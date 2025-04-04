@@ -52,9 +52,9 @@ const IndividualResponses = ({ assessment }: IndividualResponsesProps) => {
   }, []);
 
   // Find responses for each rater
-  const selfRater = assessment.raters.find(r => r.raterType === RaterType.SELF);
-  const rater1 = assessment.raters.find(r => r.raterType === RaterType.RATER1);
-  const rater2 = assessment.raters.find(r => r.raterType === RaterType.RATER2);
+  const selfRater = assessment?.raters.find(r => r.raterType === RaterType.SELF);
+  const rater1 = assessment?.raters.find(r => r.raterType === RaterType.RATER1);
+  const rater2 = assessment?.raters.find(r => r.raterType === RaterType.RATER2);
 
   console.log("Individual responses - assessment:", assessment);
   console.log("Individual responses - raters:", { selfRater, rater1, rater2 });
@@ -69,7 +69,7 @@ const IndividualResponses = ({ assessment }: IndividualResponsesProps) => {
 
   // Get response for a specific question and rater
   const getResponse = (questionId: string, raterType: RaterType) => {
-    const rater = assessment.raters.find(r => r.raterType === raterType);
+    const rater = assessment?.raters.find(r => r.raterType === raterType);
     if (!rater) return "-";
     
     const response = rater.responses.find(r => r.questionId === questionId);
@@ -83,6 +83,10 @@ const IndividualResponses = ({ assessment }: IndividualResponsesProps) => {
 
   if (loading) {
     return <div className="text-center py-8">Loading questions...</div>;
+  }
+  
+  if (!assessment) {
+    return <div className="text-center py-8">No assessment data available</div>;
   }
 
   return (

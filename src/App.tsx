@@ -54,64 +54,63 @@ const AppContent = () => {
   }, []);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<LoginPage />} />
-        
-        {/* Assessment related routes - admins can't access these */}
-        <Route 
-          path="/start" 
-          element={
-            <ProtectedRoute requiredRole={null}>
-              <StartPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/rate" 
-          element={
-            <ProtectedRoute requiredRole={null}>
-              <RaterStartPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/assessment" 
-          element={
-            <ProtectedRoute requiredRole="rater">
-              <AssessmentPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route path="/completion" element={<CompletionPage />} />
-        
-        {/* Admin routes with protection */}
-        <Route 
-          path="/results" 
-          element={
-            <ProtectedRoute requiredRole="admin">
-              <ResultsPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/admin" 
-          element={
-            <ProtectedRoute requiredRole="super_admin">
-              <AdminPage />
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* Information pages */}
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<LoginPage />} />
+      
+      {/* Assessment related routes - admins can't access these */}
+      <Route 
+        path="/start" 
+        element={
+          <ProtectedRoute requiredRole={null}>
+            <StartPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/rate" 
+        element={
+          <ProtectedRoute requiredRole={null}>
+            <RaterStartPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/assessment" 
+        element={
+          <ProtectedRoute requiredRole="rater">
+            <AssessmentPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route path="/completion" element={<CompletionPage />} />
+      
+      {/* Admin routes with protection */}
+      <Route 
+        path="/results" 
+        element={
+          <ProtectedRoute requiredRole="admin">
+            <ResultsPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin" 
+        element={
+          <ProtectedRoute requiredRole="super_admin">
+            <AdminPage />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Information pages */}
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 };
 
+// The App component structure ensures that the AssessmentProvider wraps the router
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -119,7 +118,9 @@ const App = () => (
         <AssessmentProvider>
           <Toaster />
           <Sonner />
-          <AppContent />
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
         </AssessmentProvider>
       </AuthProvider>
     </TooltipProvider>
