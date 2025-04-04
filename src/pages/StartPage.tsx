@@ -53,7 +53,7 @@ const StartPage = () => {
     } catch (error) {
       console.error("Error starting assessment:", error);
       // Error is already shown by toast in assessmentOperations.ts
-      // Just navigate back to login if there's an error
+      // Navigate back to login if there's an error with the assessment
       navigate("/login");
     } finally {
       setIsLoading(false);

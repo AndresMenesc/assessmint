@@ -89,7 +89,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch (error) {
       console.error("Error initializing assessment:", error);
       if (error instanceof Error) {
-        toast.error(error.message);
+        // No need to display toast here, the initAssessment function already does it
       } else {
         toast.error("Error initializing assessment");
       }

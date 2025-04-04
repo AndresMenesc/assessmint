@@ -1,10 +1,9 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Assessment, AssessmentResponse, RaterType } from "@/types/assessment";
 import { toast } from "sonner";
 import { getShuffledQuestions } from "@/data/questions";
 import { loadAssessmentFromLocalStorage, saveAssessmentToLocalStorage, initializeAssessmentStorage, clearAssessmentFromLocalStorage } from "@/utils/assessmentStorage";
-import { initializeAssessment, initializeRaterAssessment, addRater as addRaterToAssessment, updateResponse as updateAssessmentResponse, completeAssessment as markAssessmentComplete } from "@/utils/assessmentOperations";
+import { initializeAssessment as initializeAssessmentOp, initializeRaterAssessment, addRater as addRaterToAssessment, updateResponse as updateAssessmentResponse, completeAssessment as markAssessmentComplete } from "@/utils/assessmentOperations";
 import { calculateAllResults } from "@/utils/scoreCalculations";
 import { fetchAssessmentByCode } from "@/utils/assessmentDbUtils";
 
@@ -89,7 +88,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Admin authentication
     if (email === "super@orbit.com" && password === "super123") {
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("userEmail", email);
@@ -134,7 +132,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUserRole(null);
   };
 
-  // Handle code-based login for assessment users and raters
   const codeLogin = async (
     email: string,
     name: string,
@@ -143,49 +140,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   ): Promise<{ success: boolean; isNewAssessment?: boolean }> => {
     try {
       if (isSelf) {
-        // Self-rater login
-        const assessment = await initializeAssessment(email, name, code);
+        const assessment = await initializeAssessmentOp(email, name, code);
         
         if (assessment) {
-          // Set user data in local storage
           localStorage.setItem("isAuthenticated", "true");
           localStorage.setItem("userCode", code);
           localStorage.setItem("userEmail", email);
           localStorage.setItem("userName", name);
           localStorage.setItem("userType", "self");
-          localStorage.setItem("userRole", "rater"); // All assessment users are 'rater' role
+          localStorage.setItem("userRole", "rater");
           localStorage.setItem("raterType", RaterType.SELF);
           
-          // Update state
           setIsAuthenticated(true);
           setUserCode(code);
           setUserEmail(email);
-          setUserName(name); 
+          setUserName(name);
           setUserType("self");
-          setUserRole("rater"); // Ensure self-assessment users have 'rater' role, not admin
+          setUserRole("rater");
           
-          // Check if this is a new assessment or an existing one
-          const isNew = assessment.raters.find(r => r.raterType === RaterType.SELF)?.responses.length === 0;
+          const selfRater = assessment.raters.find(r => r.raterType === RaterType.SELF);
+          const isNew = selfRater ? selfRater.responses.length === 0 : true;
           
           return { success: true, isNewAssessment: isNew };
         } else {
           return { success: false };
         }
       } else {
-        // External rater login
         const result = await initializeRaterAssessment(email, name, code);
         
         if (result) {
-          // Set user data in local storage
           localStorage.setItem("isAuthenticated", "true");
           localStorage.setItem("userCode", code);
           localStorage.setItem("userEmail", email);
           localStorage.setItem("userName", name);
           localStorage.setItem("userType", "rater");
-          localStorage.setItem("userRole", "rater"); // External raters have 'rater' role
+          localStorage.setItem("userRole", "rater");
           localStorage.setItem("raterType", result.raterType);
           
-          // Update state
           setIsAuthenticated(true);
           setUserCode(code);
           setUserEmail(email);

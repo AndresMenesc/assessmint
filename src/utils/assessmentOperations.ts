@@ -54,13 +54,20 @@ export const initializeAssessment = async (
       const selfRater = existingAssessment.raters.find(r => r.raterType === RaterType.SELF);
       
       if (selfRater && selfRater.email.toLowerCase() === selfEmail.toLowerCase()) {
+        // This is the same person - allow them to continue their assessment
+        console.log("Same user continuing assessment with code:", code);
+        
         // Check if self-assessment is already completed
         if (selfRater.completed) {
-          toast.error("You have already completed this assessment.", {
+          toast.info("You have already completed this assessment.", {
             description: "The results will be available once all raters have completed their assessments."
           });
-          throw new Error("Self-assessment already completed");
+        } else {
+          toast.info("Continuing your existing assessment.", {
+            description: "Your previous responses have been saved."
+          });
         }
+        
         return existingAssessment;
       } else {
         // Different person trying to use the same code
