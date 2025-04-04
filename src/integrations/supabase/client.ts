@@ -9,8 +9,51 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Create a more flexible type that extends the generated Database type
+export type ExtendedDatabase = Database & {
+  public: {
+    Tables: {
+      assessment_responses: {
+        Row: {
+          id: string;
+          assessment_id: string;
+          rater_type: string;
+          responses: any;
+          email?: string;
+          name?: string;
+          completed: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          assessment_id: string;
+          rater_type: string;
+          responses?: any;
+          email?: string;
+          name?: string;
+          completed?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          assessment_id?: string;
+          rater_type?: string;
+          responses?: any;
+          email?: string;
+          name?: string;
+          completed?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+    };
+  };
+};
+
 // Create client with session persistence enabled
-export const supabase = createClient<Database>(
+export const supabase = createClient<ExtendedDatabase>(
   SUPABASE_URL, 
   SUPABASE_PUBLISHABLE_KEY,
   {

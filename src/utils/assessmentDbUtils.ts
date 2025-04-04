@@ -45,9 +45,7 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
         raterType: r.rater_type as RaterType,
         responses: r.responses || [],
         completed: r.completed,
-        // If you store these in assessment_responses, use them from there
-        // Otherwise, you might need to join with the raters table or handle it differently
-        email: r.email || "", // Fill these in or join with raters table if needed
+        email: r.email || "", 
         name: r.name || ""
       }));
     }
@@ -63,14 +61,14 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
       if (!oldRatersError && oldRatersData && oldRatersData.length > 0) {
         for (const rater of oldRatersData) {
           // For each old rater, check if there's data in the new responses table
-          const { data: newResponsesData } = await supabase
+          const { data: newResponsesData, error: newResponsesError } = await supabase
             .from('assessment_responses')
             .select('*')
             .eq('assessment_id', data.id)
             .eq('rater_type', rater.rater_type)
             .maybeSingle();
           
-          if (newResponsesData) {
+          if (!newResponsesError && newResponsesData) {
             // If we found data in the new table, use that
             raters.push({
               raterType: rater.rater_type as RaterType,
@@ -370,7 +368,7 @@ export const saveAssessmentResults = async (assessment: Assessment) => {
       .from('results')
       .upsert({
         assessment_id: assessment.id,
-        dimension_scores: JSON.stringify(results.dimensionScores),
+        dimension_scores: results.dimensionScores,
         self_awareness: results.selfAwareness,
         coachability_awareness: results.coachabilityAwareness,
         profile_type: results.profileType
