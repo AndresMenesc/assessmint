@@ -6,13 +6,12 @@ interface ProfileCardProps {
 }
 
 const ProfileCard = ({ profileType }: ProfileCardProps) => {
-  // Profile descriptions based on provided archetype list
   const profiles: Record<string, { summary: string; traits: string[] }> = {
     "The Balanced Achiever": {
       summary: "Balanced, Proactive, Transparent",
       traits: [
         "Balances confidence with appropriate humility",
-        "Actively pursues practice growth with collaborative approach",
+        "Actively pursues practice growth with collaborative approach", 
         "Adapts to changes while maintaining core standards",
         "Directly addresses issues as they arise without delay",
         "Takes ownership of mistakes and works toward solutions"
@@ -23,7 +22,7 @@ const ProfileCard = ({ profileType }: ProfileCardProps) => {
       traits: [
         "Pursues results without seeking personal recognition",
         "Builds strong team relationships based on trust",
-        "Addresses problems directly but with team consideration",
+        "Addresses problems directly but with team consideration", 
         "Drives business development with collaborative approach",
         "Handles difficult conversations with tact but directness"
       ]
@@ -34,7 +33,7 @@ const ProfileCard = ({ profileType }: ProfileCardProps) => {
         "Creates reliable systems with collaborative input",
         "Addresses systemic issues rather than symptoms",
         "Methodically analyzes problems before implementing solutions",
-        "Builds consensus while maintaining progress momentum",
+        "Builds consensus while maintaining progress momentum", 
         "Documents issues and solutions thoroughly for future reference"
       ]
     },
@@ -52,7 +51,7 @@ const ProfileCard = ({ profileType }: ProfileCardProps) => {
       summary: "Flexible, Diplomatic, Accommodating",
       traits: [
         "Adapts readily to changing practice needs",
-        "Addresses problems with diplomacy and tact",
+        "Addresses problems with diplomacy and tact", 
         "Balances direct resolution with relationship preservation",
         "Collaborates to find consensus-based solutions",
         "Adjusts approach based on situation and stakeholders"
@@ -63,7 +62,7 @@ const ProfileCard = ({ profileType }: ProfileCardProps) => {
       traits: [
         "Methodically analyzes problems before addressing them",
         "Directly confronts issues but only after thorough research",
-        "Maintains detailed documentation of issues and resolutions",
+        "Maintains detailed documentation of issues and resolutions", 
         "Prefers evidence-based approaches to problem-solving",
         "Communicates findings and concerns with precision"
       ]
@@ -72,7 +71,7 @@ const ProfileCard = ({ profileType }: ProfileCardProps) => {
       summary: "Ambitious, Action-Oriented, Straightforward",
       traits: [
         "Aggressively pursues growth opportunities",
-        "Addresses problems immediately without hesitation",
+        "Addresses problems immediately without hesitation", 
         "Initiates difficult conversations when necessary for progress",
         "Adapts quickly to changing circumstances",
         "Takes ownership of challenges and drives toward solutions"
@@ -82,7 +81,7 @@ const ProfileCard = ({ profileType }: ProfileCardProps) => {
       summary: "Cautious, Harmonious, Gradual",
       traits: [
         "Builds strong relationships with team and clients",
-        "Addresses issues gradually with focus on maintaining harmony",
+        "Addresses issues gradually with focus on maintaining harmony", 
         "May temporarily minimize problems to preserve relationships",
         "Takes time to consider all perspectives before addressing issues",
         "Prefers private conversations to public confrontation"
@@ -94,7 +93,7 @@ const ProfileCard = ({ profileType }: ProfileCardProps) => {
         "Projects confidence while minimizing problems",
         "Reframes challenges as temporary inconveniences",
         "Focuses on positive aspects rather than addressing difficulties",
-        "Redirects attention from sensitive or problematic issues",
+        "Redirects attention from sensitive or problematic issues", 
         "May delay addressing personnel or performance problems"
       ]
     },
@@ -102,7 +101,7 @@ const ProfileCard = ({ profileType }: ProfileCardProps) => {
       summary: "Efficient, Practical, Confrontational",
       traits: [
         "Addresses problems immediately and directly",
-        "Implements solutions systematically and thoroughly",
+        "Implements solutions systematically and thoroughly", 
         "Confronts difficult situations without hesitation",
         "Communicates directly with minimal concern for feelings",
         "Prioritizes resolution over relationship preservation"
@@ -110,7 +109,6 @@ const ProfileCard = ({ profileType }: ProfileCardProps) => {
     }
   };
 
-  // Fall back profile for any type not explicitly defined
   const fallbackProfile = {
     summary: "Profile information not available",
     traits: ["Detailed information not available for this profile"]
