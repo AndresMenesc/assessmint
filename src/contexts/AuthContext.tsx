@@ -17,6 +17,7 @@ interface AuthContextProps {
   setUserName: (name: string | null) => void;
   setUserCode: (code: string | null) => void;
   login: (email: string, password: string) => Promise<boolean>;
+  codeLogin: (email: string, name: string, code: string, isSelf: boolean) => Promise<{ success: boolean; isNewAssessment?: boolean }>;
   logout: () => void;
 }
 
@@ -117,6 +118,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
   };
+  
+  // Code login function for assessments
+  const codeLogin = async (email: string, name: string, code: string, isSelf: boolean): Promise<{ success: boolean; isNewAssessment?: boolean }> => {
+    try {
+      // Check if an assessment with this code exists
+      const { data: assessmentData, error: assessmentError } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('code', code)
+        .single();
+      
+      // Set user authentication for assessment
+      setIsAuthenticated(true);
+      setUserRole("rater");
+      setUserEmail(email);
+      setUserName(name);
+      setUserCode(code);
+      
+      // Store in local storage
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("userRole", "rater");
+      localStorage.setItem("userEmail", email);
+      localStorage.setItem("userName", name);
+      localStorage.setItem("userCode", code);
+      
+      if (assessmentError && assessmentError.code === 'PGRST116') {
+        // Assessment doesn't exist
+        console.log("Assessment doesn't exist, creating new one");
+        
+        if (isSelf) {
+          // For self assessment, we'll create a new assessment
+          return { success: true, isNewAssessment: true };
+        } else {
+          // For rater assessment, if code doesn't exist, return error
+          toast.error("Invalid assessment code");
+          return { success: false };
+        }
+      }
+      
+      // Assessment exists
+      console.log("Assessment exists:", assessmentData);
+      return { success: true, isNewAssessment: false };
+    } catch (error) {
+      console.error("Code login error:", error);
+      toast.error("Login failed. Please try again.");
+      return { success: false };
+    }
+  };
 
   // Logout function
   const logout = () => {
@@ -147,6 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserName,
       setUserCode,
       login,
+      codeLogin,
       logout
     }}>
       {children}
