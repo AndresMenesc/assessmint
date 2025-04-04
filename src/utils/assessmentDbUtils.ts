@@ -1,7 +1,9 @@
+
 import { Assessment, RaterResponses, RaterType } from "@/types/assessment";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { calculateAllResults } from "./calculateAllResults";
+import { Json } from "@/integrations/supabase/types";
 
 /**
  * Converts an Assessment object to the format expected by the database
@@ -43,7 +45,7 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
       // Map the responses from the new table format
       raters = responsesData.map(r => ({
         raterType: r.rater_type as RaterType,
-        responses: r.responses || [],
+        responses: r.responses as any[] || [],
         completed: r.completed,
         email: r.email || "", 
         name: r.name || ""
@@ -72,7 +74,7 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
             // If we found data in the new table, use that
             raters.push({
               raterType: rater.rater_type as RaterType,
-              responses: newResponsesData.responses || [],
+              responses: newResponsesData.responses as any[] || [],
               completed: newResponsesData.completed,
               email: rater.email,
               name: rater.name
@@ -152,11 +154,11 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
       }
       
       if (existingResponse) {
-        // Update existing responses
+        // Update existing responses - convert responses to Json type
         const { error: updateError } = await supabase
           .from('assessment_responses')
           .update({
-            responses: rater.responses,
+            responses: JSON.parse(JSON.stringify(rater.responses)) as Json, // Convert to a valid Json type
             completed: rater.completed,
             email: rater.email,
             name: rater.name,
@@ -169,13 +171,13 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
           continue;
         }
       } else {
-        // Create new responses
+        // Create new responses - convert responses to Json type
         const { error: createError } = await supabase
           .from('assessment_responses')
           .insert({
             assessment_id: assessmentData.id,
             rater_type: rater.raterType,
-            responses: rater.responses,
+            responses: JSON.parse(JSON.stringify(rater.responses)) as Json, // Convert to a valid Json type
             completed: rater.completed,
             email: rater.email,
             name: rater.name
@@ -248,7 +250,7 @@ export const createAssessmentInDb = async (assessment: Assessment) => {
         .insert({
           assessment_id: assessment.id,
           rater_type: selfRater.raterType,
-          responses: selfRater.responses,
+          responses: JSON.parse(JSON.stringify(selfRater.responses)) as Json, // Convert to a valid Json type
           completed: selfRater.completed,
           email: selfRater.email,
           name: selfRater.name
@@ -308,11 +310,11 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
         }
         
         if (existingResponse) {
-          // Update existing responses
+          // Update existing responses - convert responses to Json type
           const { error: updateError } = await supabase
             .from('assessment_responses')
             .update({
-              responses: rater.responses,
+              responses: JSON.parse(JSON.stringify(rater.responses)) as Json, // Convert to a valid Json type
               completed: rater.completed,
               email: rater.email,
               name: rater.name,
@@ -325,13 +327,13 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
             continue;
           }
         } else {
-          // Create new responses
+          // Create new responses - convert responses to Json type
           const { error: createError } = await supabase
             .from('assessment_responses')
             .insert({
               assessment_id: assessmentId,
               rater_type: rater.raterType,
-              responses: rater.responses,
+              responses: JSON.parse(JSON.stringify(rater.responses)) as Json, // Convert to a valid Json type
               completed: rater.completed,
               email: rater.email,
               name: rater.name
