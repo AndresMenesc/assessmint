@@ -1,161 +1,263 @@
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search } from "lucide-react";
-import { Assessment, RaterType, Question, Section, SubSection } from "@/types/assessment";
+import React, { useEffect, useState } from "react";
+import { Assessment, RaterType } from "@/types/assessment";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { TabsContent } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface IndividualResponsesProps {
   assessment: Assessment;
 }
 
-const IndividualResponses = ({ assessment }: IndividualResponsesProps) => {
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const isMobile = useIsMobile();
+interface ResponseData {
+  question_id: string;
+  text: string;
+  section: string;
+  sub_section: string;
+  score: number;
+  is_reversed?: boolean;
+  negative_score?: boolean;
+}
 
+const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment }) => {
+  const [selfResponses, setSelfResponses] = useState<ResponseData[]>([]);
+  const [rater1Responses, setRater1Responses] = useState<ResponseData[]>([]);
+  const [rater2Responses, setRater2Responses] = useState<ResponseData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>("self");
+  
   useEffect(() => {
-    const fetchQuestions = async () => {
+    const fetchIndividualResponses = async () => {
+      if (!assessment || !assessment.id) {
+        console.log("Invalid assessment provided to IndividualResponses");
+        setLoading(false);
+        return;
+      }
+      
+      setLoading(true);
+      
       try {
-        const { data, error } = await supabase
-          .from('questions')
+        console.log("Individual responses - assessment:", assessment);
+        
+        // Find raters
+        const { data: ratersData, error: ratersError } = await supabase
+          .from('raters')
           .select('*')
-          .order('id');
-          
-        if (error) {
-          console.error("Error fetching questions:", error);
-          throw error;
+          .eq('assessment_id', assessment.id);
+        
+        if (ratersError) {
+          console.error("Error fetching raters:", ratersError);
+          return;
         }
         
-        // Properly cast section and subSection to their enum types
-        setQuestions(data.map(q => ({
-          id: q.id,
-          text: q.text,
-          section: q.section as Section,
-          subSection: q.sub_section as SubSection,
-          isReversed: q.is_reversed,
-          negativeScore: q.negative_score
-        })));
+        const selfRater = ratersData.find(r => r.rater_type === 'self');
+        const rater1 = ratersData.find(r => r.rater_type === 'rater1');
+        const rater2 = ratersData.find(r => r.rater_type === 'rater2');
+        
+        console.log("Individual responses - raters:", { selfRater, rater1, rater2 });
+        
+        // Fetch all questions for reference
+        const { data: questionsData, error: questionsError } = await supabase
+          .from('questions')
+          .select('*');
+        
+        if (questionsError) {
+          console.error("Error fetching questions:", questionsError);
+          return;
+        }
+        
+        // Helper function to fetch and format responses
+        const fetchFormattedResponses = async (raterId: string | undefined) => {
+          if (!raterId) return [];
+          
+          const { data: responsesData, error: responsesError } = await supabase
+            .from('responses')
+            .select('*')
+            .eq('rater_id', raterId);
+            
+          if (responsesError || !responsesData) {
+            console.error("Error fetching responses:", responsesError);
+            return [];
+          }
+          
+          console.log(`Found ${responsesData.length} responses for rater ${raterId}`);
+          
+          // Join responses with questions data
+          return responsesData.map(response => {
+            const question = questionsData.find(q => q.id === response.question_id);
+            
+            return {
+              question_id: response.question_id,
+              text: question?.text || 'Question text not found',
+              section: question?.section || 'Unknown section',
+              sub_section: question?.sub_section || 'Unknown subsection',
+              score: response.score,
+              is_reversed: question?.is_reversed || false,
+              negative_score: question?.negative_score || false
+            };
+          });
+        };
+        
+        // Fetch responses for each rater
+        const selfResponses = await fetchFormattedResponses(selfRater?.id);
+        const rater1Responses = await fetchFormattedResponses(rater1?.id);
+        const rater2Responses = await fetchFormattedResponses(rater2?.id);
+        
+        setSelfResponses(selfResponses);
+        setRater1Responses(rater1Responses);
+        setRater2Responses(rater2Responses);
       } catch (error) {
-        console.error("Error loading questions:", error);
+        console.error("Error fetching individual responses:", error);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchQuestions();
-  }, []);
-
-  // Find responses for each rater
-  const selfRater = assessment?.raters.find(r => r.raterType === RaterType.SELF);
-  const rater1 = assessment?.raters.find(r => r.raterType === RaterType.RATER1);
-  const rater2 = assessment?.raters.find(r => r.raterType === RaterType.RATER2);
-
-  console.log("Individual responses - assessment:", assessment);
-  console.log("Individual responses - raters:", { selfRater, rater1, rater2 });
-
-  // Filter questions based on search term
-  const filteredQuestions = questions.filter(q => 
-    q.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    q.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    q.section.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    q.subSection.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Get response for a specific question and rater
-  const getResponse = (questionId: string, raterType: RaterType) => {
-    const rater = assessment?.raters.find(r => r.raterType === raterType);
-    if (!rater) return "-";
     
-    const response = rater.responses.find(r => r.questionId === questionId);
-    if (!response) {
-      console.log(`No response found for question ${questionId} from rater ${raterType}`);
-      return "-";
-    }
+    fetchIndividualResponses();
+  }, [assessment]);
+  
+  // Helper function to get section name for display
+  const getSectionDisplayName = (section: string): string => {
+    const sectionMap: { [key: string]: string } = {
+      'ESTEEM': 'Esteem',
+      'TRUST': 'Trust',
+      'DRIVER': 'Business Drive',
+      'ADAPTABILITY': 'Adaptability',
+      'PROBLEM_RESOLUTION': 'Problem Resolution',
+      'COACHABILITY': 'Coachability'
+    };
     
-    return response.score.toString();
+    return sectionMap[section] || section;
   };
-
+  
+  // Helper function to get sub-section name for display
+  const getSubSectionDisplayName = (subSection: string): string => {
+    const subSectionMap: { [key: string]: string } = {
+      'INSECURE': 'Insecure',
+      'PRIDE': 'Pride',
+      'TRUSTING': 'Trusting',
+      'CAUTIOUS': 'Cautious',
+      'RESERVED': 'Reserved',
+      'HUSTLE': 'Hustle',
+      'PRECISE': 'Precise',
+      'FLEXIBLE': 'Flexible',
+      'DIRECT': 'Direct',
+      'AVOIDANT': 'Avoidant',
+      'COACHABILITY': 'Coachability'
+    };
+    
+    return subSectionMap[subSection] || subSection;
+  };
+  
+  // Helper function to render responses table for a specific rater
+  const renderResponsesTable = (responses: ResponseData[]) => {
+    // Group responses by section
+    const groupedResponses: { [key: string]: ResponseData[] } = {};
+    
+    responses.forEach(response => {
+      if (!groupedResponses[response.section]) {
+        groupedResponses[response.section] = [];
+      }
+      groupedResponses[response.section].push(response);
+    });
+    
+    return (
+      <div className="space-y-8">
+        {Object.keys(groupedResponses).map(section => (
+          <div key={section} className="border rounded-lg overflow-hidden">
+            <div className="bg-muted/50 px-4 py-2 font-semibold">
+              {getSectionDisplayName(section)}
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-7/12">Question</TableHead>
+                  <TableHead className="w-2/12">Sub-Section</TableHead>
+                  <TableHead className="w-1/12 text-center">Score</TableHead>
+                  <TableHead className="w-2/12">Attributes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {groupedResponses[section].map(response => (
+                  <TableRow key={response.question_id}>
+                    <TableCell className="font-medium">{response.text}</TableCell>
+                    <TableCell>{getSubSectionDisplayName(response.sub_section)}</TableCell>
+                    <TableCell className="text-center font-mono">{response.score}</TableCell>
+                    <TableCell>
+                      {response.is_reversed && (
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full mr-1">
+                          Reversed
+                        </span>
+                      )}
+                      {response.negative_score && (
+                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                          Negative
+                        </span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ))}
+      </div>
+    );
+  };
+  
   if (loading) {
-    return <div className="text-center py-8">Loading questions...</div>;
+    return (
+      <div className="text-center py-12">
+        <p>Loading individual responses...</p>
+      </div>
+    );
   }
   
-  if (!assessment) {
-    return <div className="text-center py-8">No assessment data available</div>;
-  }
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Individual Question Responses</CardTitle>
-        <CardDescription>
-          View individual responses to each question across all raters
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search questions by ID, text, or section"
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <ScrollArea className="h-[500px]">
-            <div className="min-w-[800px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[80px]">ID</TableHead>
-                    <TableHead className="min-w-[400px]">Question</TableHead>
-                    <TableHead className="w-[100px]">Section</TableHead>
-                    <TableHead className="w-[80px] text-center">Self</TableHead>
-                    <TableHead className="w-[80px] text-center">Rater 1</TableHead>
-                    <TableHead className="w-[80px] text-center">Rater 2</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredQuestions.map((question) => (
-                    <TableRow key={question.id}>
-                      <TableCell className="font-mono text-xs">{question.id}</TableCell>
-                      <TableCell>{question.text}</TableCell>
-                      <TableCell>
-                        <span className="text-xs whitespace-nowrap">
-                          {question.section}
-                          <br />
-                          <span className="text-muted-foreground">
-                            {question.subSection.replace(/_/g, ' ')}
-                          </span>
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {selfRater ? getResponse(question.id, RaterType.SELF) : "N/A"}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {rater1 ? getResponse(question.id, RaterType.RATER1) : "N/A"}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {rater2 ? getResponse(question.id, RaterType.RATER2) : "N/A"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+    <div className="space-y-6">
+      <h3 className="text-xl font-semibold">Individual Responses</h3>
+      
+      <Tabs defaultValue="self" onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="self">Self Assessment ({selfResponses.length})</TabsTrigger>
+          <TabsTrigger value="rater1">Rater 1 ({rater1Responses.length})</TabsTrigger>
+          <TabsTrigger value="rater2">Rater 2 ({rater2Responses.length})</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="self" className="mt-4">
+          {selfResponses.length > 0 ? (
+            renderResponsesTable(selfResponses)
+          ) : (
+            <div className="text-center py-8 border rounded-lg">
+              <p className="text-muted-foreground">No responses found for self assessment.</p>
             </div>
-          </ScrollArea>
-        </div>
-      </CardContent>
-    </Card>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="rater1" className="mt-4">
+          {rater1Responses.length > 0 ? (
+            renderResponsesTable(rater1Responses)
+          ) : (
+            <div className="text-center py-8 border rounded-lg">
+              <p className="text-muted-foreground">No responses found for Rater 1.</p>
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="rater2" className="mt-4">
+          {rater2Responses.length > 0 ? (
+            renderResponsesTable(rater2Responses)
+          ) : (
+            <div className="text-center py-8 border rounded-lg">
+              <p className="text-muted-foreground">No responses found for Rater 2.</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

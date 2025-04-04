@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { calculateAllResults } from "@/utils/calculateAllResults";
 import IndividualResponses from "@/components/admin/IndividualResponses";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const ResultsPage = () => {
   const { assessment, getResults } = useAssessment();
@@ -29,12 +30,14 @@ const ResultsPage = () => {
   const [activeTab, setActiveTab] = useState<"aggregate" | "individual" | "responses">("aggregate");
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [results, setResults] = useState<any>(null);
   
   useEffect(() => {
     const fetchAssessments = async () => {
       if (userRole === "admin" || userRole === "super_admin") {
         setLoading(true);
         try {
+          console.log("Fetching assessments for admin");
           const { data, error } = await supabase
             .from('assessments')
             .select('*')
@@ -45,6 +48,7 @@ const ResultsPage = () => {
           }
           
           if (data) {
+            console.log("Fetched assessments data:", data);
             const assessmentsWithRaters = await Promise.all(
               data.map(async (a) => {
                 const { data: ratersData, error: ratersError } = await supabase
@@ -56,6 +60,8 @@ const ResultsPage = () => {
                   console.error("Error fetching raters:", ratersError);
                   return null;
                 }
+                
+                console.log(`Fetched ${ratersData.length} raters for assessment ${a.id}`);
                 
                 const ratersWithResponses = await Promise.all(
                   ratersData.map(async (rater) => {
@@ -74,6 +80,8 @@ const ResultsPage = () => {
                         responses: []
                       };
                     }
+                    
+                    console.log(`Fetched ${responsesData.length} responses for rater ${rater.id}`);
                     
                     const typedResponses: AssessmentResponse[] = responsesData.map(r => ({
                       questionId: r.question_id,
@@ -106,6 +114,7 @@ const ResultsPage = () => {
             );
             
             const validAssessments = assessmentsWithRaters.filter(a => a !== null) as Assessment[];
+            console.log("Processed assessments with raters:", validAssessments);
             setAssessments(validAssessments);
             
             if (validAssessments.length > 0 && !selectedAssessment) {
@@ -129,45 +138,107 @@ const ResultsPage = () => {
     fetchAssessments();
   }, [assessment, userRole, navigate]);
 
+  // Calculate and set results whenever selectedAssessment changes
+  useEffect(() => {
+    const calculateAndSetResults = async () => {
+      if (!selectedAssessment) return;
+      
+      console.log("Calculating results for selected assessment:", selectedAssessment);
+      try {
+        const calculatedResults = await getResults(selectedAssessment);
+        console.log("Calculated results:", calculatedResults);
+        setResults(calculatedResults);
+      } catch (error) {
+        console.error("Error calculating results:", error);
+        setResults(null);
+      }
+    };
+    
+    calculateAndSetResults();
+  }, [selectedAssessment, getResults]);
+
   const filteredAssessments = assessments.filter(a => 
     a.selfRaterEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
     a.selfRaterName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const results = selectedAssessment 
-    ? (userRole === "super_admin" ? getResults(selectedAssessment) : getResults(selectedAssessment)) 
-    : (assessment ? getResults() : null);
-    
-  console.log("Results data:", results);
-
-  const getSingleRaterResults = (assessment: Assessment, raterType: RaterType): DimensionScore[] | null => {
+  const getSingleRaterResults = async (assessment: Assessment, raterType: RaterType) => {
     if (!assessment) return null;
     
     const rater = assessment.raters.find(r => r.raterType === raterType);
-    if (!rater) return null;
+    if (!rater) {
+      // Try to fetch rater from database
+      const { data: raterData, error: raterError } = await supabase
+        .from('raters')
+        .select('*')
+        .eq('assessment_id', assessment.id)
+        .eq('rater_type', raterType)
+        .maybeSingle();
+        
+      if (raterError || !raterData) {
+        console.error("Error fetching rater:", raterError);
+        return null;
+      }
+      
+      // Fetch responses for this rater
+      const { data: responsesData, error: responsesError } = await supabase
+        .from('responses')
+        .select('*')
+        .eq('rater_id', raterData.id);
+        
+      if (responsesError) {
+        console.error("Error fetching responses:", responsesError);
+        return null;
+      }
+      
+      const typedResponses: AssessmentResponse[] = responsesData.map(r => ({
+        questionId: r.question_id,
+        score: r.score
+      }));
+      
+      const fetchedRater = {
+        raterType: raterData.rater_type as RaterType,
+        email: raterData.email,
+        name: raterData.name,
+        completed: raterData.completed,
+        responses: typedResponses
+      };
+      
+      if (userRole !== "super_admin" && !fetchedRater.completed) return null;
+      
+      const calculatedResults = calculateAllResults([fetchedRater]);
+      return calculatedResults?.dimensionScores || null;
+    }
     
     if (userRole !== "super_admin" && !rater.completed) return null;
-    
-    const singleRaterAssessment: Assessment = {
-      ...assessment,
-      raters: [rater]
-    };
     
     const calculatedResults = calculateAllResults([rater]);
     return calculatedResults?.dimensionScores || null;
   };
 
   const getCompletionStatus = (assessment: Assessment) => {
-    const selfComplete = assessment.raters.find(r => r.raterType === RaterType.SELF)?.completed;
-    const rater1Complete = assessment.raters.find(r => r.raterType === RaterType.RATER1)?.completed;
-    const rater2Complete = assessment.raters.find(r => r.raterType === RaterType.RATER2)?.completed;
+    // Check if we have all raters in the assessment object
+    const selfRater = assessment.raters.find(r => r.raterType === RaterType.SELF);
+    const rater1 = assessment.raters.find(r => r.raterType === RaterType.RATER1);
+    const rater2 = assessment.raters.find(r => r.raterType === RaterType.RATER2);
     
-    const allComplete = selfComplete && rater1Complete && rater2Complete;
+    // If we don't have all raters in the object, we need to check the database
+    if (!selfRater || !rater1 || !rater2) {
+      // For now, return what we know
+      return { 
+        selfComplete: selfRater?.completed || false, 
+        rater1Complete: rater1?.completed || false, 
+        rater2Complete: rater2?.completed || false, 
+        allComplete: false
+      };
+    }
+    
+    const allComplete = selfRater.completed && rater1.completed && rater2.completed;
     
     return { 
-      selfComplete, 
-      rater1Complete, 
-      rater2Complete, 
+      selfComplete: selfRater.completed, 
+      rater1Complete: rater1.completed, 
+      rater2Complete: rater2.completed, 
       allComplete
     };
   };
@@ -199,6 +270,24 @@ const ResultsPage = () => {
   const renderIndividualResults = () => {
     if (!selectedAssessment) return null;
     
+    const [selfResults, setSelfResults] = useState<DimensionScore[] | null>(null);
+    const [rater1Results, setRater1Results] = useState<DimensionScore[] | null>(null);
+    const [rater2Results, setRater2Results] = useState<DimensionScore[] | null>(null);
+    
+    useEffect(() => {
+      const loadIndividualResults = async () => {
+        const selfScores = await getSingleRaterResults(selectedAssessment, RaterType.SELF);
+        const rater1Scores = await getSingleRaterResults(selectedAssessment, RaterType.RATER1);
+        const rater2Scores = await getSingleRaterResults(selectedAssessment, RaterType.RATER2);
+        
+        setSelfResults(selfScores);
+        setRater1Results(rater1Scores);
+        setRater2Results(rater2Scores);
+      };
+      
+      loadIndividualResults();
+    }, [selectedAssessment]);
+    
     const raters = selectedAssessment.raters;
     const selfRater = raters.find(r => r.raterType === RaterType.SELF);
     const rater1 = raters.find(r => r.raterType === RaterType.RATER1);
@@ -223,12 +312,14 @@ const ResultsPage = () => {
               )}
             </CardHeader>
             <CardContent>
-              <DimensionChart 
-                scores={getSingleRaterResults(selectedAssessment, RaterType.SELF) || []} 
-              />
-              <CoachabilityChart 
-                scores={getSingleRaterResults(selectedAssessment, RaterType.SELF) || []} 
-              />
+              {selfResults ? (
+                <>
+                  <DimensionChart scores={selfResults} />
+                  <CoachabilityChart scores={selfResults} />
+                </>
+              ) : (
+                <div className="text-center py-8">Loading self assessment results...</div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -246,12 +337,11 @@ const ResultsPage = () => {
               )}
             </CardHeader>
             <CardContent>
-              <DimensionChart 
-                scores={getSingleRaterResults(selectedAssessment, RaterType.RATER1) || []} 
-              />
-              <CoachabilityChart 
-                scores={getSingleRaterResults(selectedAssessment, RaterType.RATER1) || []} 
-              />
+              {rater1Results ? (
+                <DimensionChart scores={rater1Results} />
+              ) : (
+                <div className="text-center py-8">Loading rater 1 assessment results...</div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -269,12 +359,11 @@ const ResultsPage = () => {
               )}
             </CardHeader>
             <CardContent>
-              <DimensionChart 
-                scores={getSingleRaterResults(selectedAssessment, RaterType.RATER2) || []} 
-              />
-              <CoachabilityChart 
-                scores={getSingleRaterResults(selectedAssessment, RaterType.RATER2) || []} 
-              />
+              {rater2Results ? (
+                <DimensionChart scores={rater2Results} />
+              ) : (
+                <div className="text-center py-8">Loading rater 2 assessment results...</div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -332,75 +421,73 @@ const ResultsPage = () => {
                   </div>
                 </div>
                 
-                {/* Fixed scroll area with proper height constraint */}
+                {/* Table for displaying assessments */}
                 <div className="border rounded-md">
                   <div className="max-h-[400px] overflow-hidden">
                     <ScrollArea className="h-[400px] w-full">
-                      <div className="min-w-[800px]">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b bg-muted/50">
-                              <th className="p-2 text-left font-medium sticky top-0 bg-muted/50 z-10">Name</th>
-                              <th className="p-2 text-left font-medium sticky top-0 bg-muted/50 z-10">Email</th>
-                              <th className="p-2 text-left font-medium sticky top-0 bg-muted/50 z-10">Status</th>
-                              <th className="p-2 text-left font-medium sticky top-0 bg-muted/50 z-10">Created</th>
-                              <th className="p-2 text-left font-medium sticky top-0 bg-muted/50 z-10">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredAssessments.length > 0 ? (
-                              filteredAssessments.map((a) => {
-                                const { allComplete } = getCompletionStatus(a);
-                                return (
-                                  <tr key={a.id} className="border-b">
-                                    <td className="p-2">
-                                      <div className="flex items-center">
-                                        <User className="h-4 w-4 mr-2 text-slate-500" />
-                                        {a.selfRaterName}
-                                      </div>
-                                    </td>
-                                    <td className="p-2">
-                                      <div className="flex items-center">
-                                        <Mail className="h-4 w-4 mr-2 text-slate-500" />
-                                        {a.selfRaterEmail}
-                                      </div>
-                                    </td>
-                                    <td className="p-2">
-                                      <span className={`px-2 py-1 text-xs rounded-full ${
-                                        allComplete ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                      }`}>
-                                        {allComplete ? 'Complete' : 'In Progress'}
-                                      </span>
-                                    </td>
-                                    <td className="p-2">
-                                      <div className="flex items-center">
-                                        <CalendarDays className="h-4 w-4 mr-2 text-slate-500" />
-                                        {new Date(a.createdAt).toLocaleDateString()}
-                                      </div>
-                                    </td>
-                                    <td className="p-2">
-                                      <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onClick={() => setSelectedAssessment(a)}
-                                      >
-                                        <FileBarChart className="h-4 w-4 mr-2" />
-                                        View Results
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                );
-                              })
-                            ) : (
-                              <tr>
-                                <td colSpan={5} className="p-4 text-center text-muted-foreground">
-                                  No assessments found
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Created</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredAssessments.length > 0 ? (
+                            filteredAssessments.map((a) => {
+                              const { allComplete } = getCompletionStatus(a);
+                              return (
+                                <TableRow key={a.id}>
+                                  <TableCell>
+                                    <div className="flex items-center">
+                                      <User className="h-4 w-4 mr-2 text-slate-500" />
+                                      {a.selfRaterName}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center">
+                                      <Mail className="h-4 w-4 mr-2 text-slate-500" />
+                                      {a.selfRaterEmail}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                      allComplete ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                      {allComplete ? 'Complete' : 'In Progress'}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center">
+                                      <CalendarDays className="h-4 w-4 mr-2 text-slate-500" />
+                                      {new Date(a.createdAt).toLocaleDateString()}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => setSelectedAssessment(a)}
+                                    >
+                                      <FileBarChart className="h-4 w-4 mr-2" />
+                                      View Results
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center text-muted-foreground">
+                                No assessments found
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
                     </ScrollArea>
                   </div>
                 </div>
@@ -443,81 +530,87 @@ const ResultsPage = () => {
                   </div>
                 )}
                 
-                {(results && results.dimensionScores.length > 0) || userRole === "super_admin" ? (
-                  <>
-                    {userRole === "super_admin" || userRole === "admin" ? (
-                      <Tabs defaultValue="aggregate" className="mt-6" onValueChange={(value) => setActiveTab(value as "aggregate" | "individual" | "responses")}>
-                        <TabsList className="grid w-full grid-cols-3">
-                          <TabsTrigger value="aggregate">Aggregate</TabsTrigger>
-                          <TabsTrigger value="individual">Individual</TabsTrigger>
-                          {userRole === "super_admin" && (
-                            <TabsTrigger value="responses">Responses</TabsTrigger>
-                          )}
-                        </TabsList>
-                        <TabsContent value="aggregate" className="mt-4">
-                          {results && results.dimensionScores.length > 0 ? (
-                            <>
-                              <DimensionChart scores={results.dimensionScores} />
-                              <CoachabilityChart scores={results.dimensionScores} />
-                              
-                              {(results.selfAwareness > 0 || results.coachabilityAwareness > 0) && (
-                                <AwarenessMetrics 
-                                  selfAwareness={results.selfAwareness} 
-                                  coachabilityAwareness={results.coachabilityAwareness} 
-                                />
-                              )}
-                              
-                              {results.profileType && (
-                                <ProfileCard profileType={results.profileType} />
-                              )}
-                            </>
-                          ) : (
-                            <div className="text-center py-12">
-                              <p className="text-lg text-muted-foreground">
-                                No results available yet. Waiting for assessments to be completed.
-                              </p>
-                            </div>
-                          )}
-                        </TabsContent>
-                        <TabsContent value="individual" className="mt-4">
-                          {renderIndividualResults()}
-                        </TabsContent>
-                        {userRole === "super_admin" && (
-                          <TabsContent value="responses" className="mt-4">
-                            <IndividualResponses assessment={selectedAssessment} />
-                          </TabsContent>
-                        )}
-                      </Tabs>
-                    ) : (
-                      <div className="space-y-8">
-                        <DimensionChart scores={results.dimensionScores} />
-                        <CoachabilityChart scores={results.dimensionScores} />
-                        
-                        {(results.selfAwareness > 0 || results.coachabilityAwareness > 0) && (
-                          <AwarenessMetrics 
-                            selfAwareness={results.selfAwareness} 
-                            coachabilityAwareness={results.coachabilityAwareness} 
-                          />
-                        )}
-                        
-                        {results.profileType && (
-                          <ProfileCard profileType={results.profileType} />
-                        )}
-                      </div>
-                    )}
-                  </>
-                ) : (
+                {loading ? (
                   <div className="text-center py-12">
-                    <p className="text-lg text-muted-foreground">
-                      No results available yet. Please complete the assessment.
-                    </p>
+                    <p className="text-lg text-muted-foreground">Loading assessment results...</p>
                   </div>
+                ) : (
+                  (results && results.dimensionScores && results.dimensionScores.length > 0) || userRole === "super_admin" ? (
+                    <>
+                      {userRole === "super_admin" || userRole === "admin" ? (
+                        <Tabs defaultValue="aggregate" className="mt-6" onValueChange={(value) => setActiveTab(value as "aggregate" | "individual" | "responses")}>
+                          <TabsList className="grid w-full grid-cols-3">
+                            <TabsTrigger value="aggregate">Aggregate</TabsTrigger>
+                            <TabsTrigger value="individual">Individual</TabsTrigger>
+                            {userRole === "super_admin" && (
+                              <TabsTrigger value="responses">Responses</TabsTrigger>
+                            )}
+                          </TabsList>
+                          <TabsContent value="aggregate" className="mt-4">
+                            {results && results.dimensionScores && results.dimensionScores.length > 0 ? (
+                              <>
+                                <DimensionChart scores={results.dimensionScores} />
+                                <CoachabilityChart scores={results.dimensionScores} />
+                                
+                                {(results.selfAwareness > 0 || results.coachabilityAwareness > 0) && (
+                                  <AwarenessMetrics 
+                                    selfAwareness={results.selfAwareness} 
+                                    coachabilityAwareness={results.coachabilityAwareness} 
+                                  />
+                                )}
+                                
+                                {results.profileType && (
+                                  <ProfileCard profileType={results.profileType} />
+                                )}
+                              </>
+                            ) : (
+                              <div className="text-center py-12">
+                                <p className="text-lg text-muted-foreground">
+                                  No results available yet. Waiting for assessments to be completed.
+                                </p>
+                              </div>
+                            )}
+                          </TabsContent>
+                          <TabsContent value="individual" className="mt-4">
+                            {renderIndividualResults()}
+                          </TabsContent>
+                          {userRole === "super_admin" && (
+                            <TabsContent value="responses" className="mt-4">
+                              <IndividualResponses assessment={selectedAssessment} />
+                            </TabsContent>
+                          )}
+                        </Tabs>
+                      ) : (
+                        <div className="space-y-8">
+                          <DimensionChart scores={results.dimensionScores} />
+                          <CoachabilityChart scores={results.dimensionScores} />
+                          
+                          {(results.selfAwareness > 0 || results.coachabilityAwareness > 0) && (
+                            <AwarenessMetrics 
+                              selfAwareness={results.selfAwareness} 
+                              coachabilityAwareness={results.coachabilityAwareness} 
+                            />
+                          )}
+                          
+                          {results.profileType && (
+                            <ProfileCard profileType={results.profileType} />
+                          )}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-lg text-muted-foreground">
+                        No results available yet. Please complete the assessment.
+                      </p>
+                    </div>
+                  )
                 )}
               </CardContent>
             </Card>
           )}
           
-          {(!results || results.dimensionScores.length === 0) && !selectedAssessment && !(userRole === "admin" || userRole === "super_admin") && (
+          {(!results || !results.dimensionScores || results.dimensionScores.length === 0) && !selectedAssessment && !(userRole === "admin" || userRole === "super_admin") && (
             <div className="text-center py-12">
               <p className="text-lg text-muted-foreground">
                 No results available yet. Please complete the assessment.

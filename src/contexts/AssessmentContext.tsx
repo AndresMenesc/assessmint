@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Assessment, RaterType, Question, AssessmentResponse } from "@/types/assessment";
 import { v4 as uuidv4 } from "uuid";
@@ -219,12 +218,71 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     try {
       if (!targetAssessment.raters || targetAssessment.raters.length === 0) {
         console.log("Assessment has no raters:", targetAssessment);
-        return {
-          dimensionScores: [],
-          selfAwareness: 0,
-          coachabilityAwareness: 0,
-          profileType: ""
+        
+        // Try to fetch raters from the database
+        const fetchRatersFromDb = async () => {
+          const { data: ratersData, error } = await supabase
+            .from('raters')
+            .select('*')
+            .eq('assessment_id', targetAssessment.id);
+            
+          if (error) {
+            console.error("Error fetching raters:", error);
+            return null;
+          }
+          
+          if (ratersData && ratersData.length > 0) {
+            console.log("Found raters in database:", ratersData);
+            // Process raters and responses
+            const processedRaters = await Promise.all(ratersData.map(async (rater) => {
+              const { data: responsesData, error: responseError } = await supabase
+                .from('responses')
+                .select('*')
+                .eq('rater_id', rater.id);
+                
+              if (responseError) {
+                console.error("Error fetching responses:", responseError);
+                return null;
+              }
+              
+              const typedResponses: AssessmentResponse[] = responsesData.map(r => ({
+                questionId: r.question_id,
+                score: r.score
+              }));
+              
+              return {
+                raterType: rater.rater_type as RaterType,
+                email: rater.email,
+                name: rater.name,
+                completed: rater.completed,
+                responses: typedResponses
+              };
+            }));
+            
+            const validRaters = processedRaters.filter(r => r !== null) as any;
+            if (validRaters.length > 0) {
+              // Use the real calculation function with the fetched raters
+              console.log("Calculating results with fetched raters:", validRaters);
+              const results = calculateResults(validRaters);
+              return results || {
+                dimensionScores: [],
+                selfAwareness: 0,
+                coachabilityAwareness: 0,
+                profileType: ""
+              };
+            }
+          }
+          
+          return {
+            dimensionScores: [],
+            selfAwareness: 0,
+            coachabilityAwareness: 0,
+            profileType: ""
+          };
         };
+        
+        // Return a promise that resolves to the results
+        return fetchRatersFromDb();
       }
       
       // Check if raters have responses
@@ -237,16 +295,74 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       if (!hasResponses) {
         console.log("No responses found in assessment:", targetAssessment);
-        return {
-          dimensionScores: [],
-          selfAwareness: 0,
-          coachabilityAwareness: 0,
-          profileType: ""
+        
+        // Try fetching responses for each rater
+        const fetchResponsesForRaters = async () => {
+          const updatedRaters = await Promise.all(targetAssessment.raters.map(async (rater) => {
+            // Find rater ID in database
+            const { data: raterData, error: raterError } = await supabase
+              .from('raters')
+              .select('id, completed')
+              .eq('assessment_id', targetAssessment.id)
+              .eq('rater_type', rater.raterType)
+              .maybeSingle();
+              
+            if (raterError || !raterData) {
+              console.error("Error fetching rater data:", raterError);
+              return rater;
+            }
+            
+            // Fetch responses for this rater
+            const { data: responsesData, error: responsesError } = await supabase
+              .from('responses')
+              .select('*')
+              .eq('rater_id', raterData.id);
+              
+            if (responsesError || !responsesData) {
+              console.error("Error fetching responses:", responsesError);
+              return rater;
+            }
+            
+            console.log(`Found ${responsesData.length} responses for rater ${rater.raterType}`);
+            
+            // Create typed responses
+            const typedResponses: AssessmentResponse[] = responsesData.map(r => ({
+              questionId: r.question_id,
+              score: r.score
+            }));
+            
+            // Return updated rater with responses and completion status
+            return {
+              ...rater,
+              responses: typedResponses,
+              completed: raterData.completed
+            };
+          }));
+          
+          // Create updated assessment with fetched responses
+          const assessmentWithResponses = {
+            ...targetAssessment,
+            raters: updatedRaters
+          };
+          
+          console.log("Assessment with fetched responses:", assessmentWithResponses);
+          
+          // Calculate results with the fetched data
+          const results = calculateResults(assessmentWithResponses.raters);
+          return results || {
+            dimensionScores: [],
+            selfAwareness: 0,
+            coachabilityAwareness: 0,
+            profileType: ""
+          };
         };
+        
+        return fetchResponsesForRaters();
       }
       
-      // Use the real calculation function
+      // Use the real calculation function with existing raters and responses
       const results = calculateResults(targetAssessment.raters);
+      console.log("Calculated results:", results);
       
       if (!results) {
         console.log("No results calculated for assessment:", targetAssessment);

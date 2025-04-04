@@ -116,11 +116,11 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <AssessmentProvider>
-          <Toaster />
-          <Sonner />
           <BrowserRouter>
             <AppContent />
           </BrowserRouter>
+          <Toaster />
+          <Sonner />
         </AssessmentProvider>
       </AuthProvider>
     </TooltipProvider>

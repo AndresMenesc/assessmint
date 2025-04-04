@@ -18,6 +18,9 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
     const selfRater = raters.find(r => r.raterType === 'self');
     const otherRaters = raters.filter(r => r.raterType !== 'self' && r.completed);
     
+    console.log("Self rater:", selfRater);
+    console.log("Other raters:", otherRaters);
+    
     // For individual results, we might be calculating for a single rater
     const isSingleRaterMode = raters.length === 1;
     
@@ -39,6 +42,14 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
       const driverScore = calculateDimensionScore(rater.responses, Section.DRIVER);
       const adaptabilityScore = calculateDimensionScore(rater.responses, Section.ADAPTABILITY);
       const problemResolutionScore = calculateDimensionScore(rater.responses, Section.PROBLEM_RESOLUTION);
+      
+      console.log("Single rater scores:", {
+        esteemScore,
+        trustScore,
+        driverScore,
+        adaptabilityScore,
+        problemResolutionScore
+      });
       
       // Normalize scores to 0-5 scale for display
       const normalizeScore = (score: number, min: number, max: number) => {
