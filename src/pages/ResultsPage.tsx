@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +31,6 @@ const ResultsPage = () => {
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState<any>(null);
   
-  // Move the individual results state variables to the component level
   const [selfResults, setSelfResults] = useState<DimensionScore[] | null>(null);
   const [rater1Results, setRater1Results] = useState<DimensionScore[] | null>(null);
   const [rater2Results, setRater2Results] = useState<DimensionScore[] | null>(null);
@@ -43,9 +41,11 @@ const ResultsPage = () => {
         setLoading(true);
         try {
           console.log("Fetching assessments for admin");
+          
           const { data, error } = await supabase
-            .from('assessments')
-            .select('*')
+            .from('assessment_responses')
+            .select('assessment_id, email, name, rater_type, completed, created_at')
+            .eq('rater_type', 'self')
             .order('created_at', { ascending: false });
             
           if (error) {
@@ -53,11 +53,32 @@ const ResultsPage = () => {
           }
           
           if (data) {
-            console.log("Fetched assessments data:", data);
+            console.log("Fetched assessment_responses data:", data);
+            
+            const assessmentsMap = new Map();
+            
+            data.forEach(response => {
+              if (!assessmentsMap.has(response.assessment_id)) {
+                assessmentsMap.set(response.assessment_id, {
+                  id: response.assessment_id,
+                  selfRaterEmail: response.email || "",
+                  selfRaterName: response.name || "",
+                  code: "",
+                  completed: response.completed,
+                  createdAt: new Date(response.created_at),
+                  updatedAt: new Date(response.created_at),
+                  raters: []
+                });
+              }
+            });
+            
+            const assessmentsList = Array.from(assessmentsMap.values());
+            console.log("Processed assessment list:", assessmentsList);
+            
             const assessmentsWithRaters = await Promise.all(
-              data.map(async (a) => {
+              assessmentsList.map(async (a) => {
                 const { data: ratersData, error: ratersError } = await supabase
-                  .from('raters')
+                  .from('assessment_responses')
                   .select('*')
                   .eq('assessment_id', a.id);
                   
@@ -66,55 +87,22 @@ const ResultsPage = () => {
                   return null;
                 }
                 
-                console.log(`Fetched ${ratersData.length} raters for assessment ${a.id}`);
+                console.log(`Fetched ${ratersData.length} raters for assessment ${a.id} from assessment_responses`);
                 
-                const ratersWithResponses = await Promise.all(
-                  ratersData.map(async (rater) => {
-                    const { data: responsesData, error: responsesError } = await supabase
-                      .from('responses')
-                      .select('*')
-                      .eq('rater_id', rater.id);
-                      
-                    if (responsesError) {
-                      console.error("Error fetching responses:", responsesError);
-                      return {
-                        raterType: rater.rater_type as RaterType,
-                        email: rater.email,
-                        name: rater.name,
-                        completed: rater.completed,
-                        responses: []
-                      };
-                    }
-                    
-                    console.log(`Fetched ${responsesData.length} responses for rater ${rater.id}`);
-                    
-                    const typedResponses: AssessmentResponse[] = responsesData.map(r => ({
-                      questionId: r.question_id,
-                      score: r.score
-                    }));
-                    
-                    return {
-                      raterType: rater.rater_type as RaterType,
-                      email: rater.email,
-                      name: rater.name,
-                      completed: rater.completed,
-                      responses: typedResponses
-                    };
-                  })
-                );
+                const processedRaters = ratersData.map(rater => {
+                  return {
+                    raterType: rater.rater_type as RaterType,
+                    email: rater.email || "",
+                    name: rater.name || "",
+                    completed: rater.completed,
+                    responses: rater.responses || []
+                  };
+                });
                 
-                const typedAssessment: Assessment = {
-                  id: a.id,
-                  selfRaterEmail: a.self_rater_email,
-                  selfRaterName: a.self_rater_name,
-                  code: a.code,
-                  completed: a.completed,
-                  createdAt: new Date(a.created_at),
-                  updatedAt: new Date(a.updated_at),
-                  raters: ratersWithResponses.filter(r => r !== null) as any
+                return {
+                  ...a,
+                  raters: processedRaters
                 };
-                
-                return typedAssessment;
               })
             );
             
@@ -143,7 +131,6 @@ const ResultsPage = () => {
     fetchAssessments();
   }, [assessment, userRole, navigate]);
 
-  // Calculate and set results whenever selectedAssessment changes
   useEffect(() => {
     const calculateAndSetResults = async () => {
       if (!selectedAssessment) return;
@@ -162,7 +149,6 @@ const ResultsPage = () => {
     calculateAndSetResults();
   }, [selectedAssessment, getResults]);
 
-  // Load individual rater results when selected assessment changes
   useEffect(() => {
     const loadIndividualResults = async () => {
       if (!selectedAssessment) return;
@@ -180,8 +166,8 @@ const ResultsPage = () => {
   }, [selectedAssessment]);
 
   const filteredAssessments = assessments.filter(a => 
-    a.selfRaterEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.selfRaterName.toLowerCase().includes(searchTerm.toLowerCase())
+    (a.selfRaterEmail && a.selfRaterEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (a.selfRaterName && a.selfRaterName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const getSingleRaterResults = async (assessment: Assessment, raterType: RaterType) => {
@@ -189,41 +175,24 @@ const ResultsPage = () => {
     
     const rater = assessment.raters.find(r => r.raterType === raterType);
     if (!rater) {
-      // Try to fetch rater from database
       const { data: raterData, error: raterError } = await supabase
-        .from('raters')
+        .from('assessment_responses')
         .select('*')
         .eq('assessment_id', assessment.id)
         .eq('rater_type', raterType)
         .maybeSingle();
         
       if (raterError || !raterData) {
-        console.error("Error fetching rater:", raterError);
+        console.error("Error fetching rater from assessment_responses:", raterError);
         return null;
       }
-      
-      // Fetch responses for this rater
-      const { data: responsesData, error: responsesError } = await supabase
-        .from('responses')
-        .select('*')
-        .eq('rater_id', raterData.id);
-        
-      if (responsesError) {
-        console.error("Error fetching responses:", responsesError);
-        return null;
-      }
-      
-      const typedResponses: AssessmentResponse[] = responsesData.map(r => ({
-        questionId: r.question_id,
-        score: r.score
-      }));
       
       const fetchedRater = {
         raterType: raterData.rater_type as RaterType,
-        email: raterData.email,
-        name: raterData.name,
+        email: raterData.email || "",
+        name: raterData.name || "",
         completed: raterData.completed,
-        responses: typedResponses
+        responses: raterData.responses || []
       };
       
       if (userRole !== "super_admin" && !fetchedRater.completed) return null;
@@ -239,14 +208,11 @@ const ResultsPage = () => {
   };
 
   const getCompletionStatus = (assessment: Assessment) => {
-    // Check if we have all raters in the assessment object
     const selfRater = assessment.raters.find(r => r.raterType === RaterType.SELF);
     const rater1 = assessment.raters.find(r => r.raterType === RaterType.RATER1);
     const rater2 = assessment.raters.find(r => r.raterType === RaterType.RATER2);
     
-    // If we don't have all raters in the object, we need to check the database
     if (!selfRater || !rater1 || !rater2) {
-      // For now, return what we know
       return { 
         selfComplete: selfRater?.completed || false, 
         rater1Complete: rater1?.completed || false, 
@@ -425,7 +391,6 @@ const ResultsPage = () => {
                   </div>
                 </div>
                 
-                {/* Table for displaying assessments */}
                 <div className="border rounded-md">
                   <div className="max-h-[400px] overflow-hidden">
                     <ScrollArea className="h-[400px] w-full">

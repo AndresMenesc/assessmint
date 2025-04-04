@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Assessment, RaterType } from "@/types/assessment";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,14 +41,14 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
       try {
         console.log("Individual responses - assessment:", assessment);
         
-        // Find raters
+        // Fetch all raters directly from assessment_responses
         const { data: ratersData, error: ratersError } = await supabase
-          .from('raters')
+          .from('assessment_responses')
           .select('*')
           .eq('assessment_id', assessment.id);
         
         if (ratersError) {
-          console.error("Error fetching raters:", ratersError);
+          console.error("Error fetching raters from assessment_responses:", ratersError);
           return;
         }
         
@@ -57,7 +56,7 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
         const rater1 = ratersData.find(r => r.rater_type === 'rater1');
         const rater2 = ratersData.find(r => r.rater_type === 'rater2');
         
-        console.log("Individual responses - raters:", { selfRater, rater1, rater2 });
+        console.log("Individual responses - raters from assessment_responses:", { selfRater, rater1, rater2 });
         
         // Fetch all questions for reference
         const { data: questionsData, error: questionsError } = await supabase
@@ -69,28 +68,19 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
           return;
         }
         
-        // Helper function to fetch and format responses
-        const fetchFormattedResponses = async (raterId: string | undefined) => {
-          if (!raterId) return [];
+        // Helper function to format responses using assessment_responses data
+        const formatResponses = (rater: any): ResponseData[] => {
+          if (!rater || !rater.responses) return [];
           
-          const { data: responsesData, error: responsesError } = await supabase
-            .from('responses')
-            .select('*')
-            .eq('rater_id', raterId);
-            
-          if (responsesError || !responsesData) {
-            console.error("Error fetching responses:", responsesError);
-            return [];
-          }
-          
-          console.log(`Found ${responsesData.length} responses for rater ${raterId}`);
+          const responses = rater.responses;
+          console.log(`Found ${responses.length} responses for rater ${rater.rater_type}`);
           
           // Join responses with questions data
-          return responsesData.map(response => {
-            const question = questionsData.find(q => q.id === response.question_id);
+          return responses.map((response: any) => {
+            const question = questionsData.find(q => q.id === response.questionId);
             
             return {
-              question_id: response.question_id,
+              question_id: response.questionId,
               text: question?.text || 'Question text not found',
               section: question?.section || 'Unknown section',
               sub_section: question?.sub_section || 'Unknown subsection',
@@ -101,14 +91,14 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
           });
         };
         
-        // Fetch responses for each rater
-        const selfResponses = await fetchFormattedResponses(selfRater?.id);
-        const rater1Responses = await fetchFormattedResponses(rater1?.id);
-        const rater2Responses = await fetchFormattedResponses(rater2?.id);
+        // Format responses for each rater
+        const selfFormattedResponses = formatResponses(selfRater);
+        const rater1FormattedResponses = formatResponses(rater1);
+        const rater2FormattedResponses = formatResponses(rater2);
         
-        setSelfResponses(selfResponses);
-        setRater1Responses(rater1Responses);
-        setRater2Responses(rater2Responses);
+        setSelfResponses(selfFormattedResponses);
+        setRater1Responses(rater1FormattedResponses);
+        setRater2Responses(rater2FormattedResponses);
       } catch (error) {
         console.error("Error fetching individual responses:", error);
       } finally {

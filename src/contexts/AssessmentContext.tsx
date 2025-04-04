@@ -219,58 +219,42 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (!targetAssessment.raters || targetAssessment.raters.length === 0) {
         console.log("Assessment has no raters:", targetAssessment);
         
-        // Try to fetch raters from the database
-        const fetchRatersFromDb = async () => {
+        // Try to fetch raters from assessment_responses table
+        const fetchRatersFromAssessmentResponses = async () => {
           const { data: ratersData, error } = await supabase
-            .from('raters')
+            .from('assessment_responses')
             .select('*')
             .eq('assessment_id', targetAssessment.id);
             
           if (error) {
-            console.error("Error fetching raters:", error);
+            console.error("Error fetching from assessment_responses:", error);
             return null;
           }
           
           if (ratersData && ratersData.length > 0) {
-            console.log("Found raters in database:", ratersData);
-            // Process raters and responses
-            const processedRaters = await Promise.all(ratersData.map(async (rater) => {
-              const { data: responsesData, error: responseError } = await supabase
-                .from('responses')
-                .select('*')
-                .eq('rater_id', rater.id);
-                
-              if (responseError) {
-                console.error("Error fetching responses:", responseError);
-                return null;
-              }
-              
-              const typedResponses: AssessmentResponse[] = responsesData.map(r => ({
-                questionId: r.question_id,
-                score: r.score
-              }));
-              
+            console.log("Found data in assessment_responses table:", ratersData);
+            
+            // Process responses data into the format expected by calculateResults
+            const processedRaters = ratersData.map(rater => {
               return {
                 raterType: rater.rater_type as RaterType,
-                email: rater.email,
-                name: rater.name,
+                email: rater.email || "",
+                name: rater.name || "",
                 completed: rater.completed,
-                responses: typedResponses
+                responses: rater.responses || []
               };
-            }));
+            });
             
-            const validRaters = processedRaters.filter(r => r !== null) as any;
-            if (validRaters.length > 0) {
-              // Use the real calculation function with the fetched raters
-              console.log("Calculating results with fetched raters:", validRaters);
-              const results = calculateResults(validRaters);
-              return results || {
-                dimensionScores: [],
-                selfAwareness: 0,
-                coachabilityAwareness: 0,
-                profileType: ""
-              };
-            }
+            // Use the real calculation function with the fetched raters
+            console.log("Calculating results with fetched raters from assessment_responses:", processedRaters);
+            const results = calculateResults(processedRaters);
+            
+            return results || {
+              dimensionScores: [],
+              selfAwareness: 0,
+              coachabilityAwareness: 0,
+              profileType: ""
+            };
           }
           
           return {
@@ -282,7 +266,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         };
         
         // Return a promise that resolves to the results
-        return fetchRatersFromDb();
+        return fetchRatersFromAssessmentResponses();
       }
       
       // Check if raters have responses
@@ -294,61 +278,40 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       });
       
       if (!hasResponses) {
-        console.log("No responses found in assessment:", targetAssessment);
+        console.log("No responses found in assessment object:", targetAssessment);
         
-        // Try fetching responses for each rater
-        const fetchResponsesForRaters = async () => {
-          const updatedRaters = await Promise.all(targetAssessment.raters.map(async (rater) => {
-            // Find rater ID in database
-            const { data: raterData, error: raterError } = await supabase
-              .from('raters')
-              .select('id, completed')
-              .eq('assessment_id', targetAssessment.id)
-              .eq('rater_type', rater.raterType)
-              .maybeSingle();
-              
-            if (raterError || !raterData) {
-              console.error("Error fetching rater data:", raterError);
-              return rater;
-            }
+        // Try fetching responses from assessment_responses table
+        const fetchResponsesFromAssessmentResponses = async () => {
+          const { data: responsesData, error: responsesError } = await supabase
+            .from('assessment_responses')
+            .select('*')
+            .eq('assessment_id', targetAssessment.id);
             
-            // Fetch responses for this rater
-            const { data: responsesData, error: responsesError } = await supabase
-              .from('responses')
-              .select('*')
-              .eq('rater_id', raterData.id);
-              
-            if (responsesError || !responsesData) {
-              console.error("Error fetching responses:", responsesError);
-              return rater;
-            }
-            
-            console.log(`Found ${responsesData.length} responses for rater ${rater.raterType}`);
-            
-            // Create typed responses
-            const typedResponses: AssessmentResponse[] = responsesData.map(r => ({
-              questionId: r.question_id,
-              score: r.score
-            }));
-            
-            // Return updated rater with responses and completion status
+          if (responsesError || !responsesData) {
+            console.error("Error fetching from assessment_responses:", responsesError);
             return {
-              ...rater,
-              responses: typedResponses,
-              completed: raterData.completed
+              dimensionScores: [],
+              selfAwareness: 0,
+              coachabilityAwareness: 0,
+              profileType: ""
             };
-          }));
+          }
           
-          // Create updated assessment with fetched responses
-          const assessmentWithResponses = {
-            ...targetAssessment,
-            raters: updatedRaters
-          };
+          console.log(`Found ${responsesData.length} entries in assessment_responses`);
           
-          console.log("Assessment with fetched responses:", assessmentWithResponses);
+          // Create raters array from assessment_responses
+          const processedRaters = responsesData.map(rater => {
+            return {
+              raterType: rater.rater_type as RaterType,
+              email: rater.email || "",
+              name: rater.name || "",
+              completed: rater.completed,
+              responses: rater.responses || []
+            };
+          });
           
           // Calculate results with the fetched data
-          const results = calculateResults(assessmentWithResponses.raters);
+          const results = calculateResults(processedRaters);
           return results || {
             dimensionScores: [],
             selfAwareness: 0,
@@ -357,7 +320,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           };
         };
         
-        return fetchResponsesForRaters();
+        return fetchResponsesFromAssessmentResponses();
       }
       
       // Use the real calculation function with existing raters and responses
