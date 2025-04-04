@@ -1,3 +1,4 @@
+
 import { AssessmentResponse, Question, RaterResponses, RaterType, Section } from "../types/assessment";
 import { questions } from "../data/questions";
 
@@ -18,7 +19,7 @@ export function calculateDimensionScore(responses: AssessmentResponse[], dimensi
         score = 6 - score; // Reverses 1->5, 2->4, 3->3, 4->2, 5->1
       }
       
-      // Apply negative scoring if needed
+      // Apply negative scoring if needed (for Insecure, Cautious, Flexible, and Avoidant sections)
       if (question.negativeScore) {
         score = -score;
       }
@@ -50,7 +51,7 @@ export function calculateCoachabilityScore(responses: AssessmentResponse[]): num
     if (response) {
       let score = response.score;
       
-      // Apply reverse scoring if needed
+      // Apply reverse scoring if needed (specific to coachability section)
       if (question.isReversed) {
         score = 6 - score; // Reverses 1->5, 2->4, 3->3, 4->2, 5->1
       }
@@ -64,7 +65,8 @@ export function calculateCoachabilityScore(responses: AssessmentResponse[]): num
   // by adjusting for missing questions
   if (answeredQuestions === 0) return 0;
   
-  // Since each question is 1-5 points, scale the total to match as if all questions were answered
+  // Since each question is 1-5 points, and we have 10 coachability questions,
+  // the max possible score is 50 (10 questions * 5 points)
   const maxQuestions = coachabilityQuestions.length;
   const scalingFactor = maxQuestions / answeredQuestions;
   const scaledScore = Math.round(totalScore * scalingFactor);
@@ -143,7 +145,8 @@ export function calculateSelfAwareness(
     return 0;
   }
 
-  // Calculate self-awareness percentage (lower difference means higher awareness)
+  // Calculate self-awareness percentage based on the formula:
+  // OVERALL SELF AWARENESS = 100 - (Absolute value of the Average sum of differences / Max possible difference) * 100
   // Max possible difference per question is 4 (1 vs 5)
   const maxPossibleDifference = totalComparisonPoints * 4;
   const selfAwareness = 100 - ((totalDifference / maxPossibleDifference) * 100);
@@ -170,6 +173,7 @@ export function calculateCoachabilityAwareness(
     raterResponses.filter(r => coachabilityIds.includes(r.questionId))
   );
   
+  // Use the same self-awareness calculation method but only for coachability questions
   return calculateSelfAwareness(selfCoachResponses, otherCoachResponses);
 }
 
@@ -178,7 +182,7 @@ export function determineProfileType(
   esteemScore: number,
   trustScore: number,
   driverScore: number,
-  adaptabilityScore: number, // Note: Flexibility is negative adaptability, Precision is positive
+  adaptabilityScore: number,
   problemResolutionScore: number
 ): string {
   console.log("Determining profile with scores:", {
@@ -348,7 +352,8 @@ export function calculateAllResults(assessment: RaterResponses[]): {
     problemResolutionScore
   );
   
-  // Format dimension scores for display
+  // Format dimension scores for display - each dimension uses the -28 to 28 range
+  // except for coachability which uses 10-50
   const dimensionScores = [
     { 
       dimension: "Esteem", 
