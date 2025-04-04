@@ -1,4 +1,3 @@
-
 import { AssessmentResponse, Question, RaterResponses, RaterType, Section } from "../types/assessment";
 import { questions } from "../data/questions";
 
@@ -30,6 +29,13 @@ export function calculateDimensionScore(responses: AssessmentResponse[], dimensi
   }
   
   console.log(`Calculated ${dimension} score: ${totalScore} (from ${answeredQuestions} questions)`);
+  
+  // If no questions were answered for this dimension, return 0
+  if (answeredQuestions === 0) {
+    console.warn(`No answered questions found for dimension ${dimension}`);
+    return 0;
+  }
+  
   return totalScore;
 }
 
@@ -54,8 +60,17 @@ export function calculateCoachabilityScore(responses: AssessmentResponse[]): num
     }
   }
   
-  // If all questions are answered, return the score, otherwise return 0
-  return answeredQuestions === coachabilityQuestions.length ? totalScore : 0;
+  // Return the score even if not all questions are answered, but ensure it's still on 10-50 scale
+  // by adjusting for missing questions
+  if (answeredQuestions === 0) return 0;
+  
+  // Since each question is 1-5 points, scale the total to match as if all questions were answered
+  const maxQuestions = coachabilityQuestions.length;
+  const scalingFactor = maxQuestions / answeredQuestions;
+  const scaledScore = Math.round(totalScore * scalingFactor);
+  
+  console.log(`Coachability score: ${scaledScore} (from ${answeredQuestions}/${maxQuestions} questions)`);
+  return scaledScore;
 }
 
 // Calculate self-awareness (comparing self vs others' ratings)
@@ -302,6 +317,15 @@ export function calculateAllResults(assessment: RaterResponses[]): {
   const adaptabilityScore = calculateDimensionScore(selfRater.responses, Section.ADAPTABILITY);
   const problemResolutionScore = calculateDimensionScore(selfRater.responses, Section.PROBLEM_RESOLUTION);
   const coachabilityScore = calculateCoachabilityScore(selfRater.responses);
+  
+  console.log("Self rater dimension scores:", {
+    esteemScore,
+    trustScore,
+    driverScore,
+    adaptabilityScore,
+    problemResolutionScore,
+    coachabilityScore
+  });
   
   // Calculate self-awareness
   const selfAwareness = calculateSelfAwareness(

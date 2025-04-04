@@ -65,9 +65,9 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
       score: c.score,
       // color logic: red if ≤30, yellow if ≤40, else green
       color: c.score <= 30 ? "#ef4444" : c.score <= 40 ? "#eab308" : "#22c55e",
-      normalizedScore: c.score, // 0..100
-      min: -28,
-      max: 28,
+      normalizedScore: c.score, // Use the actual score (10-50 scale)
+      min: 10,
+      max: 50,
       lowLabel: "resistant",
       highLabel: "receptive",
     });
@@ -89,8 +89,8 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
             : "#22c55e",
       normalizedSelfScore: c.selfScore,
       normalizedOthersScore: c.othersScore,
-      min: -28,
-      max: 28,
+      min: 10,
+      max: 50,
       lowLabel: "resistant",
       highLabel: "receptive",
     });
@@ -161,14 +161,13 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={150}>
-
           <BarChart data={chartData} layout="vertical" margin={chartMargins}>
             <XAxis
               type="number"
-              domain={[-28, 28]}
+              domain={[10, 50]}
               axisLine={true}
               tickFormatter={(val) => val.toString()}
-              ticks={[-28, -14, 0, 14, 28]}
+              ticks={[10, 20, 30, 40, 50]}
               fontSize={isMobile ? 9 : 12}
               tick={{ fill: "#666" }}
             />
@@ -183,10 +182,8 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
             <Tooltip content={<CustomTooltip />} />
 
             {/* Reference lines (draw them first) */}
-            <ReferenceLine x={-14} stroke="#ef4444" strokeWidth={2} />
-            <ReferenceLine x={0} stroke="#eab308" strokeWidth={2} />
-            <ReferenceLine x={14} stroke="#22c55e" strokeWidth={2} />
-
+            <ReferenceLine x={30} stroke="#ef4444" strokeWidth={2} />
+            <ReferenceLine x={40} stroke="#eab308" strokeWidth={2} />
 
             {/* Main bar(s) on top */}
             {isIndividualScores ? (
