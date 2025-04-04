@@ -21,7 +21,7 @@ import {
 } from "@/utils/assessmentOperations";
 
 // Import the real calculation functions
-import { calculateAllResults as calculateResults } from "@/utils/scoreCalculations";
+import { calculateAllResults as calculateResults } from "@/utils/calculateAllResults";
 
 // Define the context type
 interface AssessmentContextProps {
@@ -205,6 +205,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const targetAssessment = assessmentToUse || assessment;
     
     if (!targetAssessment) {
+      console.log("No assessment provided to getResults");
       return {
         dimensionScores: [],
         selfAwareness: 0,
@@ -216,8 +217,48 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     console.log("Calculating results for assessment:", targetAssessment);
     
     try {
+      if (!targetAssessment.raters || targetAssessment.raters.length === 0) {
+        console.log("Assessment has no raters:", targetAssessment);
+        return {
+          dimensionScores: [],
+          selfAwareness: 0,
+          coachabilityAwareness: 0,
+          profileType: ""
+        };
+      }
+      
+      // Check if raters have responses
+      let hasResponses = false;
+      targetAssessment.raters.forEach(rater => {
+        if (rater.responses && rater.responses.length > 0) {
+          hasResponses = true;
+        }
+      });
+      
+      if (!hasResponses) {
+        console.log("No responses found in assessment:", targetAssessment);
+        return {
+          dimensionScores: [],
+          selfAwareness: 0,
+          coachabilityAwareness: 0,
+          profileType: ""
+        };
+      }
+      
       // Use the real calculation function
-      return calculateResults(targetAssessment.raters);
+      const results = calculateResults(targetAssessment.raters);
+      
+      if (!results) {
+        console.log("No results calculated for assessment:", targetAssessment);
+        return {
+          dimensionScores: [],
+          selfAwareness: 0,
+          coachabilityAwareness: 0,
+          profileType: ""
+        };
+      }
+      
+      return results;
     } catch (error) {
       console.error("Error calculating results:", error);
       return {

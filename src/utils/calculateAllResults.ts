@@ -41,7 +41,7 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
       const problemResolutionScore = calculateDimensionScore(rater.responses, Section.PROBLEM_RESOLUTION);
       
       // Normalize scores to 0-5 scale for display
-      const normalizeScore = (score, min, max) => {
+      const normalizeScore = (score: number, min: number, max: number) => {
         return ((score - min) / (max - min)) * 5;
       };
       
@@ -165,7 +165,7 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
       });
       
       // Normalize scores to 0-5 scale for display
-      const normalizeScore = (score, min, max) => {
+      const normalizeScore = (score: number, min: number, max: number) => {
         return ((score - min) / (max - min)) * 5;
       };
       

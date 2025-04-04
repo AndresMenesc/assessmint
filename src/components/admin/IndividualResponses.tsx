@@ -56,6 +56,9 @@ const IndividualResponses = ({ assessment }: IndividualResponsesProps) => {
   const rater1 = assessment.raters.find(r => r.raterType === RaterType.RATER1);
   const rater2 = assessment.raters.find(r => r.raterType === RaterType.RATER2);
 
+  console.log("Individual responses - assessment:", assessment);
+  console.log("Individual responses - raters:", { selfRater, rater1, rater2 });
+
   // Filter questions based on search term
   const filteredQuestions = questions.filter(q => 
     q.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -70,7 +73,12 @@ const IndividualResponses = ({ assessment }: IndividualResponsesProps) => {
     if (!rater) return "-";
     
     const response = rater.responses.find(r => r.questionId === questionId);
-    return response ? response.score.toString() : "-";
+    if (!response) {
+      console.log(`No response found for question ${questionId} from rater ${raterType}`);
+      return "-";
+    }
+    
+    return response.score.toString();
   };
 
   if (loading) {
