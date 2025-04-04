@@ -6,6 +6,8 @@ import { questions } from "../data/questions";
 export function calculateDimensionScore(responses: AssessmentResponse[], dimension: Section): number {
   const dimensionQuestions = questions.filter(q => q.section === dimension);
   
+  console.log(`Calculating ${dimension} score from ${responses.length} responses and ${dimensionQuestions.length} questions`);
+  
   let totalScore = 0;
   let answeredQuestions = 0;
   
@@ -16,16 +18,23 @@ export function calculateDimensionScore(responses: AssessmentResponse[], dimensi
       
       // Apply reverse scoring if needed
       if (question.isReversed) {
+        const originalScore = score;
         score = 6 - score; // Reverses 1->5, 2->4, 3->3, 4->2, 5->1
+        console.log(`  Question ${question.id} (reversed): Original score ${originalScore} -> ${score}`);
+      } else {
+        console.log(`  Question ${question.id}: Score ${score}`);
       }
       
       // Apply negative scoring if needed (for Insecure, Cautious, Flexible, and Avoidant sections)
       if (question.negativeScore) {
+        const originalScore = score;
         score = -score;
+        console.log(`  Question ${question.id} (negative): Original score ${originalScore} -> ${score}`);
       }
       
       totalScore += score;
       answeredQuestions++;
+      console.log(`  Running total: ${totalScore}`);
     }
   }
   

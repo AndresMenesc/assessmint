@@ -10,6 +10,7 @@ interface ProfileCardProps {
     driverScore?: number;
     adaptabilityScore?: number;
     problemResolutionScore?: number;
+    coachabilityScore?: number;
   };
 }
 
@@ -157,6 +158,9 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
               <li>Business Drive: {debugInfo.driverScore}</li>
               <li>Adaptability: {debugInfo.adaptabilityScore}</li>
               <li>Problem Resolution: {debugInfo.problemResolutionScore}</li>
+              {debugInfo.coachabilityScore && (
+                <li>Coachability: {debugInfo.coachabilityScore}</li>
+              )}
             </ul>
             <p className="mt-2 text-gray-500">
               Verify these scores against profile ranges in the documentation
