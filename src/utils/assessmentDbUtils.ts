@@ -25,45 +25,81 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
   if (!data) return null;
   
   try {
-    // Get the raters for this assessment
-    const { data: ratersData, error: ratersError } = await supabase
-      .from('raters')
+    // Get the rater responses for this assessment using the new assessment_responses table
+    const { data: responsesData, error: responsesError } = await supabase
+      .from('assessment_responses')
       .select('*')
       .eq('assessment_id', data.id);
       
-    if (ratersError) {
-      console.error("Error fetching raters:", ratersError);
-      throw ratersError;
+    if (responsesError) {
+      console.error("Error fetching assessment responses:", responsesError);
+      throw responsesError;
     }
     
-    // Convert raters data to our app's format
+    // Convert responses data to our app's RaterResponses format
     let raters: RaterResponses[] = [];
     
-    if (ratersData && ratersData.length > 0) {
-      // For each rater, get their responses
-      for (const rater of ratersData) {
-        const { data: responsesData, error: responsesError } = await supabase
-          .from('responses')
-          .select('*')
-          .eq('rater_id', rater.id);
+    if (responsesData && responsesData.length > 0) {
+      // Map the responses from the new table format
+      raters = responsesData.map(r => ({
+        raterType: r.rater_type as RaterType,
+        responses: r.responses || [],
+        completed: r.completed,
+        // If you store these in assessment_responses, use them from there
+        // Otherwise, you might need to join with the raters table or handle it differently
+        email: r.email || "", // Fill these in or join with raters table if needed
+        name: r.name || ""
+      }));
+    }
+    
+    // If no rater data exists in the new table, try getting from the old raters table
+    // This is for backward compatibility during migration
+    if (raters.length === 0) {
+      const { data: oldRatersData, error: oldRatersError } = await supabase
+        .from('raters')
+        .select('*')
+        .eq('assessment_id', data.id);
+        
+      if (!oldRatersError && oldRatersData && oldRatersData.length > 0) {
+        for (const rater of oldRatersData) {
+          // For each old rater, check if there's data in the new responses table
+          const { data: newResponsesData } = await supabase
+            .from('assessment_responses')
+            .select('*')
+            .eq('assessment_id', data.id)
+            .eq('rater_type', rater.rater_type)
+            .maybeSingle();
           
-        if (responsesError) {
-          console.error("Error fetching responses for rater:", responsesError);
-          continue;
+          if (newResponsesData) {
+            // If we found data in the new table, use that
+            raters.push({
+              raterType: rater.rater_type as RaterType,
+              responses: newResponsesData.responses || [],
+              completed: newResponsesData.completed,
+              email: rater.email,
+              name: rater.name
+            });
+          } else {
+            // Otherwise, get responses from the old responses table
+            const { data: oldResponsesData } = await supabase
+              .from('responses')
+              .select('*')
+              .eq('rater_id', rater.id);
+              
+            const responses = oldResponsesData ? oldResponsesData.map(r => ({
+              questionId: r.question_id,
+              score: r.score
+            })) : [];
+            
+            raters.push({
+              raterType: rater.rater_type as RaterType,
+              responses,
+              completed: rater.completed,
+              email: rater.email,
+              name: rater.name
+            });
+          }
         }
-        
-        const responses = responsesData ? responsesData.map(r => ({
-          questionId: r.question_id,
-          score: r.score
-        })) : [];
-        
-        raters.push({
-          raterType: rater.rater_type as RaterType,
-          responses,
-          completed: rater.completed,
-          email: rater.email,
-          name: rater.name
-        });
       }
     }
     
@@ -102,104 +138,54 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
       throw error;
     }
     
-    // Then handle raters and their responses
+    // Then handle raters and their responses using the new table
     for (const rater of assessmentData.raters) {
-      // Find or create the rater in the database
-      const { data: existingRaters, error: findRaterError } = await supabase
-        .from('raters')
+      // Check if we already have an entry for this rater type
+      const { data: existingResponse, error: findResponseError } = await supabase
+        .from('assessment_responses')
         .select('id')
         .eq('assessment_id', assessmentData.id)
         .eq('rater_type', rater.raterType)
         .maybeSingle();
         
-      if (findRaterError) {
-        console.error("Error finding rater:", findRaterError);
+      if (findResponseError) {
+        console.error("Error finding assessment response:", findResponseError);
         continue;
       }
       
-      let raterId: string;
-      
-      if (existingRaters) {
-        // Update existing rater
-        raterId = existingRaters.id;
-        
-        const { error: updateRaterError } = await supabase
-          .from('raters')
+      if (existingResponse) {
+        // Update existing responses
+        const { error: updateError } = await supabase
+          .from('assessment_responses')
           .update({
-            name: rater.name,
-            email: rater.email,
+            responses: rater.responses,
             completed: rater.completed,
+            email: rater.email,
+            name: rater.name,
             updated_at: new Date().toISOString()
           })
-          .eq('id', raterId);
+          .eq('id', existingResponse.id);
           
-        if (updateRaterError) {
-          console.error("Error updating rater:", updateRaterError);
+        if (updateError) {
+          console.error("Error updating assessment responses:", updateError);
           continue;
         }
       } else {
-        // Create new rater
-        const { data: newRater, error: createRaterError } = await supabase
-          .from('raters')
+        // Create new responses
+        const { error: createError } = await supabase
+          .from('assessment_responses')
           .insert({
             assessment_id: assessmentData.id,
             rater_type: rater.raterType,
-            name: rater.name,
+            responses: rater.responses,
+            completed: rater.completed,
             email: rater.email,
-            completed: rater.completed
-          })
-          .select('id')
-          .single();
+            name: rater.name
+          });
           
-        if (createRaterError || !newRater) {
-          console.error("Error creating rater:", createRaterError);
+        if (createError) {
+          console.error("Error creating assessment responses:", createError);
           continue;
-        }
-        
-        raterId = newRater.id;
-      }
-      
-      // Now handle responses for this rater
-      for (const response of rater.responses) {
-        // Find or create response
-        const { data: existingResponse, error: findResponseError } = await supabase
-          .from('responses')
-          .select('id')
-          .eq('rater_id', raterId)
-          .eq('question_id', response.questionId)
-          .maybeSingle();
-          
-        if (findResponseError) {
-          console.error("Error finding response:", findResponseError);
-          continue;
-        }
-        
-        if (existingResponse) {
-          // Update existing response
-          const { error: updateResponseError } = await supabase
-            .from('responses')
-            .update({
-              score: response.score,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', existingResponse.id);
-            
-          if (updateResponseError) {
-            console.error("Error updating response:", updateResponseError);
-          }
-        } else {
-          // Create new response
-          const { error: createResponseError } = await supabase
-            .from('responses')
-            .insert({
-              rater_id: raterId,
-              question_id: response.questionId,
-              score: response.score
-            });
-            
-          if (createResponseError) {
-            console.error("Error creating response:", createResponseError);
-          }
         }
       }
     }
@@ -256,23 +242,22 @@ export const createAssessmentInDb = async (assessment: Assessment) => {
       throw error;
     }
     
-    // Then create the initial self-rater
+    // Then create the initial rater responses in the new table
     const selfRater = assessment.raters.find(r => r.raterType === 'self');
     if (selfRater) {
-      const { data: raterData, error: raterError } = await supabase
-        .from('raters')
+      const { error: raterError } = await supabase
+        .from('assessment_responses')
         .insert({
           assessment_id: assessment.id,
           rater_type: selfRater.raterType,
-          name: selfRater.name,
+          responses: selfRater.responses,
+          completed: selfRater.completed,
           email: selfRater.email,
-          completed: selfRater.completed
-        })
-        .select('id')
-        .single();
+          name: selfRater.name
+        });
         
-      if (raterError || !raterData) {
-        console.error("Error saving self-rater to database:", raterError);
+      if (raterError) {
+        console.error("Error saving self-rater responses to database:", raterError);
         // Continue even if there's an error with the rater
       }
     }
@@ -311,8 +296,55 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
     
     // If raters are included in the updates, sync them too
     if (updates.raters) {
-      // This would require fetching the full assessment and then using syncAssessmentWithDb
-      // We're not implementing this here to keep the function focused
+      for (const rater of updates.raters) {
+        const { data: existingResponse, error: findResponseError } = await supabase
+          .from('assessment_responses')
+          .select('id')
+          .eq('assessment_id', assessmentId)
+          .eq('rater_type', rater.raterType)
+          .maybeSingle();
+          
+        if (findResponseError) {
+          console.error("Error finding assessment response:", findResponseError);
+          continue;
+        }
+        
+        if (existingResponse) {
+          // Update existing responses
+          const { error: updateError } = await supabase
+            .from('assessment_responses')
+            .update({
+              responses: rater.responses,
+              completed: rater.completed,
+              email: rater.email,
+              name: rater.name,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingResponse.id);
+            
+          if (updateError) {
+            console.error("Error updating assessment responses:", updateError);
+            continue;
+          }
+        } else {
+          // Create new responses
+          const { error: createError } = await supabase
+            .from('assessment_responses')
+            .insert({
+              assessment_id: assessmentId,
+              rater_type: rater.raterType,
+              responses: rater.responses,
+              completed: rater.completed,
+              email: rater.email,
+              name: rater.name
+            });
+            
+          if (createError) {
+            console.error("Error creating assessment responses:", createError);
+            continue;
+          }
+        }
+      }
     }
     
     return true;

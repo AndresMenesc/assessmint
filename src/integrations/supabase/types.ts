@@ -39,6 +39,44 @@ export type Database = {
         }
         Relationships: []
       }
+      assessment_responses: {
+        Row: {
+          assessment_id: string
+          completed: boolean
+          created_at: string
+          id: string
+          rater_type: string
+          responses: Json
+          updated_at: string
+        }
+        Insert: {
+          assessment_id: string
+          completed?: boolean
+          created_at?: string
+          id?: string
+          rater_type: string
+          responses?: Json
+          updated_at?: string
+        }
+        Update: {
+          assessment_id?: string
+          completed?: boolean
+          created_at?: string
+          id?: string
+          rater_type?: string
+          responses?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_responses_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assessments: {
         Row: {
           code: string

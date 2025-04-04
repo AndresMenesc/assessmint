@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DimensionScore } from "@/types/assessment";
 import {
@@ -65,8 +66,8 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
       // color logic: red if ≤30, yellow if ≤40, else green
       color: c.score <= 30 ? "#ef4444" : c.score <= 40 ? "#eab308" : "#22c55e",
       normalizedScore: c.score, // 0..100
-      min: c.min,
-      max: c.max,
+      min: -28,
+      max: 28,
       lowLabel: "resistant",
       highLabel: "receptive",
     });
@@ -88,8 +89,8 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
             : "#22c55e",
       normalizedSelfScore: c.selfScore,
       normalizedOthersScore: c.othersScore,
-      min: c.min,
-      max: c.max,
+      min: -28,
+      max: 28,
       lowLabel: "resistant",
       highLabel: "receptive",
     });
@@ -164,17 +165,10 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
           <BarChart data={chartData} layout="vertical" margin={chartMargins}>
             <XAxis
               type="number"
-              domain={[0, 100]}
+              domain={[-28, 28]}
               axisLine={true}
-              tickFormatter={(val) => {
-                if (val === 0) return "0%";
-                if (val === 25) return "25%";
-                if (val === 50) return "50%";
-                if (val === 75) return "75%";
-                if (val === 100) return "100%";
-                return "";
-              }}
-              ticks={[0, 25, 50, 75, 100]}
+              tickFormatter={(val) => val.toString()}
+              ticks={[-28, -14, 0, 14, 28]}
               fontSize={isMobile ? 9 : 12}
               tick={{ fill: "#666" }}
             />
@@ -189,8 +183,9 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
             <Tooltip content={<CustomTooltip />} />
 
             {/* Reference lines (draw them first) */}
-            <ReferenceLine x={30} stroke="#ef4444" strokeWidth={2} />
-            <ReferenceLine x={40} stroke="#eab308" strokeWidth={2} />
+            <ReferenceLine x={-14} stroke="#ef4444" strokeWidth={2} />
+            <ReferenceLine x={0} stroke="#eab308" strokeWidth={2} />
+            <ReferenceLine x={14} stroke="#22c55e" strokeWidth={2} />
 
 
             {/* Main bar(s) on top */}
@@ -203,7 +198,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                 <LabelList
                   dataKey="score"
                   position="right"
-                  formatter={(val: number) => `${val.toFixed(1)}%`}
+                  formatter={(val: number) => val.toFixed(1)}
                   style={labelStyle}
                   offset={5}
                 />
@@ -222,7 +217,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                   <LabelList
                     dataKey="selfScore"
                     position="right"
-                    formatter={(val: number) => `${val.toFixed(1)}%`}
+                    formatter={(val: number) => val.toFixed(1)}
                     style={labelStyle}
                     offset={5}
                   />
@@ -238,7 +233,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                   <LabelList
                     dataKey="othersScore"
                     position="right"
-                    formatter={(val: number) => `${val.toFixed(1)}%`}
+                    formatter={(val: number) => val.toFixed(1)}
                     style={labelStyle}
                     offset={25}
                   />
