@@ -49,15 +49,23 @@ const QuestionCard = ({ question, onNext, onBack, isFirstQuestion }: QuestionCar
     }
   };
   
-  // Handle keyboard events for accessibility
+  // Handle keyboard events for accessibility - Modified to prevent auto-advancing with Enter
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Enter" && selectedScore !== null) {
-      handleNext();
-    } else if (e.key >= "1" && e.key <= "5") {
+    // Only allow numbers 1-5 to select answers
+    if (e.key >= "1" && e.key <= "5") {
       const score = parseInt(e.key);
       handleScoreSelect(score);
-    } else if (e.key === "Backspace" && onBack && !isFirstQuestion) {
+      e.preventDefault(); // Prevent any default behavior
+    } 
+    // Allow Backspace for back navigation, but don't auto-advance
+    else if (e.key === "Backspace" && onBack && !isFirstQuestion) {
       handleBack();
+      e.preventDefault();
+    }
+    // Prevent Enter from automatically advancing
+    else if (e.key === "Enter") {
+      e.preventDefault(); // Stop the Enter key from triggering next
+      // Don't auto-advance, user must click the Next button
     }
   };
 

@@ -61,9 +61,14 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         problemResolutionScore
       };
       
-      // Normalize scores to 0-5 scale for display
+      // FIX: Properly normalize scores to show actual differences
+      // We map from the raw range (-28 to 28) to the display range (0 to 5)
+      // First, calculate what percentage of the range the score represents
       const normalizeScore = (score: number, min: number, max: number) => {
-        return ((score - min) / (max - min)) * 5;
+        // Ensure the score is within the valid range
+        const clampedScore = Math.max(min, Math.min(max, score));
+        // Linear transformation from [-28, 28] to [0, 5]
+        return ((clampedScore - min) / (max - min)) * 5;
       };
       
       dimensionScores = [
@@ -200,9 +205,12 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         otherEsteemScore, otherTrustScore, otherDriverScore, otherAdaptabilityScore, otherProblemResolutionScore
       });
       
-      // Normalize scores to 0-5 scale for display
+      // FIX: Properly normalize scores to show actual differences
       const normalizeScore = (score: number, min: number, max: number) => {
-        return ((score - min) / (max - min)) * 5;
+        // Ensure the score is within the valid range
+        const clampedScore = Math.max(min, Math.min(max, score));
+        // Linear transformation from [-28, 28] to [0, 5]
+        return ((clampedScore - min) / (max - min)) * 5;
       };
       
       dimensionScores = [
