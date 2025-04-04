@@ -28,7 +28,8 @@ const AssessmentPage = () => {
     completeAssessment,
     initializeAssessment,
     initializeRaterAssessment,
-    loading: assessmentLoading
+    loading: assessmentLoading,
+    currentRater
   } = useAssessment();
   
   const navigate = useNavigate();
@@ -105,7 +106,7 @@ const AssessmentPage = () => {
       window.scrollTo(0, 0);
     } else {
       // All questions answered, check if all questions have responses
-      const currentRaterResponses = assessment?.raters.find(r => r.raterType === assessment.currentRater)?.responses || [];
+      const currentRaterResponses = assessment?.raters.find(r => r.raterType === currentRater)?.responses || [];
       const unansweredQuestions = questions.filter(q => 
         !currentRaterResponses.some(r => r.questionId === q.id)
       );
