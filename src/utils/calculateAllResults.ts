@@ -7,6 +7,7 @@ import { calculateDimensionScore, calculateCoachabilityScore, calculateSelfAware
  */
 export const calculateAllResults = (raters: RaterResponses[]) => {
   if (!raters || raters.length === 0) {
+    console.log("No raters provided to calculateAllResults");
     return null;
   }
   
@@ -26,6 +27,11 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
     if (isSingleRaterMode) {
       // Single rater mode - just show their individual scores
       const rater = raters[0];
+      
+      if (!rater.responses || rater.responses.length === 0) {
+        console.log("No responses found for rater:", rater);
+        return null;
+      }
       
       // Calculate actual dimension scores from responses
       const esteemScore = calculateDimensionScore(rater.responses, Section.ESTEEM);
@@ -104,6 +110,11 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         return null;
       }
       
+      if (!selfRater.responses || selfRater.responses.length === 0) {
+        console.log("No responses found for self rater:", selfRater);
+        return null;
+      }
+      
       // Calculate dimension scores for self rater
       const esteemScore = calculateDimensionScore(selfRater.responses, Section.ESTEEM);
       const trustScore = calculateDimensionScore(selfRater.responses, Section.TRUST);
@@ -122,6 +133,11 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
       let otherCount = 0;
       
       otherRaters.forEach(rater => {
+        if (!rater.responses || rater.responses.length === 0) {
+          console.log("No responses found for rater:", rater);
+          return; // Skip this rater
+        }
+        
         const eScore = calculateDimensionScore(rater.responses, Section.ESTEEM);
         const tScore = calculateDimensionScore(rater.responses, Section.TRUST);
         const dScore = calculateDimensionScore(rater.responses, Section.DRIVER);
