@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -331,74 +332,77 @@ const ResultsPage = () => {
                   </div>
                 </div>
                 
-                <div className="rounded-md border overflow-x-auto">
-                  <ScrollArea className="max-h-[500px]">
-                    <div className="w-full min-w-[800px]">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="p-2 text-left font-medium">Name</th>
-                            <th className="p-2 text-left font-medium">Email</th>
-                            <th className="p-2 text-left font-medium">Status</th>
-                            <th className="p-2 text-left font-medium">Created</th>
-                            <th className="p-2 text-left font-medium">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredAssessments.length > 0 ? (
-                            filteredAssessments.map((a) => {
-                              const { allComplete } = getCompletionStatus(a);
-                              return (
-                                <tr key={a.id} className="border-b">
-                                  <td className="p-2">
-                                    <div className="flex items-center">
-                                      <User className="h-4 w-4 mr-2 text-slate-500" />
-                                      {a.selfRaterName}
-                                    </div>
-                                  </td>
-                                  <td className="p-2">
-                                    <div className="flex items-center">
-                                      <Mail className="h-4 w-4 mr-2 text-slate-500" />
-                                      {a.selfRaterEmail}
-                                    </div>
-                                  </td>
-                                  <td className="p-2">
-                                    <span className={`px-2 py-1 text-xs rounded-full ${
-                                      allComplete ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                      {allComplete ? 'Complete' : 'In Progress'}
-                                    </span>
-                                  </td>
-                                  <td className="p-2">
-                                    <div className="flex items-center">
-                                      <CalendarDays className="h-4 w-4 mr-2 text-slate-500" />
-                                      {new Date(a.createdAt).toLocaleDateString()}
-                                    </div>
-                                  </td>
-                                  <td className="p-2">
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      onClick={() => setSelectedAssessment(a)}
-                                    >
-                                      <FileBarChart className="h-4 w-4 mr-2" />
-                                      View Results
-                                    </Button>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          ) : (
-                            <tr>
-                              <td colSpan={5} className="p-4 text-center text-muted-foreground">
-                                No assessments found
-                              </td>
+                {/* Fixed scroll area with proper height constraint */}
+                <div className="border rounded-md">
+                  <div className="max-h-[400px] overflow-hidden">
+                    <ScrollArea className="h-[400px] w-full">
+                      <div className="min-w-[800px]">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b bg-muted/50">
+                              <th className="p-2 text-left font-medium sticky top-0 bg-muted/50 z-10">Name</th>
+                              <th className="p-2 text-left font-medium sticky top-0 bg-muted/50 z-10">Email</th>
+                              <th className="p-2 text-left font-medium sticky top-0 bg-muted/50 z-10">Status</th>
+                              <th className="p-2 text-left font-medium sticky top-0 bg-muted/50 z-10">Created</th>
+                              <th className="p-2 text-left font-medium sticky top-0 bg-muted/50 z-10">Actions</th>
                             </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </ScrollArea>
+                          </thead>
+                          <tbody>
+                            {filteredAssessments.length > 0 ? (
+                              filteredAssessments.map((a) => {
+                                const { allComplete } = getCompletionStatus(a);
+                                return (
+                                  <tr key={a.id} className="border-b">
+                                    <td className="p-2">
+                                      <div className="flex items-center">
+                                        <User className="h-4 w-4 mr-2 text-slate-500" />
+                                        {a.selfRaterName}
+                                      </div>
+                                    </td>
+                                    <td className="p-2">
+                                      <div className="flex items-center">
+                                        <Mail className="h-4 w-4 mr-2 text-slate-500" />
+                                        {a.selfRaterEmail}
+                                      </div>
+                                    </td>
+                                    <td className="p-2">
+                                      <span className={`px-2 py-1 text-xs rounded-full ${
+                                        allComplete ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                      }`}>
+                                        {allComplete ? 'Complete' : 'In Progress'}
+                                      </span>
+                                    </td>
+                                    <td className="p-2">
+                                      <div className="flex items-center">
+                                        <CalendarDays className="h-4 w-4 mr-2 text-slate-500" />
+                                        {new Date(a.createdAt).toLocaleDateString()}
+                                      </div>
+                                    </td>
+                                    <td className="p-2">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => setSelectedAssessment(a)}
+                                      >
+                                        <FileBarChart className="h-4 w-4 mr-2" />
+                                        View Results
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            ) : (
+                              <tr>
+                                <td colSpan={5} className="p-4 text-center text-muted-foreground">
+                                  No assessments found
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </ScrollArea>
+                  </div>
                 </div>
               </CardContent>
             </Card>

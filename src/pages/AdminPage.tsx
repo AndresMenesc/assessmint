@@ -52,52 +52,58 @@ const AdminPage = () => {
             <TabsTrigger value="results">Results</TabsTrigger>
           </TabsList>
           
-          <div className="flex-1 overflow-hidden">
-            <TabsContent value="questions" className="h-full">
-              <ScrollArea className="h-[calc(100vh-250px)]">
-                <div className="pr-4 space-y-4">
-                  <QuestionsManager />
-                </div>
-              </ScrollArea>
+          <div className="flex-1 flex flex-col">
+            <TabsContent value="questions" className="flex-1 flex flex-col h-full">
+              <div className="flex-1 relative h-full min-h-[400px]">
+                <ScrollArea className="absolute inset-0">
+                  <div className="pr-4 space-y-4">
+                    <QuestionsManager />
+                  </div>
+                </ScrollArea>
+              </div>
             </TabsContent>
             
-            <TabsContent value="scoring" className="h-full">
-              <ScrollArea className="h-[calc(100vh-250px)]">
-                <div className="pr-4">
-                  <ScoringRules />
-                </div>
-              </ScrollArea>
+            <TabsContent value="scoring" className="flex-1 flex flex-col h-full">
+              <div className="flex-1 relative h-full min-h-[400px]">
+                <ScrollArea className="absolute inset-0">
+                  <div className="pr-4">
+                    <ScoringRules />
+                  </div>
+                </ScrollArea>
+              </div>
             </TabsContent>
             
-            <TabsContent value="results" className="h-full">
-              <ScrollArea className="h-[calc(100vh-250px)]">
-                <div className="pr-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Results</CardTitle>
-                      <CardDescription>View and export assessment results</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-col items-center justify-center py-8">
-                        <Users className="h-16 w-16 text-muted-foreground mb-4" />
-                        <h3 className="text-xl font-semibold mb-2">View Assessment Results</h3>
-                        <p className="text-muted-foreground text-center max-w-md mb-6">
-                          Access the detailed assessment results for all completed assessments.
-                          {userRole === "super_admin" && (
-                            <span className="block mt-2 text-sm font-medium text-primary">
-                              As a Super Admin, you can view individual question responses for all assessments.
-                            </span>
-                          )}
-                        </p>
-                        <Button onClick={() => navigate("/results")}>
-                          <FileText className="h-4 w-4 mr-2" />
-                          Go to Results Dashboard
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </ScrollArea>
+            <TabsContent value="results" className="flex-1 flex flex-col h-full">
+              <div className="flex-1 relative h-full min-h-[400px]">
+                <ScrollArea className="absolute inset-0">
+                  <div className="pr-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Results</CardTitle>
+                        <CardDescription>View and export assessment results</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-col items-center justify-center py-8">
+                          <Users className="h-16 w-16 text-muted-foreground mb-4" />
+                          <h3 className="text-xl font-semibold mb-2">View Assessment Results</h3>
+                          <p className="text-muted-foreground text-center max-w-md mb-6">
+                            Access the detailed assessment results for all completed assessments.
+                            {userRole === "super_admin" && (
+                              <span className="block mt-2 text-sm font-medium text-primary">
+                                As a Super Admin, you can view individual question responses for all assessments.
+                              </span>
+                            )}
+                          </p>
+                          <Button onClick={() => navigate("/results")}>
+                            <FileText className="h-4 w-4 mr-2" />
+                            Go to Results Dashboard
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </ScrollArea>
+              </div>
             </TabsContent>
           </div>
         </Tabs>

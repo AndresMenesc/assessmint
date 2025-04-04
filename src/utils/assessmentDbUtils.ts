@@ -1,3 +1,4 @@
+
 import { Assessment, RaterResponses, RaterType } from "@/types/assessment";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -41,6 +42,7 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
     let raters: RaterResponses[] = [];
     
     if (responsesData && responsesData.length > 0) {
+      console.log("Found responses data in assessment_responses table:", responsesData);
       // Map the responses from the new table format
       raters = responsesData.map(r => ({
         raterType: r.rater_type as RaterType,
@@ -54,12 +56,14 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
     // If no rater data exists in the new table, try getting from the old raters table
     // This is for backward compatibility during migration
     if (raters.length === 0) {
+      console.log("No responses found in assessment_responses, checking legacy tables");
       const { data: oldRatersData, error: oldRatersError } = await supabase
         .from('raters')
         .select('*')
         .eq('assessment_id', data.id);
         
       if (!oldRatersError && oldRatersData && oldRatersData.length > 0) {
+        console.log("Found raters in legacy raters table:", oldRatersData);
         for (const rater of oldRatersData) {
           // For each old rater, check if there's data in the new responses table
           const { data: newResponsesData, error: newResponsesError } = await supabase
@@ -124,6 +128,7 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
 export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
   try {
     console.log("Syncing assessment with DB:", assessmentData.id);
+    console.log("Assessment data:", JSON.stringify(assessmentData));
     const dbAssessment = assessmentToDbFormat(assessmentData);
     
     // First update the assessment
@@ -141,6 +146,7 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
     // Then handle raters and their responses using the new table
     for (const rater of assessmentData.raters) {
       console.log(`Processing rater ${rater.raterType} with email ${rater.email}`);
+      
       // Check if we already have an entry for this rater type
       const { data: existingResponse, error: findResponseError } = await supabase
         .from('assessment_responses')
@@ -154,16 +160,24 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
         continue;
       }
       
+      // Prepare responses data for database
+      const safeResponses = rater.responses || [];
+      console.log(`Responses for rater ${rater.raterType}:`, JSON.stringify(safeResponses));
+      
+      const safeEmail = rater.email || null;
+      const safeName = rater.name || null;
+      
       if (existingResponse) {
-        console.log(`Updating existing responses for rater ${rater.raterType}`, rater.responses.length);
-        // Update existing responses - convert responses to Json type
+        console.log(`Updating existing responses for rater ${rater.raterType}, ID: ${existingResponse.id}`);
+        
+        // Update existing responses - safely convert responses to Json type
         const { data, error: updateError } = await supabase
           .from('assessment_responses')
           .update({
-            responses: rater.responses as unknown as Json, // Convert to a valid Json type
+            responses: safeResponses as unknown as Json,
             completed: rater.completed,
-            email: rater.email || null, // Ensure email is null if not provided
-            name: rater.name || null, // Ensure name is null if not provided
+            email: safeEmail,
+            name: safeName,
             updated_at: new Date().toISOString()
           })
           .eq('id', existingResponse.id)
@@ -178,16 +192,17 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
         console.log("Update successful:", data);
       } else {
         console.log(`Creating new responses for rater ${rater.raterType}`);
-        // Create new responses - convert responses to Json type
+        
+        // Create new responses - safely convert responses to Json type
         const { data, error: createError } = await supabase
           .from('assessment_responses')
           .insert({
             assessment_id: assessmentData.id,
             rater_type: rater.raterType,
-            responses: rater.responses as unknown as Json, // Convert to a valid Json type
+            responses: safeResponses as unknown as Json,
             completed: rater.completed,
-            email: rater.email || null, // Ensure email is null if not provided
-            name: rater.name || null // Ensure name is null if not provided
+            email: safeEmail,
+            name: safeName
           })
           .select();
           
@@ -209,38 +224,13 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
 };
 
 /**
- * Fetches an assessment by code from the database
- */
-export const fetchAssessmentByCode = async (code: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('assessments')
-      .select('*')
-      .eq('code', code)
-      .maybeSingle();
-      
-    if (error) {
-      console.error("Error fetching assessment:", error);
-      throw error;
-    }
-    
-    if (!data) {
-      return null;
-    }
-    
-    return dbToAssessmentFormat(data);
-  } catch (error) {
-    console.error("Error in fetchAssessmentByCode:", error);
-    toast.error("Error loading assessment");
-    return null;
-  }
-};
-
-/**
  * Creates a new assessment in the database
  */
 export const createAssessmentInDb = async (assessment: Assessment) => {
   try {
+    console.log("Creating new assessment in DB:", assessment.id);
+    console.log("Assessment data:", JSON.stringify(assessment));
+    
     const dbAssessment = assessmentToDbFormat(assessment);
     
     // First create the assessment
@@ -256,20 +246,31 @@ export const createAssessmentInDb = async (assessment: Assessment) => {
     // Then create the initial rater responses in the new table
     const selfRater = assessment.raters.find(r => r.raterType === 'self');
     if (selfRater) {
-      const { error: raterError } = await supabase
+      console.log("Adding self-rater responses to DB");
+      
+      // Safely prepare responses data
+      const safeResponses = selfRater.responses || [];
+      const safeEmail = selfRater.email || null;
+      const safeName = selfRater.name || null;
+      
+      const { data, error: raterError } = await supabase
         .from('assessment_responses')
         .insert({
           assessment_id: assessment.id,
           rater_type: selfRater.raterType,
-          responses: JSON.parse(JSON.stringify(selfRater.responses)) as Json, // Convert to a valid Json type
+          responses: safeResponses as unknown as Json,
           completed: selfRater.completed,
-          email: selfRater.email,
-          name: selfRater.name
-        });
+          email: safeEmail,
+          name: safeName
+        })
+        .select();
         
       if (raterError) {
         console.error("Error saving self-rater responses to database:", raterError);
-        // Continue even if there's an error with the rater
+        console.error("Error details:", raterError.details);
+        console.error("Error message:", raterError.message);
+      } else {
+        console.log("Successfully added self-rater responses:", data);
       }
     }
     
