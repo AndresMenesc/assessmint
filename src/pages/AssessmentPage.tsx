@@ -104,9 +104,31 @@ const AssessmentPage = () => {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       window.scrollTo(0, 0);
     } else {
-      // All questions answered, complete the assessment
-      completeAssessment();
-      navigate("/completion");
+      // All questions answered, check if all questions have responses
+      const currentRaterResponses = assessment?.raters.find(r => r.raterType === assessment.currentRater)?.responses || [];
+      const unansweredQuestions = questions.filter(q => 
+        !currentRaterResponses.some(r => r.questionId === q.id)
+      );
+      
+      if (unansweredQuestions.length > 0) {
+        toast.error(`Please answer all questions (${unansweredQuestions.length} unanswered)`);
+        // Navigate to the first unanswered question
+        const firstUnanswered = questions.findIndex(q => q.id === unansweredQuestions[0].id);
+        if (firstUnanswered !== -1) {
+          setCurrentQuestionIndex(firstUnanswered);
+        }
+      } else {
+        // All questions answered, complete the assessment
+        completeAssessment();
+        navigate("/completion");
+      }
+    }
+  };
+  
+  const handleBack = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      window.scrollTo(0, 0);
     }
   };
   
@@ -159,7 +181,9 @@ const AssessmentPage = () => {
             <div className="flex justify-center">
               <QuestionCard 
                 question={questions[currentQuestionIndex]} 
-                onNext={handleNext} 
+                onNext={handleNext}
+                onBack={handleBack}
+                isFirstQuestion={currentQuestionIndex === 0}
               />
             </div>
           )}

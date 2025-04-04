@@ -60,7 +60,7 @@ const AppContent = () => {
       <Route path="/about" element={<AboutPage />} />
       <Route path="*" element={<NotFound />} />
       
-      {/* Assessment related routes - All need to be within the AssessmentProvider */}
+      {/* Assessment related routes - All wrapped in AssessmentProvider */}
       <Route path="/start" element={
         <ProtectedRoute requiredRole={null}>
           <StartPage />
@@ -78,7 +78,7 @@ const AppContent = () => {
       } />
       <Route path="/completion" element={<CompletionPage />} />
       
-      {/* Admin routes with protection */}
+      {/* Admin routes with protection - Also in AssessmentProvider */}
       <Route path="/results" element={
         <ProtectedRoute requiredRole="admin">
           <ResultsPage />
@@ -93,7 +93,7 @@ const AppContent = () => {
   );
 };
 
-// The App component structure ensures that the AssessmentProvider wraps the router
+// The App component structure ensures that the AssessmentProvider wraps all routes
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>

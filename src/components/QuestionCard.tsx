@@ -6,13 +6,16 @@ import { Question } from "@/types/assessment";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, KeyboardEvent } from "react";
 import { toast } from "sonner";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 interface QuestionCardProps {
   question: Question;
   onNext: () => void;
+  onBack?: () => void;
+  isFirstQuestion: boolean;
 }
 
-const QuestionCard = ({ question, onNext }: QuestionCardProps) => {
+const QuestionCard = ({ question, onNext, onBack, isFirstQuestion }: QuestionCardProps) => {
   const { responses, updateResponse } = useAssessment();
   
   // Find existing response for this question
@@ -40,6 +43,12 @@ const QuestionCard = ({ question, onNext }: QuestionCardProps) => {
     }
   };
   
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    }
+  };
+  
   // Handle keyboard events for accessibility
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" && selectedScore !== null) {
@@ -47,6 +56,8 @@ const QuestionCard = ({ question, onNext }: QuestionCardProps) => {
     } else if (e.key >= "1" && e.key <= "5") {
       const score = parseInt(e.key);
       handleScoreSelect(score);
+    } else if (e.key === "Backspace" && onBack && !isFirstQuestion) {
+      handleBack();
     }
   };
 
@@ -81,13 +92,23 @@ const QuestionCard = ({ question, onNext }: QuestionCardProps) => {
           ))}
         </div>
       </CardContent>
-      <CardFooter className="flex justify-end">
+      <CardFooter className="flex justify-between">
+        <Button
+          onClick={handleBack}
+          disabled={isFirstQuestion}
+          variant="outline"
+          className="px-6"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
         <Button
           onClick={handleNext}
           disabled={selectedScore === null}
-          className="px-8"
+          className="px-6"
         >
           Next
+          <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </CardFooter>
     </Card>
