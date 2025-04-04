@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { useAssessment } from "@/contexts/AssessmentContext";
 import { Question } from "@/types/assessment";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, KeyboardEvent } from "react";
 import { toast } from "sonner";
 
 interface QuestionCardProps {
@@ -39,9 +39,19 @@ const QuestionCard = ({ question, onNext }: QuestionCardProps) => {
       toast.error("Please select an answer before continuing");
     }
   };
+  
+  // Handle keyboard events for accessibility
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" && selectedScore !== null) {
+      handleNext();
+    } else if (e.key >= "1" && e.key <= "5") {
+      const score = parseInt(e.key);
+      handleScoreSelect(score);
+    }
+  };
 
   return (
-    <Card className="w-full max-w-3xl">
+    <Card className="w-full max-w-3xl" tabIndex={0} onKeyDown={handleKeyDown}>
       <CardHeader className="text-center">
         <p className="text-muted-foreground text-sm">
           Please rate on a scale of 1-5:

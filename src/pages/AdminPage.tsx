@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Users, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import ScoringRules from "@/components/admin/ScoringRules";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const AdminPage = () => {
   const { logout, userEmail, userRole } = useAuth();
@@ -51,12 +52,16 @@ const AdminPage = () => {
             <TabsTrigger value="results">Results</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="questions" className="space-y-4">
-            <QuestionsManager />
+          <TabsContent value="questions" className="space-y-4 h-[calc(100vh-250px)]">
+            <ScrollArea className="h-full pr-4">
+              <QuestionsManager />
+            </ScrollArea>
           </TabsContent>
           
           <TabsContent value="scoring">
-            <ScoringRules />
+            <ScrollArea className="h-[calc(100vh-250px)] pr-4">
+              <ScoringRules />
+            </ScrollArea>
           </TabsContent>
           
           <TabsContent value="results">
