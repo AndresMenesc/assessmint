@@ -27,12 +27,12 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
     }
     
     // Admin access control
-    if (requiredRole === "admin" && (userRole === "admin" || userRole === "super_admin")) {
+    if (requiredRole === "admin" && ["admin", "super_admin"].includes(userRole)) {
       return <>{children}</>;
     }
     
-    // Rater access control - using array includes for type safety
-    if (requiredRole === "rater" && userRole && ["rater", "admin", "super_admin"].includes(userRole)) {
+    // Rater access control - handle rater and other roles
+    if (requiredRole === "rater" && ["rater", "admin", "super_admin"].includes(userRole)) {
       return <>{children}</>;
     }
     
