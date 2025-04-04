@@ -1,3 +1,4 @@
+
 import { Assessment, RaterResponses, RaterType } from "@/types/assessment";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -22,7 +23,7 @@ export const assessmentToDbFormat = (assessment: Assessment) => {
 /**
  * Fetches an assessment from the database by code
  */
-export const fetchAssessmentByCode = async (code: string) => {
+export const fetchAssessmentByCode = async (code: string): Promise<Assessment | null> => {
   try {
     console.log("Fetching assessment by code:", code);
     
@@ -54,7 +55,7 @@ export const fetchAssessmentByCode = async (code: string) => {
     }
     
     // Convert the database response to our Assessment type
-    const assessment = {
+    const assessment: Assessment = {
       id: assessmentData.id,
       code: assessmentData.code,
       selfRaterEmail: assessmentData.self_rater_email,
@@ -63,7 +64,7 @@ export const fetchAssessmentByCode = async (code: string) => {
       createdAt: new Date(assessmentData.created_at),
       updatedAt: new Date(assessmentData.updated_at),
       raters: responseData.map(r => ({
-        raterType: r.rater_type,
+        raterType: r.rater_type as RaterType, // Ensure we cast string to RaterType enum
         email: r.email || '',
         name: r.name || '',
         responses: r.responses || [],
@@ -104,7 +105,7 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
       console.log("Found responses data in assessment_responses table:", responsesData);
       // Map the responses from the new table format
       raters = responsesData.map(r => ({
-        raterType: r.rater_type as RaterType,
+        raterType: r.rater_type as RaterType, // Ensure we cast string to RaterType enum
         responses: r.responses as any[] || [],
         completed: r.completed,
         email: r.email || "", 
@@ -135,7 +136,7 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
           if (!newResponsesError && newResponsesData) {
             // If we found data in the new table, use that
             raters.push({
-              raterType: rater.rater_type as RaterType,
+              raterType: rater.rater_type as RaterType, // Ensure we cast string to RaterType enum
               responses: newResponsesData.responses as any[] || [],
               completed: newResponsesData.completed,
               email: rater.email,
@@ -154,7 +155,7 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
             })) : [];
             
             raters.push({
-              raterType: rater.rater_type as RaterType,
+              raterType: rater.rater_type as RaterType, // Ensure we cast string to RaterType enum
               responses,
               completed: rater.completed,
               email: rater.email,
