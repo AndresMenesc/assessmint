@@ -1,4 +1,3 @@
-
 import { RaterResponses, Section } from "@/types/assessment";
 import { calculateDimensionScore, calculateCoachabilityScore, calculateSelfAwareness, calculateCoachabilityAwareness } from "./scoreCalculations";
 
@@ -61,50 +60,41 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         problemResolutionScore
       };
       
-      // FIX: Properly normalize scores to show actual differences
-      // We map from the raw range (-28 to 28) to the display range (0 to 5)
-      // First, calculate what percentage of the range the score represents
-      const normalizeScore = (score: number, min: number, max: number) => {
-        // Ensure the score is within the valid range
-        const clampedScore = Math.max(min, Math.min(max, score));
-        // Linear transformation from [-28, 28] to [0, 5]
-        return ((clampedScore - min) / (max - min)) * 5;
-      };
-      
+      // MODIFIED: Use the raw scores directly without normalization
       dimensionScores = [
         { 
           name: "Esteem", 
-          score: normalizeScore(esteemScore, -28, 28), 
-          min: 0, 
-          max: 5, 
+          score: esteemScore,
+          min: -28, 
+          max: 28, 
           color: "#4169E1" // Royal Blue
         },
         { 
           name: "Trust", 
-          score: normalizeScore(trustScore, -28, 28), 
-          min: 0, 
-          max: 5, 
+          score: trustScore,
+          min: -28, 
+          max: 28, 
           color: "#20B2AA" // Light Sea Green
         },
         { 
           name: "Business Drive", 
-          score: normalizeScore(driverScore, -28, 28), 
-          min: 0, 
-          max: 5, 
+          score: driverScore,
+          min: -28, 
+          max: 28, 
           color: "#9370DB" // Medium Purple
         },
         { 
           name: "Adaptability", 
-          score: normalizeScore(adaptabilityScore, -28, 28), 
-          min: 0, 
-          max: 5, 
+          score: adaptabilityScore,
+          min: -28, 
+          max: 28, 
           color: "#3CB371" // Medium Sea Green
         },
         { 
           name: "Problem Resolution", 
-          score: normalizeScore(problemResolutionScore, -28, 28), 
-          min: 0, 
-          max: 5, 
+          score: problemResolutionScore,
+          min: -28, 
+          max: 28, 
           color: "#FF7F50" // Coral
         }
       ];
@@ -205,53 +195,46 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         otherEsteemScore, otherTrustScore, otherDriverScore, otherAdaptabilityScore, otherProblemResolutionScore
       });
       
-      // FIX: Properly normalize scores to show actual differences
-      const normalizeScore = (score: number, min: number, max: number) => {
-        // Ensure the score is within the valid range
-        const clampedScore = Math.max(min, Math.min(max, score));
-        // Linear transformation from [-28, 28] to [0, 5]
-        return ((clampedScore - min) / (max - min)) * 5;
-      };
-      
+      // MODIFIED: Use the raw scores directly without normalization
       dimensionScores = [
         { 
           name: "Esteem", 
-          selfScore: normalizeScore(esteemScore, -28, 28), 
-          othersScore: normalizeScore(otherEsteemScore, -28, 28), 
-          min: 0, 
-          max: 5, 
+          selfScore: esteemScore, 
+          othersScore: otherEsteemScore, 
+          min: -28, 
+          max: 28, 
           color: "#4169E1" // Royal Blue
         },
         { 
           name: "Trust", 
-          selfScore: normalizeScore(trustScore, -28, 28), 
-          othersScore: normalizeScore(otherTrustScore, -28, 28), 
-          min: 0, 
-          max: 5, 
+          selfScore: trustScore, 
+          othersScore: otherTrustScore, 
+          min: -28, 
+          max: 28, 
           color: "#20B2AA" // Light Sea Green
         },
         { 
           name: "Business Drive", 
-          selfScore: normalizeScore(driverScore, -28, 28), 
-          othersScore: normalizeScore(otherDriverScore, -28, 28), 
-          min: 0, 
-          max: 5, 
+          selfScore: driverScore, 
+          othersScore: otherDriverScore, 
+          min: -28, 
+          max: 28, 
           color: "#9370DB" // Medium Purple
         },
         { 
           name: "Adaptability", 
-          selfScore: normalizeScore(adaptabilityScore, -28, 28), 
-          othersScore: normalizeScore(otherAdaptabilityScore, -28, 28), 
-          min: 0, 
-          max: 5, 
+          selfScore: adaptabilityScore, 
+          othersScore: otherAdaptabilityScore, 
+          min: -28, 
+          max: 28, 
           color: "#3CB371" // Medium Sea Green
         },
         { 
           name: "Problem Resolution", 
-          selfScore: normalizeScore(problemResolutionScore, -28, 28), 
-          othersScore: normalizeScore(otherProblemResolutionScore, -28, 28), 
-          min: 0, 
-          max: 5, 
+          selfScore: problemResolutionScore, 
+          othersScore: otherProblemResolutionScore, 
+          min: -28, 
+          max: 28, 
           color: "#FF7F50" // Coral
         }
       ];

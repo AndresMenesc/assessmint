@@ -114,30 +114,30 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
   const isIndividualScores =
     "score" in filteredScores[0] || !("selfScore" in filteredScores[0]);
 
-  // Transform the raw data into normalized chart data
+  // Transform the raw data into chart data
   const chartData = filteredScores.map(original => {
     const dimensionName = (original as any).dimension || (original as any).name;
     const descriptions =
       DIMENSION_DESCRIPTIONS[dimensionName] || { low: "low", high: "high" };
 
     if (isIndividualScores) {
-      // Single dimension score
+      // Single dimension score - Use raw score directly
       const s = original as any;
       const normalizedScore =
-        ((s.score - MIN_DIM) / RANGE_DIM) * 100 || 0; // map -28..+28 => 0..100
+        ((s.score - MIN_DIM) / RANGE_DIM) * 100 || 0; // map -28..+28 => 0..100 for display purposes only
 
       return {
         dimension: dimensionName,
-        score: s.score,
+        score: s.score, // Keep raw score for display
         min: MIN_DIM,
         max: MAX_DIM,
         color: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
-        normalizedScore,
+        normalizedScore, // Used for positioning the bar only
         lowLabel: descriptions.low,
         highLabel: descriptions.high
       };
     } else {
-      // aggregator scenario: selfScore + othersScore
+      // aggregator scenario: selfScore + othersScore - Use raw scores directly
       const s = original as any;
       const normalizedSelfScore =
         ((s.selfScore - MIN_DIM) / RANGE_DIM) * 100 || 0;
@@ -146,13 +146,13 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
 
       return {
         dimension: dimensionName,
-        selfScore: s.selfScore,
-        othersScore: s.othersScore,
+        selfScore: s.selfScore, // Keep raw score for display
+        othersScore: s.othersScore, // Keep raw score for display
         min: MIN_DIM,
         max: MAX_DIM,
         color: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
-        normalizedSelfScore,
-        normalizedOthersScore,
+        normalizedSelfScore, // Used for positioning the bar only
+        normalizedOthersScore, // Used for positioning the bar only
         lowLabel: descriptions.low,
         highLabel: descriptions.high
       };
@@ -222,10 +222,8 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
               layout="vertical"
               margin={{ top: 30, right: 50, left: 80, bottom: 30 }}
             >
-              {/* 
-                X-axis from 0..100 because we're normalizing dimension scores. 
-                We want displayed ticks at -28..+28, so we do a "tickFormatter".
-              */}
+              {/* X-axis still needs normalized values for positioning (0-100), 
+                  but we'll show the actual -28 to 28 values on the ticks */}
               <XAxis
                 type="number"
                 domain={[0, 100]}
@@ -235,7 +233,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                 fontSize={isMobile ? 9 : 12}
                 tick={{ fill: "#666" }}
                 tickFormatter={(value: number) => {
-                  // Convert 0..100 back to -28..+28
+                  // Convert 0..100 back to -28..+28 for display
                   const realVal = (value / 100) * RANGE_DIM + MIN_DIM;
                   return realVal.toFixed(0);
                 }}
@@ -249,10 +247,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
               />
               <Tooltip content={<CustomTooltip />} />
 
-              {/* 
-                Reference lines at x=25 => -14, x=50 => 0, x=75 => +14 
-                (based on the same normalization: (realVal+28)/56*100 )
-              */}
+              {/* Reference lines at x=25 => -14, x=50 => 0, x=75 => +14 */}
               <ReferenceLine x={25} stroke="#ddd" strokeDasharray="3 3" />
               <ReferenceLine x={50} stroke="#aaa" />
               <ReferenceLine x={75} stroke="#ddd" strokeDasharray="3 3" />
