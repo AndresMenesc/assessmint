@@ -32,6 +32,11 @@ const ResultsPage = () => {
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState<any>(null);
   
+  // Move the individual results state variables to the component level
+  const [selfResults, setSelfResults] = useState<DimensionScore[] | null>(null);
+  const [rater1Results, setRater1Results] = useState<DimensionScore[] | null>(null);
+  const [rater2Results, setRater2Results] = useState<DimensionScore[] | null>(null);
+  
   useEffect(() => {
     const fetchAssessments = async () => {
       if (userRole === "admin" || userRole === "super_admin") {
@@ -157,6 +162,23 @@ const ResultsPage = () => {
     calculateAndSetResults();
   }, [selectedAssessment, getResults]);
 
+  // Load individual rater results when selected assessment changes
+  useEffect(() => {
+    const loadIndividualResults = async () => {
+      if (!selectedAssessment) return;
+      
+      const selfScores = await getSingleRaterResults(selectedAssessment, RaterType.SELF);
+      const rater1Scores = await getSingleRaterResults(selectedAssessment, RaterType.RATER1);
+      const rater2Scores = await getSingleRaterResults(selectedAssessment, RaterType.RATER2);
+      
+      setSelfResults(selfScores);
+      setRater1Results(rater1Scores);
+      setRater2Results(rater2Scores);
+    };
+    
+    loadIndividualResults();
+  }, [selectedAssessment]);
+
   const filteredAssessments = assessments.filter(a => 
     a.selfRaterEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
     a.selfRaterName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -269,24 +291,6 @@ const ResultsPage = () => {
 
   const renderIndividualResults = () => {
     if (!selectedAssessment) return null;
-    
-    const [selfResults, setSelfResults] = useState<DimensionScore[] | null>(null);
-    const [rater1Results, setRater1Results] = useState<DimensionScore[] | null>(null);
-    const [rater2Results, setRater2Results] = useState<DimensionScore[] | null>(null);
-    
-    useEffect(() => {
-      const loadIndividualResults = async () => {
-        const selfScores = await getSingleRaterResults(selectedAssessment, RaterType.SELF);
-        const rater1Scores = await getSingleRaterResults(selectedAssessment, RaterType.RATER1);
-        const rater2Scores = await getSingleRaterResults(selectedAssessment, RaterType.RATER2);
-        
-        setSelfResults(selfScores);
-        setRater1Results(rater1Scores);
-        setRater2Results(rater2Scores);
-      };
-      
-      loadIndividualResults();
-    }, [selectedAssessment]);
     
     const raters = selectedAssessment.raters;
     const selfRater = raters.find(r => r.raterType === RaterType.SELF);
