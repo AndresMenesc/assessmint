@@ -21,6 +21,37 @@ export const assessmentToDbFormat = (assessment: Assessment) => {
 };
 
 /**
+ * Fetches an assessment from the database by code
+ */
+export const fetchAssessmentByCode = async (code: string): Promise<Assessment | null> => {
+  try {
+    console.log("Fetching assessment by code:", code);
+    
+    const { data, error } = await supabase
+      .from('assessments')
+      .select('*')
+      .eq('code', code)
+      .maybeSingle();
+      
+    if (error) {
+      console.error("Error fetching assessment by code:", error);
+      throw error;
+    }
+    
+    if (!data) {
+      console.log("No assessment found for code:", code);
+      return null;
+    }
+    
+    console.log("Assessment found for code:", code, data);
+    return await dbToAssessmentFormat(data);
+  } catch (error) {
+    console.error("Error in fetchAssessmentByCode:", error);
+    return null;
+  }
+};
+
+/**
  * Converts a database assessment record to our app's Assessment format
  */
 export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null> => {
