@@ -101,10 +101,6 @@ const CompletionPage = () => {
                   The person you rated will receive the results once all assessments have been completed.
                 </p>
               </div>
-              
-              <p className="text-center text-muted-foreground mt-6">
-                You may now close this window or return to the home page.
-              </p>
             </CardContent>
             <CardFooter>
               <Button 
@@ -153,10 +149,6 @@ const CompletionPage = () => {
                 <Check className="mr-2 h-5 w-5" />
                 Your responses have been recorded
               </h3>
-              <p className="text-green-700 text-sm">
-                You've completed {assessment.raters.find(r => r.raterType === RaterType.SELF)?.responses.length || 0} 
-                out of 84 questions.
-              </p>
               <p className="text-green-700 text-sm mt-2">
                 Your comprehensive results will be available once all raters have completed their assessments.
               </p>

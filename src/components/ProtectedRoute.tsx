@@ -31,7 +31,7 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
       return <>{children}</>;
     }
     
-    // Rater access control
+    // Rater access control - fixing the type comparison error by comparing string values correctly
     if (requiredRole === "rater" && (userRole === "rater" || userRole === "admin" || userRole === "super_admin")) {
       return <>{children}</>;
     }

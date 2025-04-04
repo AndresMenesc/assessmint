@@ -1,4 +1,3 @@
-
 import { Assessment, RaterResponses, RaterType } from "@/types/assessment";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,31 +22,60 @@ export const assessmentToDbFormat = (assessment: Assessment) => {
 /**
  * Fetches an assessment from the database by code
  */
-export const fetchAssessmentByCode = async (code: string): Promise<Assessment | null> => {
+export const fetchAssessmentByCode = async (code: string) => {
   try {
     console.log("Fetching assessment by code:", code);
     
-    const { data, error } = await supabase
+    // Query the assessments table first
+    const { data: assessmentData, error: assessmentError } = await supabase
       .from('assessments')
       .select('*')
       .eq('code', code)
-      .maybeSingle();
+      .single();
       
-    if (error) {
-      console.error("Error fetching assessment by code:", error);
-      throw error;
+    if (assessmentError) {
+      if (assessmentError.code === 'PGRST116') {
+        // Assessment not found
+        console.log(`No assessment found with code: ${code}`);
+        return null;
+      }
+      throw assessmentError;
     }
     
-    if (!data) {
-      console.log("No assessment found for code:", code);
-      return null;
+    // Now fetch all raters and their responses for this assessment
+    const { data: responseData, error: responseError } = await supabase
+      .from('assessment_responses')
+      .select('*')
+      .eq('assessment_id', assessmentData.id);
+      
+    if (responseError) {
+      console.error("Error fetching assessment responses:", responseError);
+      throw responseError;
     }
     
-    console.log("Assessment found for code:", code, data);
-    return await dbToAssessmentFormat(data);
+    // Convert the database response to our Assessment type
+    const assessment = {
+      id: assessmentData.id,
+      code: assessmentData.code,
+      selfRaterEmail: assessmentData.self_rater_email,
+      selfRaterName: assessmentData.self_rater_name,
+      completed: assessmentData.completed,
+      createdAt: new Date(assessmentData.created_at),
+      updatedAt: new Date(assessmentData.updated_at),
+      raters: responseData.map(r => ({
+        raterType: r.rater_type,
+        email: r.email || '',
+        name: r.name || '',
+        responses: r.responses || [],
+        completed: r.completed
+      }))
+    };
+    
+    console.log("Assessment found:", assessment);
+    return assessment;
   } catch (error) {
-    console.error("Error in fetchAssessmentByCode:", error);
-    return null;
+    console.error("Error fetching assessment by code:", error);
+    throw error;
   }
 };
 

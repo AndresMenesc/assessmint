@@ -39,6 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [userCode, setUserCode] = useState<string | null>(null);
+  const [loginInProgress, setLoginInProgress] = useState<boolean>(false);
 
   // Check local storage for authentication on component mount
   useEffect(() => {
@@ -59,7 +60,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Login function
   const login = async (email: string, password: string): Promise<boolean> => {
+    if (loginInProgress) {
+      toast.error("Login already in progress");
+      return false;
+    }
+    
     try {
+      setLoginInProgress(true);
+      
       // Check if this is an admin user
       const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
@@ -116,6 +124,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Login error:", error);
       toast.error("Login failed. Please try again.");
       return false;
+    } finally {
+      setLoginInProgress(false);
     }
   };
   
