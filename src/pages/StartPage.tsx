@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -52,9 +51,12 @@ const StartPage = () => {
       });
     } catch (error) {
       console.error("Error starting assessment:", error);
-      // Error is already shown by toast in assessmentOperations.ts
-      // Navigate back to login if there's an error with the assessment
-      navigate("/login");
+      
+      // Only redirect to login if there's a specific error that requires it
+      if (error instanceof Error && error.message === "Assessment already completed") {
+        navigate("/login");
+      }
+      // Otherwise, stay on this page so the user can try again
     } finally {
       setIsLoading(false);
     }

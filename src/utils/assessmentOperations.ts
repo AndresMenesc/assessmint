@@ -50,31 +50,70 @@ export const initializeAssessment = async (
     const existingAssessment = await fetchAssessmentByCode(code);
     
     if (existingAssessment) {
-      // Check if this is the same self-rater
+      // Find the self-rater in the assessment
       const selfRater = existingAssessment.raters.find(r => r.raterType === RaterType.SELF);
       
-      if (selfRater && selfRater.email.toLowerCase() === selfEmail.toLowerCase()) {
-        // This is the same person - allow them to continue their assessment
-        console.log("Same user continuing assessment with code:", code);
-        
-        // Check if self-assessment is already completed
-        if (selfRater.completed) {
-          toast.info("You have already completed this assessment.", {
-            description: "The results will be available once all raters have completed their assessments."
-          });
+      // Allow access to the assessment regardless of email if the assessment isn't complete
+      if (!existingAssessment.completed) {
+        // If it's the same email or assessment isn't completed, allow access
+        if (selfRater && selfRater.email.toLowerCase() === selfEmail.toLowerCase()) {
+          // This is the same person - allow them to continue their assessment
+          console.log("Same user continuing assessment with code:", code);
+          
+          // Check if self-assessment is already completed
+          if (selfRater.completed) {
+            toast.info("You have already completed this assessment.", {
+              description: "The results will be available once all raters have completed their assessments."
+            });
+          } else {
+            toast.info("Continuing your existing assessment.", {
+              description: "Your previous responses have been saved."
+            });
+          }
+          
+          return existingAssessment;
         } else {
-          toast.info("Continuing your existing assessment.", {
-            description: "Your previous responses have been saved."
+          // Different person trying to use the same code, but still allow it
+          toast.info("Using an existing assessment code.", {
+            description: "You are continuing an assessment with an existing code."
           });
+          
+          // Here we can update the assessment with the new email and name
+          const updatedSelfRater = {
+            ...selfRater,
+            email: selfEmail,
+            name: selfName
+          };
+          
+          // Update the rater in the assessment
+          const updatedRaters = existingAssessment.raters.map(r => 
+            r.raterType === RaterType.SELF ? updatedSelfRater : r
+          );
+          
+          const updatedAssessment = {
+            ...existingAssessment,
+            selfRaterEmail: selfEmail,
+            selfRaterName: selfName,
+            raters: updatedRaters,
+            updatedAt: new Date()
+          };
+          
+          // Save the updated assessment
+          await updateAssessmentInDb(updatedAssessment.id, {
+            selfRaterEmail: selfEmail,
+            selfRaterName: selfName,
+            updatedAt: updatedAssessment.updatedAt,
+            raters: updatedRaters
+          });
+          
+          return updatedAssessment;
         }
-        
-        return existingAssessment;
       } else {
-        // Different person trying to use the same code
-        toast.error("This assessment code is already in use by another person.", {
+        // Assessment is already completed
+        toast.error("This assessment code has already been completed.", {
           description: "Please create a new assessment with a different code."
         });
-        throw new Error("Code already used by different person");
+        throw new Error("Assessment already completed");
       }
     } else {
       // Creating new assessment

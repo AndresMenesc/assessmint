@@ -191,6 +191,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Error in codeLogin:", error);
+      if (error instanceof Error && error.message === "Code already used by different person") {
+        toast.error("This assessment code is already in use by another person.", {
+          description: "Please create a new assessment with a different code."
+        });
+      }
       return { success: false };
     }
   };
