@@ -17,6 +17,7 @@ interface CoachabilityChartProps {
   scores: DimensionScore[];
 }
 
+// Simple tooltip
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
@@ -43,45 +44,40 @@ const CustomTooltip = ({ active, payload }: any) => {
 export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
   const isMobile = useIsMobile();
 
-  // 1) Find the coachability dimension from the scores
-  const coachabilityScore = scores.find((score) => {
-    const scoreName =
-      "dimension" in score ? score.dimension : (score as any).name;
-    return scoreName === "Coachability";
-  });
+  // Identify the "Coachability" dimension
+  const coachabilityScore = scores.find(
+    (score) => (score.dimension ?? (score as any).name) === "Coachability"
+  );
+  if (!coachabilityScore) return null;
 
-  if (!coachabilityScore) {
-    return null;
-  }
-
-  // Check if single "score" vs. selfScore/othersScore
+  // Determine if it's single or aggregated scenario
   const isIndividualScores =
     "score" in coachabilityScore || !("selfScore" in coachabilityScore);
 
-  // We'll only have one item in chartData (the "Coachability" row)
+  // Build data for exactly one row
   const chartData: any[] = [];
-
   if (isIndividualScores) {
+    // single user
     const c = coachabilityScore as any;
     chartData.push({
       dimension: "Coachability",
       score: c.score,
+      // color logic: red if ≤30, yellow if ≤40, else green
+      color: c.score <= 30 ? "#ef4444" : c.score <= 40 ? "#eab308" : "#22c55e",
+      normalizedScore: c.score, // 0..100
       min: c.min,
       max: c.max,
-      color:
-        c.score <= 30 ? "#ef4444" : c.score <= 40 ? "#eab308" : "#22c55e",
-      normalizedScore: c.score, // 0..100
       lowLabel: "resistant",
       highLabel: "receptive",
     });
   } else {
+    // aggregator with self + others
     const c = coachabilityScore as any;
     chartData.push({
       dimension: "Coachability",
       selfScore: c.selfScore,
       othersScore: c.othersScore,
-      min: c.min,
-      max: c.max,
+      // color logic for each
       selfColor:
         c.selfScore <= 30 ? "#ef4444" : c.selfScore <= 40 ? "#eab308" : "#22c55e",
       othersColor:
@@ -90,33 +86,24 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
           : c.othersScore <= 40
             ? "#eab308"
             : "#22c55e",
-      normalizedSelfScore: c.selfScore, // 0..100
+      normalizedSelfScore: c.selfScore,
       normalizedOthersScore: c.othersScore,
+      min: c.min,
+      max: c.max,
       lowLabel: "resistant",
       highLabel: "receptive",
     });
   }
 
-  // Adjust margins
-  const chartMargins = isMobile
-    ? { top: 30, right: 70, left: 100, bottom: 20 }
-    : { top: 30, right: 80, left: 150, bottom: 20 };
-
-  const labelStyle = {
-    fontSize: isMobile ? "9px" : "11px",
-    fill: "#000",
-  };
-
-  // 2) Custom Y-axis tick so we can place "resistant" (lowLabel) on left,
-  // "Coachability" in center, "receptive" on right
+  // Render custom Y-axis to show "Coachability", "resistant", "receptive"
   const renderYAxisTick = (props: any) => {
     const { x, y, payload } = props;
     const item = chartData.find((d) => d.dimension === payload.value);
     if (!item) return null;
 
     return (
-      <g transform={`translate(${x},${y})`}>
-        {/* "Coachability" label near axis */}
+      <g transform={`translate(${x}, ${y})`}>
+        {/* "Coachability" label near the axis */}
         <text
           x={-50}
           y={0}
@@ -128,8 +115,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
         >
           {payload.value}
         </text>
-
-        {/* Low label on the far left */}
+        {/* Low label on far left */}
         <text
           x={-30}
           y={0}
@@ -141,10 +127,9 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
         >
           {item.lowLabel}
         </text>
-
         {/* High label on far right */}
         <text
-          x={550} // tweak as needed
+          x={550}
           y={0}
           dy={3}
           textAnchor="end"
@@ -158,6 +143,16 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
     );
   };
 
+  // Chart margins & label style
+  const chartMargins = isMobile
+    ? { top: 30, right: 70, left: 100, bottom: 20 }
+    : { top: 30, right: 80, left: 150, bottom: 20 };
+
+  const labelStyle = {
+    fontSize: isMobile ? "9px" : "11px",
+    fill: "#000",
+  };
+
   return (
     <Card className="w-full mt-6">
       <CardHeader>
@@ -165,21 +160,18 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={150}>
-          <BarChart
-            data={chartData}
-            layout="vertical"
-            margin={chartMargins}
-          >
+
+          <BarChart data={chartData} layout="vertical" margin={chartMargins}>
             <XAxis
               type="number"
               domain={[0, 100]}
               axisLine={true}
-              tickFormatter={(value) => {
-                if (value === 0) return "0%";
-                if (value === 25) return "25%";
-                if (value === 50) return "50%";
-                if (value === 75) return "75%";
-                if (value === 100) return "100%";
+              tickFormatter={(val) => {
+                if (val === 0) return "0%";
+                if (val === 25) return "25%";
+                if (val === 50) return "50%";
+                if (val === 75) return "75%";
+                if (val === 100) return "100%";
                 return "";
               }}
               ticks={[0, 25, 50, 75, 100]}
@@ -196,90 +188,57 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
             />
             <Tooltip content={<CustomTooltip />} />
 
-            {/* BACKGROUND BARS FIRST - so main bar draws on top */}
-            <Bar
-              dataKey={() => 30}
-              stackId="bg"
-              fill="#ffecec"
-              barSize={20}
-              radius={[0, 0, 0, 0]}
-            />
-            <Bar
-              dataKey={() => 10}
-              stackId="bg"
-              fill="#fff9e5"
-              barSize={20}
-              radius={[0, 0, 0, 0]}
-            />
-            <Bar
-              dataKey={() => 60}
-              stackId="bg"
-              fill="#ecfdf5"
-              barSize={20}
-              radius={[0, 0, 0, 0]}
-            />
-
+            {/* Reference lines (draw them first) */}
             <ReferenceLine x={30} stroke="#ef4444" strokeWidth={2} />
             <ReferenceLine x={40} stroke="#eab308" strokeWidth={2} />
 
-            {/* MAIN BAR(S) LAST - ensures they're on top of the background */}
+
+            {/* Main bar(s) on top */}
             {isIndividualScores ? (
-              // Single bar approach
-              <Bar
-                dataKey="normalizedScore"
-                // No stackId, or a different stackId than "bg"
-                // If you want it to fully appear on top
-                barSize={20}
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+              // Single bar
+              <Bar dataKey="normalizedScore" barSize={20}>
+                {chartData.map((entry, idx) => (
+                  <Cell key={idx} fill={entry.color} />
                 ))}
                 <LabelList
                   dataKey="score"
                   position="right"
-                  formatter={(value: number) => `${value.toFixed(1)}%`}
+                  formatter={(val: number) => `${val.toFixed(1)}%`}
                   style={labelStyle}
                   offset={5}
                 />
               </Bar>
             ) : (
+              // Aggregated (self + others) stacked
               <>
-                {/* Self Score */}
                 <Bar
                   dataKey="normalizedSelfScore"
                   barSize={20}
-                  // a different stackId from "bg" => e.g. "coachStack"
                   stackId="coachStack"
                 >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-self-${index}`} fill={entry.selfColor} />
+                  {chartData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.selfColor} />
                   ))}
                   <LabelList
                     dataKey="selfScore"
                     position="right"
-                    formatter={(value: number) => `${value.toFixed(1)}%`}
+                    formatter={(val: number) => `${val.toFixed(1)}%`}
                     style={labelStyle}
                     offset={5}
                   />
                 </Bar>
-
-                {/* Others Score */}
                 <Bar
                   dataKey="normalizedOthersScore"
                   barSize={20}
                   stackId="coachStack"
                 >
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-others-${index}`}
-                      fill={entry.othersColor}
-                      opacity={0.7}
-                    />
+                  {chartData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.othersColor} opacity={0.7} />
                   ))}
                   <LabelList
                     dataKey="othersScore"
                     position="right"
-                    formatter={(value: number) => `${value.toFixed(1)}%`}
+                    formatter={(val: number) => `${val.toFixed(1)}%`}
                     style={labelStyle}
                     offset={25}
                   />
