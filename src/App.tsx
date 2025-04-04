@@ -60,7 +60,7 @@ const AppContent = () => {
       <Route path="/about" element={<AboutPage />} />
       <Route path="*" element={<NotFound />} />
       
-      {/* Assessment related routes */}
+      {/* Assessment related routes - All need to be within the AssessmentProvider */}
       <Route path="/start" element={
         <ProtectedRoute requiredRole={null}>
           <StartPage />
