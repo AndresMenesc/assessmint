@@ -44,7 +44,9 @@ export type Database = {
           assessment_id: string
           completed: boolean
           created_at: string
+          email: string | null
           id: string
+          name: string | null
           rater_type: string
           responses: Json
           updated_at: string
@@ -53,7 +55,9 @@ export type Database = {
           assessment_id: string
           completed?: boolean
           created_at?: string
+          email?: string | null
           id?: string
+          name?: string | null
           rater_type: string
           responses?: Json
           updated_at?: string
@@ -62,7 +66,9 @@ export type Database = {
           assessment_id?: string
           completed?: boolean
           created_at?: string
+          email?: string | null
           id?: string
+          name?: string | null
           rater_type?: string
           responses?: Json
           updated_at?: string

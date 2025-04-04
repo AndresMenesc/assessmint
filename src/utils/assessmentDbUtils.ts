@@ -123,6 +123,7 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
  */
 export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
   try {
+    console.log("Syncing assessment with DB:", assessmentData.id);
     const dbAssessment = assessmentToDbFormat(assessmentData);
     
     // First update the assessment
@@ -139,6 +140,7 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
     
     // Then handle raters and their responses using the new table
     for (const rater of assessmentData.raters) {
+      console.log(`Processing rater ${rater.raterType} with email ${rater.email}`);
       // Check if we already have an entry for this rater type
       const { data: existingResponse, error: findResponseError } = await supabase
         .from('assessment_responses')
@@ -153,39 +155,49 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
       }
       
       if (existingResponse) {
+        console.log(`Updating existing responses for rater ${rater.raterType}`, rater.responses.length);
         // Update existing responses - convert responses to Json type
-        const { error: updateError } = await supabase
+        const { data, error: updateError } = await supabase
           .from('assessment_responses')
           .update({
-            responses: JSON.parse(JSON.stringify(rater.responses)) as Json, // Convert to a valid Json type
+            responses: rater.responses as unknown as Json, // Convert to a valid Json type
             completed: rater.completed,
-            email: rater.email,
-            name: rater.name,
+            email: rater.email || null, // Ensure email is null if not provided
+            name: rater.name || null, // Ensure name is null if not provided
             updated_at: new Date().toISOString()
           })
-          .eq('id', existingResponse.id);
+          .eq('id', existingResponse.id)
+          .select();
           
         if (updateError) {
           console.error("Error updating assessment responses:", updateError);
+          console.error("Error details:", updateError.details);
+          console.error("Error message:", updateError.message);
           continue;
         }
+        console.log("Update successful:", data);
       } else {
+        console.log(`Creating new responses for rater ${rater.raterType}`);
         // Create new responses - convert responses to Json type
-        const { error: createError } = await supabase
+        const { data, error: createError } = await supabase
           .from('assessment_responses')
           .insert({
             assessment_id: assessmentData.id,
             rater_type: rater.raterType,
-            responses: JSON.parse(JSON.stringify(rater.responses)) as Json, // Convert to a valid Json type
+            responses: rater.responses as unknown as Json, // Convert to a valid Json type
             completed: rater.completed,
-            email: rater.email,
-            name: rater.name
-          });
+            email: rater.email || null, // Ensure email is null if not provided
+            name: rater.name || null // Ensure name is null if not provided
+          })
+          .select();
           
         if (createError) {
           console.error("Error creating assessment responses:", createError);
+          console.error("Error details:", createError.details);
+          console.error("Error message:", createError.message);
           continue;
         }
+        console.log("Insert successful:", data);
       }
     }
     
