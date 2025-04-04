@@ -529,7 +529,10 @@ const ResultsPage = () => {
                                 )}
                                 
                                 {results.profileType && (
-                                  <ProfileCard profileType={results.profileType} />
+                                  <ProfileCard 
+                                    profileType={results.profileType} 
+                                    debugInfo={results.rawScores}
+                                  />
                                 )}
                               </>
                             ) : (
@@ -562,7 +565,10 @@ const ResultsPage = () => {
                           )}
                           
                           {results.profileType && (
-                            <ProfileCard profileType={results.profileType} />
+                            <ProfileCard 
+                              profileType={results.profileType} 
+                              debugInfo={results.rawScores}
+                            />
                           )}
                         </div>
                       )}

@@ -1,11 +1,21 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 
 interface ProfileCardProps {
   profileType: string;
+  debugInfo?: {
+    esteemScore?: number;
+    trustScore?: number;
+    driverScore?: number;
+    adaptabilityScore?: number;
+    problemResolutionScore?: number;
+  };
 }
 
-const ProfileCard = ({ profileType }: ProfileCardProps) => {
+const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
+  const [showDebug, setShowDebug] = useState(false);
+  
   const profiles: Record<string, { summary: string; traits: string[] }> = {
     "The Balanced Achiever": {
       summary: "Balanced, Proactive, Transparent",
@@ -119,7 +129,17 @@ const ProfileCard = ({ profileType }: ProfileCardProps) => {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Your Profile: {profileType}</CardTitle>
+        <CardTitle className="flex justify-between">
+          <span>Your Profile: {profileType}</span>
+          {debugInfo && (
+            <button 
+              onClick={() => setShowDebug(!showDebug)} 
+              className="text-xs text-gray-500 underline"
+            >
+              {showDebug ? "Hide Scores" : "Show Scores"}
+            </button>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="mb-4">
@@ -127,6 +147,22 @@ const ProfileCard = ({ profileType }: ProfileCardProps) => {
             {profile.summary}
           </span>
         </div>
+        
+        {debugInfo && showDebug && (
+          <div className="mb-4 p-3 border rounded-md text-xs">
+            <h4 className="font-medium mb-1">Raw Dimension Scores:</h4>
+            <ul className="space-y-1">
+              <li>Esteem: {debugInfo.esteemScore}</li>
+              <li>Trust: {debugInfo.trustScore}</li>
+              <li>Business Drive: {debugInfo.driverScore}</li>
+              <li>Adaptability: {debugInfo.adaptabilityScore}</li>
+              <li>Problem Resolution: {debugInfo.problemResolutionScore}</li>
+            </ul>
+            <p className="mt-2 text-gray-500">
+              Verify these scores against profile ranges in the documentation
+            </p>
+          </div>
+        )}
         
         <h3 className="font-semibold mb-2">Typical Behaviors:</h3>
         <ul className="list-disc list-inside space-y-1 pl-2">

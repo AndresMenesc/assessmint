@@ -1,4 +1,3 @@
-
 import { RaterResponses, Section } from "@/types/assessment";
 import { calculateDimensionScore, calculateCoachabilityScore, calculateSelfAwareness, calculateCoachabilityAwareness } from "./scoreCalculations";
 
@@ -259,7 +258,14 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         dimensionScores,
         selfAwareness,
         coachabilityAwareness,
-        profileType
+        profileType,
+        rawScores: {
+          esteemScore,
+          trustScore,
+          driverScore,
+          adaptabilityScore,
+          problemResolutionScore
+        }
       };
     }
     
