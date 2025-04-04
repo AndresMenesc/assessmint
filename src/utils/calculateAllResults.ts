@@ -278,7 +278,7 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
 
 /**
  * Helper function to determine profile type based on dimension scores
- * These use the actual score ranges from the provided behavioral profile archetypes
+ * These use the exact score ranges from the provided behavioral profile archetypes
  */
 function determineProfileType(
   esteemScore: number,
