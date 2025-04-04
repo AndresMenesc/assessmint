@@ -26,11 +26,11 @@ const CustomTooltip = ({ active, payload }: any) => {
       <div className="bg-white p-2 border shadow-sm rounded-md">
         <p className="font-semibold">Coachability</p>
         {data.score !== undefined ? (
-          <p>Score: {data.score.toFixed(2)}</p>
+          <p>Score: {data.score}</p>
         ) : (
           <>
-            <p>Self Score: {data.selfScore.toFixed(2)}</p>
-            <p>Others Score: {data.othersScore.toFixed(2)}</p>
+            <p>Self Score: {data.selfScore}</p>
+            <p>Others Score: {data.othersScore}</p>
           </>
         )}
         <p className="text-xs text-gray-500">
@@ -195,7 +195,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                 <LabelList
                   dataKey="score"
                   position="right"
-                  formatter={(val: number) => val.toFixed(1)}
+                  formatter={(val: number) => val}
                   style={labelStyle}
                   offset={5}
                 />
@@ -214,7 +214,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                   <LabelList
                     dataKey="selfScore"
                     position="right"
-                    formatter={(val: number) => val.toFixed(1)}
+                    formatter={(val: number) => val}
                     style={labelStyle}
                     offset={5}
                   />
@@ -230,7 +230,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                   <LabelList
                     dataKey="othersScore"
                     position="right"
-                    formatter={(val: number) => val.toFixed(1)}
+                    formatter={(val: number) => val}
                     style={labelStyle}
                     offset={25}
                   />

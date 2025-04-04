@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DimensionScore } from "@/types/assessment";
 import {
@@ -65,11 +66,11 @@ const CustomTooltip = ({ active, payload }: any) => {
       <div className="bg-white p-2 border shadow-sm rounded-md">
         <p className="font-semibold">{data.dimension || data.name}</p>
         {isIndividual ? (
-          <p>Score: {data.score.toFixed(2)}</p>
+          <p>Score: {data.score}</p>
         ) : (
           <>
-            <p>Self Score: {data.selfScore?.toFixed(2)}</p>
-            <p>Others Score: {data.othersScore?.toFixed(2)}</p>
+            <p>Self Score: {data.selfScore}</p>
+            <p>Others Score: {data.othersScore}</p>
           </>
         )}
         <p className="text-xs text-gray-500">
@@ -123,12 +124,14 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
     if (isIndividualScores) {
       // Single dimension score - Use raw score directly
       const s = original as any;
+      
+      // Calculate normalized score for positioning the bar (0-100)
       const normalizedScore =
         ((s.score - MIN_DIM) / RANGE_DIM) * 100 || 0; // map -28..+28 => 0..100 for display purposes only
 
       return {
         dimension: dimensionName,
-        score: s.score, // Keep raw score for display
+        score: s.score, // Keep raw score unchanged for display
         min: MIN_DIM,
         max: MAX_DIM,
         color: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
@@ -139,6 +142,8 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
     } else {
       // aggregator scenario: selfScore + othersScore - Use raw scores directly
       const s = original as any;
+      
+      // Calculate normalized scores for positioning the bars (0-100)
       const normalizedSelfScore =
         ((s.selfScore - MIN_DIM) / RANGE_DIM) * 100 || 0;
       const normalizedOthersScore =
@@ -146,8 +151,8 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
 
       return {
         dimension: dimensionName,
-        selfScore: s.selfScore, // Keep raw score for display
-        othersScore: s.othersScore, // Keep raw score for display
+        selfScore: s.selfScore, // Keep raw score unchanged for display
+        othersScore: s.othersScore, // Keep raw score unchanged for display
         min: MIN_DIM,
         max: MAX_DIM,
         color: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
@@ -222,8 +227,8 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
               layout="vertical"
               margin={{ top: 30, right: 50, left: 80, bottom: 30 }}
             >
-              {/* X-axis still needs normalized values for positioning (0-100), 
-                  but we'll show the actual -28 to 28 values on the ticks */}
+              {/* X-axis using normalized values for positioning (0-100), 
+                  but showing the actual -28 to 28 scale on ticks */}
               <XAxis
                 type="number"
                 domain={[0, 100]}
@@ -266,7 +271,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                   <LabelList
                     dataKey="score"
                     position="right"
-                    formatter={(v: number) => v.toFixed(1)}
+                    formatter={(v: number) => v}
                     style={{
                       fontSize: isMobile ? "9px" : "11px",
                       fill: "#000"
@@ -290,7 +295,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                     <LabelList
                       dataKey="selfScore"
                       position="right"
-                      formatter={(v: number) => v.toFixed(1)}
+                      formatter={(v: number) => v}
                       style={{
                         fontSize: isMobile ? "9px" : "11px",
                         fill: "#000"
@@ -317,7 +322,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                     <LabelList
                       dataKey="othersScore"
                       position="right"
-                      formatter={(v: number) => v.toFixed(1)}
+                      formatter={(v: number) => v}
                       style={{
                         fontSize: isMobile ? "9px" : "11px",
                         fill: "#000"
