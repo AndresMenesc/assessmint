@@ -57,55 +57,38 @@ const AppContent = () => {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="*" element={<NotFound />} />
       
-      {/* Assessment related routes - admins can't access these */}
-      <Route 
-        path="/start" 
-        element={
-          <ProtectedRoute requiredRole={null}>
-            <StartPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/rate" 
-        element={
-          <ProtectedRoute requiredRole={null}>
-            <RaterStartPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/assessment" 
-        element={
-          <ProtectedRoute requiredRole="rater">
-            <AssessmentPage />
-          </ProtectedRoute>
-        } 
-      />
+      {/* Assessment related routes */}
+      <Route path="/start" element={
+        <ProtectedRoute requiredRole={null}>
+          <StartPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/rate" element={
+        <ProtectedRoute requiredRole={null}>
+          <RaterStartPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/assessment" element={
+        <ProtectedRoute requiredRole="rater">
+          <AssessmentPage />
+        </ProtectedRoute>
+      } />
       <Route path="/completion" element={<CompletionPage />} />
       
       {/* Admin routes with protection */}
-      <Route 
-        path="/results" 
-        element={
-          <ProtectedRoute requiredRole="admin">
-            <ResultsPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/admin" 
-        element={
-          <ProtectedRoute requiredRole="super_admin">
-            <AdminPage />
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Information pages */}
-      <Route path="/about" element={<AboutPage />} />
-      <Route path="*" element={<NotFound />} />
+      <Route path="/results" element={
+        <ProtectedRoute requiredRole="admin">
+          <ResultsPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin" element={
+        <ProtectedRoute requiredRole="super_admin">
+          <AdminPage />
+        </ProtectedRoute>
+      } />
     </Routes>
   );
 };
