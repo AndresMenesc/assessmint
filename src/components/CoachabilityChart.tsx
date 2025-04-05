@@ -60,12 +60,14 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
   if (isIndividualScores) {
     // single user
     const c = coachabilityScore as any;
+    const rawScore = Math.round(c.score);
+    
     chartData.push({
       dimension: "Coachability",
-      score: c.score,
+      score: rawScore,
       // color logic: red if ≤30, yellow if ≤40, else green
-      color: c.score <= 30 ? "#ef4444" : c.score <= 40 ? "#eab308" : "#22c55e",
-      normalizedScore: c.score, // Use the actual score for positioning
+      color: rawScore <= 30 ? "#ef4444" : rawScore <= 40 ? "#eab308" : "#22c55e",
+      normalizedScore: ((rawScore - 10) / 40) * 100, // Normalize 10-50 to 0-100% for visualization
       min: 10,
       max: 50,
       lowLabel: "resistant",
@@ -74,21 +76,24 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
   } else {
     // aggregator with self + others
     const c = coachabilityScore as any;
+    const selfRawScore = Math.round(c.selfScore);
+    const othersRawScore = Math.round(c.othersScore);
+    
     chartData.push({
       dimension: "Coachability",
-      selfScore: c.selfScore,
-      othersScore: c.othersScore,
+      selfScore: selfRawScore,
+      othersScore: othersRawScore,
       // color logic for each
       selfColor:
-        c.selfScore <= 30 ? "#ef4444" : c.selfScore <= 40 ? "#eab308" : "#22c55e",
+        selfRawScore <= 30 ? "#ef4444" : selfRawScore <= 40 ? "#eab308" : "#22c55e",
       othersColor:
-        c.othersScore <= 30
+        othersRawScore <= 30
           ? "#ef4444"
-          : c.othersScore <= 40
+          : othersRawScore <= 40
             ? "#eab308"
             : "#22c55e",
-      normalizedSelfScore: c.selfScore,
-      normalizedOthersScore: c.othersScore,
+      normalizedSelfScore: ((selfRawScore - 10) / 40) * 100,
+      normalizedOthersScore: ((othersRawScore - 10) / 40) * 100,
       min: 10,
       max: 50,
       lowLabel: "resistant",
@@ -164,10 +169,10 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
           <BarChart data={chartData} layout="vertical" margin={chartMargins}>
             <XAxis
               type="number"
-              domain={[10, 50]}
+              domain={[0, 100]}
               axisLine={true}
-              tickFormatter={(val) => val.toString()}
-              ticks={[10, 20, 30, 40, 50]}
+              tickFormatter={(val) => Math.round((val / 100 * 40) + 10).toString()}
+              ticks={[0, 25, 50, 75, 100]}
               fontSize={isMobile ? 9 : 12}
               tick={{ fill: "#666" }}
             />
@@ -182,8 +187,8 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
             <Tooltip content={<CustomTooltip />} />
 
             {/* Reference lines (draw them first) */}
-            <ReferenceLine x={30} stroke="#ef4444" strokeWidth={2} />
-            <ReferenceLine x={40} stroke="#eab308" strokeWidth={2} />
+            <ReferenceLine x={(30 - 10) / 40 * 100} stroke="#ef4444" strokeWidth={2} />
+            <ReferenceLine x={(40 - 10) / 40 * 100} stroke="#eab308" strokeWidth={2} />
 
             {/* Main bar(s) on top */}
             {isIndividualScores ? (
