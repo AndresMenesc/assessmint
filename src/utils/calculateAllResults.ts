@@ -1,3 +1,4 @@
+
 import { RaterResponses, Section } from "@/types/assessment";
 import { calculateDimensionScore, calculateCoachabilityScore, calculateSelfAwareness, calculateCoachabilityAwareness } from "./scoreCalculations";
 
@@ -60,7 +61,7 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         problemResolutionScore
       };
       
-      // MODIFIED: Use the raw scores directly without normalization
+      // Use the raw scores directly without normalization
       dimensionScores = [
         { 
           name: "Esteem", 
@@ -195,7 +196,7 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         otherEsteemScore, otherTrustScore, otherDriverScore, otherAdaptabilityScore, otherProblemResolutionScore
       });
       
-      // MODIFIED: Use the raw scores directly without normalization
+      // Use the raw scores directly without normalization
       dimensionScores = [
         { 
           name: "Esteem", 

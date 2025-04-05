@@ -65,7 +65,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
       score: c.score,
       // color logic: red if ≤30, yellow if ≤40, else green
       color: c.score <= 30 ? "#ef4444" : c.score <= 40 ? "#eab308" : "#22c55e",
-      normalizedScore: c.score, // Use the actual score (10-50 scale)
+      normalizedScore: c.score, // Use the actual score for positioning
       min: 10,
       max: 50,
       lowLabel: "resistant",
@@ -195,7 +195,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                 <LabelList
                   dataKey="score"
                   position="right"
-                  formatter={(val: number) => val}
+                  formatter={(val: number) => Math.round(val)}
                   style={labelStyle}
                   offset={5}
                 />
@@ -214,7 +214,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                   <LabelList
                     dataKey="selfScore"
                     position="right"
-                    formatter={(val: number) => val}
+                    formatter={(val: number) => Math.round(val)}
                     style={labelStyle}
                     offset={5}
                   />
@@ -230,7 +230,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                   <LabelList
                     dataKey="othersScore"
                     position="right"
-                    formatter={(val: number) => val}
+                    formatter={(val: number) => Math.round(val)}
                     style={labelStyle}
                     offset={25}
                   />

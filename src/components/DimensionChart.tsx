@@ -271,7 +271,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                   <LabelList
                     dataKey="score"
                     position="right"
-                    formatter={(v: number) => v}
+                    formatter={(v: number) => Math.round(v)}
                     style={{
                       fontSize: isMobile ? "9px" : "11px",
                       fill: "#000"
@@ -295,7 +295,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                     <LabelList
                       dataKey="selfScore"
                       position="right"
-                      formatter={(v: number) => v}
+                      formatter={(v: number) => Math.round(v)}
                       style={{
                         fontSize: isMobile ? "9px" : "11px",
                         fill: "#000"
@@ -322,7 +322,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                     <LabelList
                       dataKey="othersScore"
                       position="right"
-                      formatter={(v: number) => v}
+                      formatter={(v: number) => Math.round(v)}
                       style={{
                         fontSize: isMobile ? "9px" : "11px",
                         fill: "#000"
