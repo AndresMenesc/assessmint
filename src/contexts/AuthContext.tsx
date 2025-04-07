@@ -19,6 +19,7 @@ interface AuthContextProps {
   login: (email: string, password: string) => Promise<boolean>;
   codeLogin: (email: string, name: string, code: string, isSelf: boolean) => Promise<{ success: boolean; isNewAssessment?: boolean }>;
   logout: () => void;
+  resetPassword: (email: string) => Promise<boolean>;
 }
 
 // Create context with a default value
@@ -64,6 +65,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (event === "PASSWORD_RECOVERY") {
           toast.info("You can now reset your password");
+        } else if (event === "SIGNED_IN") {
+          // Handle sign in event
+          if (session?.user) {
+            console.log("User signed in:", session.user);
+            
+            // Check if this user is an admin in your database
+            checkUserRole(session.user.email);
+          }
         }
       }
     );
@@ -73,6 +82,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, []);
+
+  // Helper function to check user role in admin_users table
+  const checkUserRole = async (email: string | undefined) => {
+    if (!email) return;
+    
+    try {
+      const { data: adminData, error: adminError } = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('email', email.toLowerCase())
+        .single();
+
+      if (adminError) {
+        console.error("Error checking admin status:", adminError);
+        return;
+      }
+
+      if (adminData) {
+        // Set admin authentication
+        setIsAuthenticated(true);
+        setUserRole(adminData.role as UserRole);
+        setUserEmail(adminData.email);
+        setUserName(adminData.name || adminData.email.split('@')[0]);
+        
+        // Store in local storage
+        localStorage.setItem("isAuthenticated", "true");
+        localStorage.setItem("userRole", adminData.role);
+        localStorage.setItem("userEmail", adminData.email);
+        localStorage.setItem("userName", adminData.name || adminData.email.split('@')[0]);
+        
+        toast.success(`Welcome, ${adminData.name || "Admin"}!`);
+      }
+    } catch (error) {
+      console.error("Error checking user role:", error);
+    }
+  };
 
   // Login function
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -84,23 +129,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoginInProgress(true);
       
-      // Check if this is an admin user
-      const { data: adminData, error: adminError } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('email', email.toLowerCase())
-        .single();
+      // Try to sign in with Supabase Auth first
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase(),
+        password: password
+      });
 
-      if (adminError && adminError.code !== 'PGRST116') {
-        console.error("Error checking admin status:", adminError);
-        toast.error("Login failed. Please try again.");
-        return false;
-      }
+      if (authData.user) {
+        // Successfully signed in with Supabase Auth
+        console.log("Supabase Auth sign-in successful:", authData.user);
+        
+        // Check if this is an admin user
+        const { data: adminData, error: adminError } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('email', email.toLowerCase())
+          .single();
 
-      // If we found an admin user, verify password
-      if (adminData) {
-        // Simple password check (in a real app, use proper hashing)
-        if (adminData.password === password) {
+        if (adminError && adminError.code !== 'PGRST116') {
+          console.error("Error checking admin status:", adminError);
+          toast.error("Login failed. Please try again.");
+          return false;
+        }
+
+        if (adminData) {
           // Set admin authentication
           setIsAuthenticated(true);
           setUserRole(adminData.role as UserRole);
@@ -115,9 +167,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           toast.success(`Welcome, ${adminData.name || "Admin"}!`);
           return true;
-        } else {
-          toast.error("Invalid password");
+        }
+      } else if (authError) {
+        console.log("Supabase Auth error, falling back to legacy login:", authError.message);
+        
+        // Fall back to checking the admin_users table directly
+        const { data: adminData, error: adminError } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('email', email.toLowerCase())
+          .single();
+
+        if (adminError && adminError.code !== 'PGRST116') {
+          console.error("Error checking admin status:", adminError);
+          toast.error("Login failed. Please try again.");
           return false;
+        }
+
+        // If we found an admin user, verify password
+        if (adminData) {
+          // Simple password check (in a real app, use proper hashing)
+          if (adminData.password === password) {
+            // Set admin authentication
+            setIsAuthenticated(true);
+            setUserRole(adminData.role as UserRole);
+            setUserEmail(adminData.email);
+            setUserName(adminData.name || adminData.email.split('@')[0]);
+            
+            // Store in local storage
+            localStorage.setItem("isAuthenticated", "true");
+            localStorage.setItem("userRole", adminData.role);
+            localStorage.setItem("userEmail", adminData.email);
+            localStorage.setItem("userName", adminData.name || adminData.email.split('@')[0]);
+            
+            toast.success(`Welcome, ${adminData.name || "Admin"}!`);
+            return true;
+          } else {
+            toast.error("Invalid password");
+            return false;
+          }
         }
       }
       
@@ -142,6 +230,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     } finally {
       setLoginInProgress(false);
+    }
+  };
+  
+  // Reset password function
+  const resetPassword = async (email: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      
+      if (error) {
+        console.error("Password reset error:", error);
+        toast.error(`Password reset failed: ${error.message}`);
+        return false;
+      }
+      
+      toast.success(`Password reset instructions sent to ${email}`);
+      return true;
+    } catch (error) {
+      console.error("Password reset error:", error);
+      toast.error("Password reset failed. Please try again.");
+      return false;
     }
   };
   
@@ -195,6 +305,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Logout function
   const logout = () => {
+    // Sign out from Supabase Auth
+    supabase.auth.signOut().catch(error => {
+      console.error("Error signing out from Supabase:", error);
+    });
+    
+    // Clear local state and storage
     setIsAuthenticated(false);
     setUserRole(null);
     setUserEmail(null);
@@ -223,7 +339,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserCode,
       login,
       codeLogin,
-      logout
+      logout,
+      resetPassword
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,7 +47,7 @@ const resetPasswordFormSchema = z.object({
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, codeLogin, userRole } = useAuth();
+  const { login, codeLogin, userRole, resetPassword } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"user" | "admin">("user");
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
@@ -89,7 +88,6 @@ const LoginPage = () => {
 
       if (result.success) {
         if (isSelf && result.isNewAssessment) {
-          // Self-assessment with new assessment
           navigate("/start", {
             state: {
               name: values.name,
@@ -98,7 +96,6 @@ const LoginPage = () => {
             }
           });
         } else if (isSelf && !result.isNewAssessment) {
-          // Self-assessment with existing assessment
           navigate("/assessment", {
             state: {
               name: values.name,
@@ -108,7 +105,6 @@ const LoginPage = () => {
             }
           });
         } else {
-          // Rater assessment - ensure we navigate to assessment page
           navigate("/assessment", {
             state: {
               name: values.name,
@@ -141,7 +137,6 @@ const LoginPage = () => {
       if (success) {
         toast.success("Login successful!");
 
-        // Explicitly check user role and navigate to appropriate page
         if (userRole === "super_admin") {
           navigate("/admin", { replace: true });
         } else if (userRole === "admin") {
@@ -160,15 +155,10 @@ const LoginPage = () => {
   const handleResetPassword = async (values: z.infer<typeof resetPasswordFormSchema>) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/login`,
-      });
+      const success = await resetPassword(values.email);
       
-      if (error) {
-        toast.error(error.message);
-      } else {
+      if (success) {
         setIsResetEmailSent(true);
-        toast.success("Password reset link sent to your email");
       }
     } catch (error) {
       console.error("Reset password error:", error);
