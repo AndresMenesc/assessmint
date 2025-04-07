@@ -13,8 +13,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { LogIn, UserIcon, Mail, Lock, User, Hash } from "lucide-react";
+import { LogIn, UserIcon, Mail, Lock, User, Hash, KeyRound } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Logo from "@/components/Logo";
+import { supabase } from "@/integrations/supabase/client";
 
 const userFormSchema = z.object({
   name: z.string().min(2, {
@@ -38,11 +40,19 @@ const adminFormSchema = z.object({
   }),
 });
 
+const resetPasswordFormSchema = z.object({
+  email: z.string().email({
+    message: "Please enter a valid email address.",
+  }),
+});
+
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login, codeLogin, userRole } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"user" | "admin">("user");
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isResetEmailSent, setIsResetEmailSent] = useState(false);
 
   const userForm = useForm<z.infer<typeof userFormSchema>>({
     resolver: zodResolver(userFormSchema),
@@ -59,6 +69,13 @@ const LoginPage = () => {
     defaultValues: {
       email: "",
       password: "",
+    },
+  });
+
+  const resetPasswordForm = useForm<z.infer<typeof resetPasswordFormSchema>>({
+    resolver: zodResolver(resetPasswordFormSchema),
+    defaultValues: {
+      email: "",
     },
   });
 
@@ -135,6 +152,27 @@ const LoginPage = () => {
       }
     } catch (error) {
       toast.error("An error occurred during login");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (values: z.infer<typeof resetPasswordFormSchema>) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      
+      if (error) {
+        toast.error(error.message);
+      } else {
+        setIsResetEmailSent(true);
+        toast.success("Password reset link sent to your email");
+      }
+    } catch (error) {
+      console.error("Reset password error:", error);
+      toast.error("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -354,12 +392,22 @@ const LoginPage = () => {
                       ) : (
                         <span className="flex items-center">
                           <LogIn className="mr-2 h-4 w-4" />
-                          Super Admin Login
+                          Admin Login
                         </span>
                       )}
                     </Button>
 
-
+                    <div className="text-center mt-4">
+                      <Button 
+                        variant="link" 
+                        onClick={() => setIsResetDialogOpen(true)}
+                        type="button"
+                        className="text-sm"
+                      >
+                        <KeyRound className="mr-2 h-4 w-4" />
+                        Forgot Password?
+                      </Button>
+                    </div>
                   </form>
                 </Form>
               </CardContent>
@@ -367,6 +415,76 @@ const LoginPage = () => {
           </Tabs>
         </Card>
       </div>
+
+      {/* Password Reset Dialog */}
+      <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isResetEmailSent ? "Email Sent" : "Reset Password"}</DialogTitle>
+            <DialogDescription>
+              {isResetEmailSent 
+                ? "Check your email for a reset password link. Follow the instructions to create a new password." 
+                : "Enter your email address and we'll send you a link to reset your password."}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {!isResetEmailSent ? (
+            <Form {...resetPasswordForm}>
+              <form onSubmit={resetPasswordForm.handleSubmit(handleResetPassword)} className="space-y-4">
+                <FormField
+                  control={resetPasswordForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Label htmlFor="reset-email">Email</Label>
+                      <FormControl>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Input
+                            id="reset-email"
+                            type="email"
+                            className="pl-10"
+                            placeholder="Enter your email address"
+                            autoComplete="email"
+                            {...field}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <DialogFooter className="sm:justify-end">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsResetDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? "Sending..." : "Send Reset Link"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          ) : (
+            <DialogFooter className="sm:justify-end">
+              <Button 
+                type="button" 
+                onClick={() => {
+                  setIsResetDialogOpen(false);
+                  setIsResetEmailSent(false);
+                  resetPasswordForm.reset();
+                }}
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

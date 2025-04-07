@@ -56,6 +56,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserName(storedName);
       setUserCode(storedCode);
     }
+
+    // Set up auth state change listener for Supabase authentication
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("Auth state change event:", event, session);
+        
+        if (event === "PASSWORD_RECOVERY") {
+          toast.info("You can now reset your password");
+        }
+      }
+    );
+
+    // Clean up the subscription when the component unmounts
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Login function
