@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -234,8 +233,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Reset password function
   const resetPassword = async (email: string): Promise<boolean> => {
     try {
+      // Get the current site URL for redirect
+      const redirectTo = `${window.location.origin}/login`;
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login?type=recovery`,
+        redirectTo: redirectTo,
       });
       
       if (error) {

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -69,20 +70,28 @@ const LoginPage = () => {
   const [recoveryToken, setRecoveryToken] = useState<string | null>(null);
 
   useEffect(() => {
+    // First check for URL query parameters (for ?type=recovery)
     const url = new URL(window.location.href);
     const type = url.searchParams.get('type');
     
     if (type === 'recovery') {
       toast.success('You can now set your new password');
+      setIsNewPasswordDialogOpen(true);
     }
     
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    if (hashParams.get('type') === 'recovery') {
+    // Then check for hash parameters (#access_token=...)
+    if (window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const type = hashParams.get('type');
       const accessToken = hashParams.get('access_token');
-      if (accessToken) {
+      
+      if (type === 'recovery' && accessToken) {
+        console.log("Recovery token detected in hash");
         setRecoveryToken(accessToken);
         setIsNewPasswordDialogOpen(true);
+        toast.success("Please set your new password");
         
+        // Clean up the URL to remove the hash parameters
         window.history.replaceState(null, '', window.location.pathname);
       }
     }
