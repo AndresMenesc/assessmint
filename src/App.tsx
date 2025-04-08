@@ -63,7 +63,7 @@ const AppContent = () => {
       <Route path="/about" element={<AboutPage />} />
       <Route path="*" element={<NotFound />} />
       
-      {/* Assessment related routes */}
+      {/* Assessment related routes - All wrapped in AssessmentProvider */}
       <Route path="/start" element={
         <ProtectedRoute requiredRole={null}>
           <StartPage />
@@ -81,7 +81,7 @@ const AppContent = () => {
       } />
       <Route path="/completion" element={<CompletionPage />} />
       
-      {/* Admin routes with protection */}
+      {/* Admin routes with protection - Also wrapped in AssessmentProvider */}
       <Route path="/results" element={
         <ProtectedRoute requiredRole="admin">
           <ResultsPage />
@@ -97,7 +97,6 @@ const AppContent = () => {
 };
 
 // The App component structure ensures that the AuthProvider wraps everything including the AssessmentProvider
-// IMPORTANT: The order of providers matters! AuthProvider must wrap AssessmentProvider
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>

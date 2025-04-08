@@ -173,9 +173,9 @@ const ResultsPage = () => {
       const rater1Scores = await getSingleRaterResults(selectedAssessment, RaterType.RATER1);
       const rater2Scores = await getSingleRaterResults(selectedAssessment, RaterType.RATER2);
       
-      setSelfResults(selfScores);
-      setRater1Results(rater1Scores);
-      setRater2Results(rater2Scores);
+      setSelfResults(selfScores || []);
+      setRater1Results(rater1Scores || []);
+      setRater2Results(rater2Scores || []);
     };
     
     loadIndividualResults();
