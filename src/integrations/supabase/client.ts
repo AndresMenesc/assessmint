@@ -8,12 +8,14 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 // Get current site URL for Supabase redirects
 const getRedirectURL = () => {
-  // In production, use the actual site URL
-  if (import.meta.env.PROD) {
-    return window.location.origin;
+  // Check if we're on the production domain
+  const hostname = window.location.hostname;
+  if (hostname === 'www.orbit-insights.com' || hostname === 'orbit-insights.com') {
+    return 'https://www.orbit-insights.com/login';
   }
+  
   // In development, use the local dev URL
-  return window.location.origin;
+  return `${window.location.origin}/login`;
 };
 
 // Import the supabase client like this:
@@ -75,4 +77,3 @@ export const supabase = createClient<ExtendedDatabase>(
     }
   }
 );
-

@@ -69,31 +69,37 @@ const LoginPage = () => {
   const [recoveryToken, setRecoveryToken] = useState<string | null>(null);
 
   useEffect(() => {
-    // First check for URL query parameters (for ?type=recovery)
-    const url = new URL(window.location.href);
-    const type = url.searchParams.get('type');
-    
-    if (type === 'recovery') {
-      toast.success('You can now set your new password');
-      setIsNewPasswordDialogOpen(true);
-    }
-    
-    // Then check for hash parameters (#access_token=...)
-    if (window.location.hash) {
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const type = hashParams.get('type');
-      const accessToken = hashParams.get('access_token');
+    const checkForRecoveryToken = () => {
+      const url = new URL(window.location.href);
+      const type = url.searchParams.get('type');
       
-      if (type === 'recovery' && accessToken) {
-        console.log("Recovery token detected in hash");
-        setRecoveryToken(accessToken);
+      if (type === 'recovery') {
+        console.log('Recovery type detected in URL params');
         setIsNewPasswordDialogOpen(true);
-        toast.success("Please set your new password");
-        
-        // Clean up the URL to remove the hash parameters
-        window.history.replaceState(null, '', window.location.pathname);
+        toast.success('You can now set your new password');
+        return;
       }
-    }
+      
+      if (window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const hashType = hashParams.get('type');
+        
+        if ((hashType === 'recovery' || hashType === 'signup') && accessToken) {
+          console.log("Recovery token detected in hash:", accessToken);
+          setRecoveryToken(accessToken);
+          setIsNewPasswordDialogOpen(true);
+          toast.success("Please set your new password");
+          
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return true;
+        }
+      }
+      
+      return false;
+    };
+    
+    checkForRecoveryToken();
   }, []);
 
   const userForm = useForm<z.infer<typeof userFormSchema>>({
@@ -225,12 +231,30 @@ const LoginPage = () => {
   const handleUpdatePassword = async (values: z.infer<typeof newPasswordFormSchema>) => {
     setIsLoading(true);
     try {
-      const success = await updatePassword(values.password);
+      let success;
+      
+      if (recoveryToken) {
+        const { error } = await supabase.auth.updateUser({ 
+          password: values.password 
+        }, {
+          accessToken: recoveryToken
+        });
+        
+        success = !error;
+        
+        if (error) {
+          console.error("Update password error with token:", error);
+          toast.error(error.message || "Failed to update password");
+        }
+      } else {
+        success = await updatePassword(values.password);
+      }
       
       if (success) {
         setIsNewPasswordDialogOpen(false);
         toast.success("Your password has been updated successfully. Please log in.");
         newPasswordForm.reset();
+        setActiveTab("admin");
       }
     } catch (error) {
       console.error("Update password error:", error);
@@ -547,12 +571,20 @@ const LoginPage = () => {
         </DialogContent>
       </Dialog>
       
-      <Dialog open={isNewPasswordDialogOpen} onOpenChange={(open) => {
-        if (!open) {
-          setIsNewPasswordDialogOpen(false);
-          newPasswordForm.reset();
-        }
-      }}>
+      <Dialog 
+        open={isNewPasswordDialogOpen} 
+        onOpenChange={(open) => {
+          if (!open && recoveryToken) {
+            toast.warning("Please set your new password to continue");
+            return;
+          }
+          
+          setIsNewPasswordDialogOpen(open);
+          if (!open) {
+            newPasswordForm.reset();
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Set New Password</DialogTitle>
@@ -577,6 +609,7 @@ const LoginPage = () => {
                           type="password"
                           className="pl-10"
                           placeholder="Enter your new password"
+                          autoFocus
                           {...field}
                         />
                       </div>
