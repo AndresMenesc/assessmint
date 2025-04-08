@@ -48,6 +48,11 @@ export interface Response {
   score: number;
 }
 
+// Extended type used for compatibility with calculation functions
+export interface AssessmentResponse extends Response {
+  assessment_id: string; // Added for compatibility
+}
+
 // Type for assessment result scores
 export interface DimensionScore {
   dimension: string;
@@ -77,7 +82,7 @@ export interface Assessment {
   updatedAt: Date;
 }
 
-// Type for the assessment response
+// Type for the assessment response in database format
 export interface AssessmentResponse {
   id?: string;
   assessment_id: string;

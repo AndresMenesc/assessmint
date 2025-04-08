@@ -55,7 +55,22 @@ export function prepareAssessmentResponse(data: any, assessmentId: string): any 
     name: data.name,
     completed: data.completed || false,
     responses: prepareResponsesForDb(data.responses || []),
-    created_at: data.created_at,
-    updated_at: data.updated_at || new Date().toISOString()
+    created_at: data.created_at || new Date().toISOString(),
+    updated_at: data.updated_at || new Date().toISOString(),
+    id: data.id || undefined // Include id if available
+  });
+}
+
+/**
+ * Helper function to prepare response data for the database
+ */
+export function prepareDbResponse(data: any, raterId: string): any {
+  return prepareDbObject({
+    rater_id: raterId,
+    question_id: data.questionId,
+    score: data.score,
+    created_at: data.created_at || new Date().toISOString(),
+    updated_at: data.updated_at || new Date().toISOString(),
+    id: data.id || undefined
   });
 }

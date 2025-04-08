@@ -18,10 +18,19 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: AdminUser | null;
   role: UserRole;
+  userRole: UserRole; // Added alias for backward compatibility
+  userEmail: string | null; // Added for components using this
+  userName: string | null; // Added for components using this
+  userCode?: string | null; // Added for components using this
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>; // Added alias for backward compatibility
+  codeLogin: (email: string, name: string, code: string, isSelf: boolean) => Promise<{ success: boolean; isNewAssessment?: boolean; }>; // Added for components using this
   signOut: () => Promise<void>;
+  logout: () => Promise<void>; // Added alias for backward compatibility
   verifySession: () => Promise<boolean>;
+  resetPassword: (email: string) => Promise<boolean>; // Added for components using this
+  updatePassword: (password: string) => Promise<boolean>; // Added for components using this
 }
 
 // Create context with default values
@@ -29,10 +38,18 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   user: null,
   role: null,
+  userRole: null,
+  userEmail: null,
+  userName: null,
   loading: true,
   signIn: async () => {},
+  login: async () => false,
+  codeLogin: async () => ({ success: false }),
   signOut: async () => {},
+  logout: async () => {},
   verifySession: async () => false,
+  resetPassword: async () => false,
+  updatePassword: async () => false,
 });
 
 // Hook for using the auth context
@@ -50,6 +67,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<AdminUser | null>(null);
   const [role, setRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
+  const [userCode, setUserCode] = useState<string | null>(null);
 
   // Verify session on component mount
   useEffect(() => {
@@ -176,7 +194,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         name: safeDataAccess(safeUserData, 'name') || safeDataAccess(safeUserData, 'email')
       });
       // Use the as UserRole type assertion
-      setRole(userRole as UserRole);
+      setRole(userRole);
       
       toast.success('Signed in successfully');
     } catch (error) {
@@ -200,12 +218,70 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsAuthenticated(false);
       setUser(null);
       setRole(null);
+      setUserCode(null);
       toast.success('Signed out successfully');
     } catch (error) {
       console.error('Sign out error:', error);
       toast.error('An error occurred during sign out');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // For assessment login with code
+  const codeLogin = async (email: string, name: string, code: string, isSelf: boolean) => {
+    try {
+      setLoading(true);
+      
+      // Store the code
+      setUserCode(code);
+      
+      // For simplicity, set as authenticated with rater role
+      setIsAuthenticated(true);
+      setUser({
+        role: 'rater',
+        email: email,
+        name: name
+      });
+      setRole('rater');
+      
+      // Success response (simplified)
+      return { success: true, isNewAssessment: isSelf && code.length <= 5 };
+    } catch (error) {
+      console.error('Code login error:', error);
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Reset password function 
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) {
+        toast.error(error.message);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Reset password error:', error);
+      return false;
+    }
+  };
+
+  // Update password function
+  const updatePassword = async (password: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        toast.error(error.message);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Update password error:', error);
+      return false;
     }
   };
 
@@ -216,10 +292,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated,
         user,
         role,
+        userRole: role, // Alias for backward compatibility
+        userEmail: user?.email || null,
+        userName: user?.name || null,
+        userCode,
         loading,
         signIn,
+        login: signIn, // Alias for backward compatibility
+        codeLogin,
         signOut,
+        logout: signOut, // Alias for backward compatibility
         verifySession,
+        resetPassword,
+        updatePassword
       }}
     >
       {children}

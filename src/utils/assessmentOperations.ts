@@ -1,8 +1,9 @@
-import { supabase } from "@/integrations/supabase/client";
-import { Assessment, Response, Section, SubSection, Question } from "@/types/assessment";
-import { DbAssessment } from "@/types/db-types";
-import { safeQueryData, isQueryError, asParam, safeDataFilter, asDbParam } from "./supabaseHelpers";
-import { prepareDbObject, prepareAssessmentResponse } from "./dbTypeHelpers";
+import { supabase } from '@/integrations/supabase/client';
+import { Assessment, Response, RaterType, AssessmentResponse } from '@/types/assessment';
+import { DbAssessment } from '@/types/db-types';
+import { v4 as uuidv4 } from 'uuid';
+import { prepareDbObject, prepareAssessmentResponse, raterTypeToString, prepareResponsesForDb, prepareDbResponse } from './dbTypeHelpers';
+import { safeQueryData, safeDataFilter, asParam, safeRowAccess } from './supabaseHelpers';
 
 // Function to create a new assessment in the database
 export const createAssessmentInDb = async (assessment: Assessment): Promise<Assessment> => {
@@ -480,3 +481,31 @@ export const fetchQuestions = async (): Promise<Question[]> => {
 export {
   // All functions are already exported above
 };
+
+/**
+ * Helper function to convert database responses to our app format
+ */
+export async function convertDbResponsesToAppFormat(
+  responseData: any[] | null
+): Promise<Response[]> {
+  if (!responseData || !Array.isArray(responseData)) {
+    return [];
+  }
+
+  return responseData.map((r: any) => ({
+    questionId: r.question_id,
+    score: r.score
+  }));
+}
+
+/**
+ * Helper function for type compatibility with AssessmentResponse
+ */
+export function adaptResponsesForCalculation(
+  responses: Response[]
+): AssessmentResponse[] {
+  return responses.map(r => ({
+    ...r,
+    assessment_id: 'temp-id' // Providing a temporary assessment_id for compatibility
+  }));
+}

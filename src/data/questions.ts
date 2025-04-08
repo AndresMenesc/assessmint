@@ -1,8 +1,7 @@
+import { Question } from "@/types/assessment";
 
-import { Question, Section, SubSection } from "@/types/assessment";
-
-// Default questions for the assessment
-export const questions: Question[] = [
+// Original list of questions
+const questionsList: Question[] = [
   // Esteem section - Insecure subsection
   {
     id: "esteem-insecure-1",
@@ -208,5 +207,25 @@ export const questions: Question[] = [
   }
 ];
 
-// Export the defaultQuestions as well for backward compatibility
-export const defaultQuestions = questions;
+// Export the questions array
+export const questions = questionsList;
+
+// Function to get all questions
+export function getQuestions(): Question[] {
+  return questions;
+}
+
+// Function to get a single question by ID
+export function getQuestionById(id: string): Question | undefined {
+  return questions.find(q => q.id === id);
+}
+
+// Function to get questions by section
+export function getQuestionsBySection(section: string): Question[] {
+  return questions.filter(q => q.section === section);
+}
+
+// Function to get questions by subsection
+export function getQuestionsBySubsection(subsection: string): Question[] {
+  return questions.filter(q => q.subSection === subsection);
+}
