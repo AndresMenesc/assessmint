@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, LogOut, Mail, Search, User, CalendarDays, FileBarChart, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { calculateAllResults } from "@/utils/calculateAllResults";
+import { calculateResults } from "@/utils/calculateAllResults";
 import IndividualResponses from "@/components/admin/IndividualResponses";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
@@ -216,13 +216,13 @@ const ResultsPage = () => {
       
       if (userRole !== "super_admin" && !fetchedRater.completed) return null;
       
-      const calculatedResults = calculateAllResults([fetchedRater]);
+      const calculatedResults = calculateResults([fetchedRater]);
       return calculatedResults?.dimensionScores || null;
     }
     
     if (userRole !== "super_admin" && !rater.completed) return null;
     
-    const calculatedResults = calculateAllResults([rater]);
+    const calculatedResults = calculateResults([rater]);
     return calculatedResults?.dimensionScores || null;
   };
 

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Assessment, RaterType, Question, AssessmentResponse, Response } from "@/types/assessment";
 import { v4 as uuidv4 } from "uuid";
@@ -18,16 +17,15 @@ import {
   completeAssessment as completeUserAssessment,
   fetchQuestions as fetchAllQuestions
 } from "@/utils/assessmentOperations";
-import { calculateAllResults as calculateResults } from "@/utils/calculateAllResults";
+import { calculateResults } from "@/utils/calculateAllResults";
 import { 
-  safeQueryData, 
-  safeDataFilter, 
   asParam, 
+  safeDataFilter, 
+  safeQueryData, 
   safeRowAccess, 
   getRowField, 
   safePrepareResponses 
-} from "@/utils/supabaseHelpers";
-import { PostgrestError } from "@supabase/supabase-js";
+} from "@/utils/supabaseUtils";
 
 interface AssessmentContextProps {
   assessment: Assessment | null;

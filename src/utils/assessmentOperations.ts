@@ -1,9 +1,209 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Assessment, RaterType, Response, Question } from "@/types/assessment";
 import { prepareDbObject } from "./dbTypeHelpers";
+import { asParam } from "./supabaseUtils";
 
-// Fix database operations to use the correct parameter preparation
-// Replace occurrences of asDbParam with prepareDbObject
+export const initializeAssessment = async (selfRaterEmail: string, selfRaterName: string, code: string): Promise<Assessment | null> => {
+  try {
+    const result = await createAssessment(selfRaterEmail, selfRaterName, code);
+    
+    if (!result.success || !result.assessmentId) {
+      throw new Error("Failed to create assessment");
+    }
+    
+    return {
+      id: result.assessmentId,
+      selfRaterEmail,
+      selfRaterName,
+      code,
+      completed: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      raters: [
+        {
+          raterType: RaterType.SELF,
+          email: selfRaterEmail,
+          name: selfRaterName,
+          responses: [],
+          completed: false
+        }
+      ]
+    };
+  } catch (error) {
+    console.error("Error in initializeAssessment:", error);
+    throw error;
+  }
+};
+
+export const initializeRaterAssessment = async (email: string, name: string, code: string) => {
+  try {
+    const assessment = await getAssessmentByCode(code);
+    if (!assessment) {
+      throw new Error("Assessment not found");
+    }
+    
+    const rater = await getRaterByEmail(assessment.id, email);
+    if (rater && rater.completed) {
+      throw new Error("Assessment already completed");
+    }
+    
+    const raterType = rater ? rater.rater_type as RaterType : 
+                     email === assessment.self_rater_email ? RaterType.SELF : RaterType.RATER1;
+    
+    if (!rater) {
+      await addRaterToAssessment(assessment.id, email, name, raterType);
+    }
+    
+    const responses = rater ? await getResponsesForRater(rater.id) : [];
+    
+    return {
+      assessment: {
+        id: assessment.id,
+        selfRaterEmail: assessment.self_rater_email,
+        selfRaterName: assessment.self_rater_name,
+        code: assessment.code,
+        completed: assessment.completed,
+        createdAt: new Date(assessment.created_at),
+        updatedAt: new Date(assessment.updated_at),
+        raters: [
+          {
+            raterType,
+            email,
+            name,
+            responses,
+            completed: rater ? rater.completed : false
+          }
+        ]
+      },
+      raterType
+    };
+  } catch (error) {
+    console.error("Error in initializeRaterAssessment:", error);
+    throw error;
+  }
+};
+
+export const addRater = (assessment: Assessment, email: string, name: string, raterType: RaterType): Assessment | null => {
+  try {
+    const existingRaterIndex = assessment.raters.findIndex(r => r.raterType === raterType);
+    
+    if (existingRaterIndex >= 0) {
+      const updatedRaters = [...assessment.raters];
+      updatedRaters[existingRaterIndex] = {
+        ...updatedRaters[existingRaterIndex],
+        email,
+        name
+      };
+      
+      return {
+        ...assessment,
+        raters: updatedRaters
+      };
+    } else {
+      return {
+        ...assessment,
+        raters: [
+          ...assessment.raters,
+          {
+            raterType,
+            email,
+            name,
+            responses: [],
+            completed: false
+          }
+        ]
+      };
+    }
+  } catch (error) {
+    console.error("Error in addRater:", error);
+    return null;
+  }
+};
+
+export const updateResponse = (assessment: Assessment, raterType: RaterType, questionId: string, score: number) => {
+  try {
+    const updatedRaters = assessment.raters.map(rater => {
+      if (rater.raterType !== raterType) {
+        return rater;
+      }
+      
+      const existingResponseIndex = rater.responses.findIndex(r => r.questionId === questionId);
+      
+      if (existingResponseIndex >= 0) {
+        const updatedResponses = [...rater.responses];
+        updatedResponses[existingResponseIndex] = {
+          ...updatedResponses[existingResponseIndex],
+          score
+        };
+        
+        return {
+          ...rater,
+          responses: updatedResponses
+        };
+      } else {
+        return {
+          ...rater,
+          responses: [
+            ...rater.responses,
+            {
+              questionId,
+              score
+            }
+          ]
+        };
+      }
+    });
+    
+    const updatedAssessment = {
+      ...assessment,
+      raters: updatedRaters
+    };
+    
+    return {
+      updatedAssessment,
+      success: true
+    };
+  } catch (error) {
+    console.error("Error in updateResponse:", error);
+    return {
+      success: false
+    };
+  }
+};
+
+export const completeAssessment = (assessment: Assessment, raterType: RaterType): Assessment | null => {
+  try {
+    const updatedRaters = assessment.raters.map(rater => {
+      if (rater.raterType === raterType) {
+        return {
+          ...rater,
+          completed: true
+        };
+      }
+      return rater;
+    });
+    
+    const allCompleted = updatedRaters.every(r => r.completed);
+    
+    return {
+      ...assessment,
+      raters: updatedRaters,
+      completed: allCompleted
+    };
+  } catch (error) {
+    console.error("Error in completeAssessment:", error);
+    return null;
+  }
+};
+
+export const fetchQuestions = async (): Promise<Question[]> => {
+  try {
+    return await getAllQuestions();
+  } catch (error) {
+    console.error("Error fetching questions:", error);
+    return [];
+  }
+};
 
 export async function updateAssessment(assessmentId: string, data: any) {
   try {
@@ -22,7 +222,6 @@ export async function updateAssessment(assessmentId: string, data: any) {
 
 export async function createAssessment(selfRaterEmail: string, selfRaterName: string, code: string) {
   try {
-    // Create the assessment record
     const { data: assessmentData, error: assessmentError } = await supabase
       .from('assessments')
       .insert(prepareDbObject({
@@ -39,7 +238,6 @@ export async function createAssessment(selfRaterEmail: string, selfRaterName: st
       return { success: false, assessmentId: null };
     }
     
-    // Create the self-rater record
     const { data: raterData, error: raterError } = await supabase
       .from('raters')
       .insert(prepareDbObject({
@@ -70,7 +268,6 @@ export async function createAssessment(selfRaterEmail: string, selfRaterName: st
 
 export async function addRaterToAssessment(assessmentId: string, email: string, name: string, raterType: RaterType) {
   try {
-    // Check if a rater with this email already exists for this assessment
     const { data: existingRaters, error: checkError } = await supabase
       .from('raters')
       .select('*')
@@ -82,7 +279,6 @@ export async function addRaterToAssessment(assessmentId: string, email: string, 
       return { success: false, raterId: null };
     }
     
-    // If rater already exists, return their ID
     if (existingRaters && existingRaters.length > 0) {
       return { 
         success: true, 
@@ -91,7 +287,6 @@ export async function addRaterToAssessment(assessmentId: string, email: string, 
       };
     }
     
-    // Create new rater
     const { data: raterData, error: raterError } = await supabase
       .from('raters')
       .insert(prepareDbObject({
@@ -122,7 +317,6 @@ export async function addRaterToAssessment(assessmentId: string, email: string, 
 
 export async function saveResponses(raterId: string, responses: Response[]) {
   try {
-    // First, get the rater to update their completion status
     const { data: raterData, error: raterError } = await supabase
       .from('raters')
       .select('*')
@@ -134,7 +328,6 @@ export async function saveResponses(raterId: string, responses: Response[]) {
       return { success: false };
     }
     
-    // Insert all responses
     const preparedResponses = responses.map(response => prepareDbObject({
       rater_id: raterId,
       question_id: response.questionId,
@@ -150,7 +343,6 @@ export async function saveResponses(raterId: string, responses: Response[]) {
       return { success: false };
     }
     
-    // Update rater as completed
     const { error: updateError } = await supabase
       .from('raters')
       .update({ completed: true })
@@ -161,7 +353,6 @@ export async function saveResponses(raterId: string, responses: Response[]) {
       return { success: false };
     }
     
-    // Check if all raters have completed for this assessment
     const { data: assessmentData, error: assessmentError } = await supabase
       .from('raters')
       .select('*')
@@ -174,7 +365,6 @@ export async function saveResponses(raterId: string, responses: Response[]) {
     
     const allCompleted = assessmentData.every(rater => rater.completed);
     
-    // If all completed, update the assessment status
     if (allCompleted) {
       const { error: completeError } = await supabase
         .from('assessments')
@@ -292,7 +482,6 @@ export async function getAllQuestions(): Promise<Question[]> {
 
 export async function getAssessmentDetails(assessmentId: string) {
   try {
-    // Get the assessment data
     const { data: assessmentData, error: assessmentError } = await supabase
       .from('assessments')
       .select('*')
@@ -304,7 +493,6 @@ export async function getAssessmentDetails(assessmentId: string) {
       return null;
     }
     
-    // Get all raters for this assessment
     const { data: ratersData, error: ratersError } = await supabase
       .from('raters')
       .select('*')
@@ -315,7 +503,6 @@ export async function getAssessmentDetails(assessmentId: string) {
       return null;
     }
     
-    // Get all responses for each rater
     const raters = [];
     for (const rater of ratersData) {
       const { data: responsesData, error: responsesError } = await supabase
@@ -385,8 +572,6 @@ export async function getAllAssessments() {
 
 export async function deleteAssessment(assessmentId: string) {
   try {
-    // First delete all related data
-    // 1. Delete responses for all raters
     const { data: ratersData, error: ratersError } = await supabase
       .from('raters')
       .select('id')
@@ -400,7 +585,6 @@ export async function deleteAssessment(assessmentId: string) {
     if (ratersData && ratersData.length > 0) {
       const raterIds = ratersData.map(r => r.id);
       
-      // Delete responses for these raters
       const { error: responsesError } = await supabase
         .from('responses')
         .delete()
@@ -412,7 +596,6 @@ export async function deleteAssessment(assessmentId: string) {
       }
     }
     
-    // 2. Delete raters
     const { error: deleteRatersError } = await supabase
       .from('raters')
       .delete()
@@ -423,7 +606,6 @@ export async function deleteAssessment(assessmentId: string) {
       return false;
     }
     
-    // 3. Delete results if they exist
     const { error: deleteResultsError } = await supabase
       .from('results')
       .delete()
@@ -434,7 +616,6 @@ export async function deleteAssessment(assessmentId: string) {
       // Continue anyway as results might not exist
     }
     
-    // 4. Finally delete the assessment
     const { error: deleteAssessmentError } = await supabase
       .from('assessments')
       .delete()

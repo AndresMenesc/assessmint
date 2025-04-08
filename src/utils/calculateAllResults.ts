@@ -1,20 +1,45 @@
+
 // Import correct function names
 import { 
   calculateDimensionScores,
   calculateCoachabilityScore,
+  calculateSelfAwarenessScore
 } from "./scoreCalculations";
-import { calculateSelfAwarenessScore } from "./scoreCalculations";
 import { Response, AssessmentResponse, toAssessmentResponse } from "@/types/assessment";
+import { RaterResponses } from "@/types/db-types";
 import { Question } from "@/types/assessment";
 import { getQuestions } from "@/data/questions";
 
 // Function to calculate all results for an assessment
-export function calculateResults(selfResponses: Response[], rater1Responses: Response[], rater2Responses: Response[], assessmentId: string) {
+export function calculateResults(raters: RaterResponses[]) {
+  if (!raters || raters.length === 0) {
+    console.log("No raters provided for calculation");
+    return null;
+  }
+  
+  // Extract responses from each rater type
+  const selfRater = raters.find(r => r.raterType === "self");
+  const rater1 = raters.find(r => r.raterType === "rater1");
+  const rater2 = raters.find(r => r.raterType === "rater2");
+  
+  if (!selfRater) {
+    console.log("Self rater not found in data");
+    return null;
+  }
+  
+  const selfResponses = selfRater.responses || [];
+  const rater1Responses = rater1 ? rater1.responses || [] : [];
+  const rater2Responses = rater2 ? rater2.responses || [] : [];
+  
+  // Use a placeholder assessmentId for calculations
+  const assessmentId = "assessment";
+  
   // Convert Response[] to AssessmentResponse[]
   const selfAssessmentResponses = selfResponses.map(r => toAssessmentResponse(r, assessmentId));
   const rater1AssessmentResponses = rater1Responses.map(r => toAssessmentResponse(r, assessmentId));
   const rater2AssessmentResponses = rater2Responses.map(r => toAssessmentResponse(r, assessmentId));
   
+  // Calculate dimension scores - each function returns an array of scores
   const esteemScore = calculateDimensionScores(selfAssessmentResponses, rater1AssessmentResponses, rater2AssessmentResponses, "ESTEEM");
   const trustScore = calculateDimensionScores(selfAssessmentResponses, rater1AssessmentResponses, rater2AssessmentResponses, "TRUST");
   const driverScore = calculateDimensionScores(selfAssessmentResponses, rater1AssessmentResponses, rater2AssessmentResponses, "DRIVER");
@@ -37,12 +62,12 @@ export function calculateResults(selfResponses: Response[], rater1Responses: Res
   
   // Combine all dimension scores
   const dimensionScores = [
-    ...esteemScore,
-    ...trustScore,
-    ...driverScore,
-    ...adaptabilityScore,
-    ...problemResolutionScore,
-    ...coachabilityScore
+    ...(Array.isArray(esteemScore) ? esteemScore : [esteemScore]),
+    ...(Array.isArray(trustScore) ? trustScore : [trustScore]),
+    ...(Array.isArray(driverScore) ? driverScore : [driverScore]),
+    ...(Array.isArray(adaptabilityScore) ? adaptabilityScore : [adaptabilityScore]),
+    ...(Array.isArray(problemResolutionScore) ? problemResolutionScore : [problemResolutionScore]),
+    ...(Array.isArray(coachabilityScore) ? coachabilityScore : [coachabilityScore])
   ];
   
   // Determine profile type based on scores

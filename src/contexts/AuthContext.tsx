@@ -2,11 +2,10 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { safeQueryData, safeDataAccess } from '@/utils/supabaseHelpers';
+import { safeQueryData, safeDataFilter } from '@/utils/supabaseUtils';
+import { DbAdminUser, UserRole } from '@/types/db-types';
 
 // Type definitions
-export type UserRole = 'super_admin' | 'admin' | 'rater' | null;
-
 export interface AdminUser {
   id?: string;
   role: UserRole;
@@ -19,18 +18,18 @@ interface AuthContextType {
   user: AdminUser | null;
   role: UserRole;
   userRole: UserRole; // Added alias for backward compatibility
-  userEmail: string | null; // Added for components using this
-  userName: string | null; // Added for components using this
-  userCode?: string | null; // Added for components using this
+  userEmail: string | null;
+  userName: string | null;
+  userCode?: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  login: (email: string, password: string) => Promise<boolean>; // Added alias for backward compatibility
-  codeLogin: (email: string, name: string, code: string, isSelf: boolean) => Promise<{ success: boolean; isNewAssessment?: boolean; }>; // Added for components using this
+  login: (email: string, password: string) => Promise<boolean>;
+  codeLogin: (email: string, name: string, code: string, isSelf: boolean) => Promise<{ success: boolean; isNewAssessment?: boolean; }>;
   signOut: () => Promise<void>;
-  logout: () => Promise<void>; // Added alias for backward compatibility
+  logout: () => Promise<void>;
   verifySession: () => Promise<boolean>;
-  resetPassword: (email: string) => Promise<boolean>; // Added for components using this
-  updatePassword: (password: string) => Promise<boolean>; // Added for components using this
+  resetPassword: (email: string) => Promise<boolean>;
+  updatePassword: (password: string) => Promise<boolean>;
 }
 
 // Create context with default values
@@ -107,7 +106,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // Safe data access
-      const safeUserData = safeQueryData(userData);
+      const safeUserData = safeQueryData<DbAdminUser>(userData as DbAdminUser);
       if (!safeUserData) {
         setIsAuthenticated(false);
         setUser(null);
@@ -116,18 +115,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // Set user state and role based on database
-      const userRoleValue = safeDataAccess(safeUserData, 'role') as string;
+      const userRoleValue = safeUserData.role as UserRole;
       
       setIsAuthenticated(true);
       setUser({
-        id: safeDataAccess(safeUserData, 'id'),
-        role: userRoleValue as UserRole,
-        email: safeDataAccess(safeUserData, 'email'),
-        name: safeDataAccess(safeUserData, 'name') || safeDataAccess(safeUserData, 'email')
+        id: safeUserData.id,
+        role: userRoleValue,
+        email: safeUserData.email,
+        name: safeUserData.name || safeUserData.email
       });
       
-      // Use the as UserRole type assertion
-      setRole(userRoleValue as UserRole);
+      setRole(userRoleValue);
       
       return true;
     } catch (error) {
@@ -158,7 +156,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // Safe data access
-      const safeUserData = safeQueryData(userData);
+      const safeUserData = safeQueryData<DbAdminUser>(userData as DbAdminUser);
       if (!safeUserData) {
         toast.error('User data not found');
         setLoading(false);
@@ -166,7 +164,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // Verify password
-      if (safeDataAccess(safeUserData, 'password') !== password) {
+      if (safeUserData.password !== password) {
         toast.error('Invalid email or password');
         setLoading(false);
         return;
@@ -185,17 +183,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // Set user state and role
-      const userRoleValue = safeDataAccess(safeUserData, 'role') as string;
+      const userRoleValue = safeUserData.role as UserRole;
       
       setIsAuthenticated(true);
       setUser({
-        id: safeDataAccess(safeUserData, 'id'),
-        role: userRoleValue as UserRole,
-        email: safeDataAccess(safeUserData, 'email'),
-        name: safeDataAccess(safeUserData, 'name') || safeDataAccess(safeUserData, 'email')
+        id: safeUserData.id,
+        role: userRoleValue,
+        email: safeUserData.email,
+        name: safeUserData.name || safeUserData.email
       });
-      // Use the as UserRole type assertion
-      setRole(userRoleValue as UserRole);
+      setRole(userRoleValue);
       
       toast.success('Signed in successfully');
     } catch (error) {
@@ -210,7 +207,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       await signIn(email, password);
-      return true;
+      return isAuthenticated;
     } catch (error) {
       return false;
     }

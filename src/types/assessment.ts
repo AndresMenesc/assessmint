@@ -99,6 +99,3 @@ export interface AssessmentResponseDb {
   created_at?: string;
   updated_at?: string;
 }
-
-// Import database types - using export type to fix isolatedModules issue
-export type { DbAssessment, DbAssessmentResponse, DbQuestion } from './db-types';
