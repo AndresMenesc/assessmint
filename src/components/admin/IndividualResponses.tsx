@@ -7,16 +7,6 @@ import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  safeQueryData, 
-  safeDataFilter, 
-  asParam, 
-  safeDataAccess, 
-  safeRowAccess, 
-  isQueryError, 
-  getRowField,
-  safePrepareResponses
-} from "@/utils/supabaseHelpers";
 
 interface IndividualResponsesProps {
   assessment: Assessment;
@@ -56,32 +46,16 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
         const { data: ratersData, error: ratersError } = await supabase
           .from('assessment_responses')
           .select('*')
-          .eq('assessment_id', asParam(assessment.id));
+          .eq('assessment_id', assessment.id);
         
         if (ratersError) {
           console.error("Error fetching raters from assessment_responses:", ratersError);
           return;
         }
         
-        if (!ratersData || !Array.isArray(ratersData)) {
-          console.error("No valid raters data returned");
-          return;
-        }
-        
-        const safeRatersData = safeDataFilter(ratersData);
-        
-        // Find raters by type using our safe accessor
-        const selfRater = safeRatersData.find(r => 
-          getRowField(r, 'rater_type', '') === 'self'
-        );
-        
-        const rater1 = safeRatersData.find(r => 
-          getRowField(r, 'rater_type', '') === 'rater1'
-        );
-        
-        const rater2 = safeRatersData.find(r => 
-          getRowField(r, 'rater_type', '') === 'rater2'
-        );
+        const selfRater = ratersData.find(r => r.rater_type === 'self');
+        const rater1 = ratersData.find(r => r.rater_type === 'rater1');
+        const rater2 = ratersData.find(r => r.rater_type === 'rater2');
         
         console.log("Individual responses - raters from assessment_responses:", { selfRater, rater1, rater2 });
         
@@ -94,30 +68,26 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
           console.error("Error fetching questions:", questionsError);
           return;
         }
-
-        const safeQuestionsData = safeDataFilter(questionsData);
         
         // Helper function to format responses using assessment_responses data
         const formatResponses = (rater: any): ResponseData[] => {
-          if (!rater) return [];
+          if (!rater || !rater.responses) return [];
           
-          const responses = safePrepareResponses(getRowField(rater, 'responses', []));
-          console.log(`Found ${responses.length} responses for rater ${getRowField(rater, 'rater_type', '')}`);
+          const responses = rater.responses;
+          console.log(`Found ${responses.length} responses for rater ${rater.rater_type}`);
           
           // Join responses with questions data
           return responses.map((response: any) => {
-            const question = safeQuestionsData.find(q => 
-              getRowField(q, 'id', '') === response.questionId
-            );
+            const question = questionsData.find(q => q.id === response.questionId);
             
             return {
               question_id: response.questionId,
-              text: getRowField(question, 'text', 'Question text not found'),
-              section: getRowField(question, 'section', 'Unknown section'),
-              sub_section: getRowField(question, 'sub_section', 'Unknown subsection'),
+              text: question?.text || 'Question text not found',
+              section: question?.section || 'Unknown section',
+              sub_section: question?.sub_section || 'Unknown subsection',
               score: response.score,
-              is_reversed: getRowField(question, 'is_reversed', false),
-              negative_score: getRowField(question, 'negative_score', false)
+              is_reversed: question?.is_reversed || false,
+              negative_score: question?.negative_score || false
             };
           });
         };

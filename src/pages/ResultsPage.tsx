@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, LogOut, Mail, Search, User, CalendarDays, FileBarChart, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { calculateResults } from "@/utils/calculateAllResults";
+import { calculateAllResults } from "@/utils/calculateAllResults";
 import IndividualResponses from "@/components/admin/IndividualResponses";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
@@ -29,7 +29,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { safeQueryData, safeDataFilter, asParam, safeRowAccess } from "@/utils/supabaseHelpers";
 
 const ResultsPage = () => {
   const { assessment, getResults } = useAssessment();
@@ -59,7 +58,7 @@ const ResultsPage = () => {
           const { data, error } = await supabase
             .from('assessment_responses')
             .select('assessment_id, email, name, rater_type, completed, created_at')
-            .eq('rater_type', asParam('self'))
+            .eq('rater_type', 'self')
             .order('created_at', { ascending: false });
             
           if (error) {
@@ -71,8 +70,7 @@ const ResultsPage = () => {
             
             const assessmentsMap = new Map();
             
-            const safeRatersData = safeDataFilter(data);
-            safeRatersData.forEach(response => {
+            data.forEach(response => {
               if (!assessmentsMap.has(response.assessment_id)) {
                 assessmentsMap.set(response.assessment_id, {
                   id: response.assessment_id,
@@ -95,17 +93,16 @@ const ResultsPage = () => {
                 const { data: ratersData, error: ratersError } = await supabase
                   .from('assessment_responses')
                   .select('*')
-                  .eq('assessment_id', asParam(a.id));
+                  .eq('assessment_id', a.id);
                   
                 if (ratersError) {
                   console.error("Error fetching raters:", ratersError);
                   return null;
                 }
                 
-                console.log(`Fetched ${ratersData?.length || 0} raters for assessment ${a.id} from assessment_responses`);
+                console.log(`Fetched ${ratersData.length} raters for assessment ${a.id} from assessment_responses`);
                 
-                const safeRaters = safeDataFilter(ratersData);
-                const processedRaters = safeRaters.map(rater => {
+                const processedRaters = ratersData.map(rater => {
                   return {
                     raterType: rater.rater_type as RaterType,
                     email: rater.email || "",
@@ -173,9 +170,9 @@ const ResultsPage = () => {
       const rater1Scores = await getSingleRaterResults(selectedAssessment, RaterType.RATER1);
       const rater2Scores = await getSingleRaterResults(selectedAssessment, RaterType.RATER2);
       
-      setSelfResults(selfScores || []);
-      setRater1Results(rater1Scores || []);
-      setRater2Results(rater2Scores || []);
+      setSelfResults(selfScores);
+      setRater1Results(rater1Scores);
+      setRater2Results(rater2Scores);
     };
     
     loadIndividualResults();
@@ -186,7 +183,7 @@ const ResultsPage = () => {
     (a.selfRaterName && a.selfRaterName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const getSingleRaterResults = async (assessment: Assessment, raterType: RaterType): Promise<DimensionScore[] | null> => {
+  const getSingleRaterResults = async (assessment: Assessment, raterType: RaterType) => {
     if (!assessment) return null;
     
     const rater = assessment.raters.find(r => r.raterType === raterType);
@@ -194,8 +191,8 @@ const ResultsPage = () => {
       const { data: raterData, error: raterError } = await supabase
         .from('assessment_responses')
         .select('*')
-        .eq('assessment_id', asParam(assessment.id))
-        .eq('rater_type', asParam(raterType))
+        .eq('assessment_id', assessment.id)
+        .eq('rater_type', raterType)
         .maybeSingle();
         
       if (raterError || !raterData) {
@@ -203,26 +200,23 @@ const ResultsPage = () => {
         return null;
       }
       
-      const safeRaterData = safeQueryData(raterData);
-      if (!safeRaterData) return null;
-      
       const fetchedRater = {
-        raterType: safeRaterData.rater_type as RaterType,
-        email: safeRaterData.email || "",
-        name: safeRaterData.name || "",
-        completed: safeRaterData.completed,
-        responses: safeRaterData.responses || []
+        raterType: raterData.rater_type as RaterType,
+        email: raterData.email || "",
+        name: raterData.name || "",
+        completed: raterData.completed,
+        responses: raterData.responses || []
       };
       
       if (userRole !== "super_admin" && !fetchedRater.completed) return null;
       
-      const calculatedResults = calculateResults([fetchedRater]);
+      const calculatedResults = calculateAllResults([fetchedRater]);
       return calculatedResults?.dimensionScores || null;
     }
     
     if (userRole !== "super_admin" && !rater.completed) return null;
     
-    const calculatedResults = calculateResults([rater]);
+    const calculatedResults = calculateAllResults([rater]);
     return calculatedResults?.dimensionScores || null;
   };
 
@@ -264,7 +258,7 @@ const ResultsPage = () => {
       const { error: responsesError } = await supabase
         .from('assessment_responses')
         .delete()
-        .eq('assessment_id', asParam(assessmentToDelete.id));
+        .eq('assessment_id', assessmentToDelete.id);
         
       if (responsesError) {
         throw responsesError;
@@ -273,12 +267,12 @@ const ResultsPage = () => {
       await supabase
         .from('results')
         .delete()
-        .eq('assessment_id', asParam(assessmentToDelete.id));
+        .eq('assessment_id', assessmentToDelete.id);
       
       const { error: assessmentError } = await supabase
         .from('assessments')
         .delete()
-        .eq('id', asParam(assessmentToDelete.id));
+        .eq('id', assessmentToDelete.id);
         
       if (assessmentError) {
         throw assessmentError;

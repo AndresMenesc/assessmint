@@ -1,325 +1,372 @@
-// Import statements remain the same
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { safeQueryData, safeDataFilter } from '@/utils/supabaseUtils';
-import { DbAdminUser, UserRole } from '@/types/db-types';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-// Type definitions
-export interface AdminUser {
-  id?: string;
-  role: UserRole;
-  email: string;
-  name?: string | null;
-}
+// Define user role types
+export type UserRole = "super_admin" | "admin" | "rater" | null;
 
-interface AuthContextType {
+// Define context type
+interface AuthContextProps {
   isAuthenticated: boolean;
-  user: AdminUser | null;
-  role: UserRole;
-  userRole: UserRole; // Added alias for backward compatibility
+  userRole: UserRole;
   userEmail: string | null;
   userName: string | null;
-  userCode?: string | null;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  userCode: string | null;
+  setUserEmail: (email: string | null) => void;
+  setUserName: (name: string | null) => void;
+  setUserCode: (code: string | null) => void;
   login: (email: string, password: string) => Promise<boolean>;
-  codeLogin: (email: string, name: string, code: string, isSelf: boolean) => Promise<{ success: boolean; isNewAssessment?: boolean; }>;
-  signOut: () => Promise<void>;
-  logout: () => Promise<void>;
-  verifySession: () => Promise<boolean>;
+  codeLogin: (email: string, name: string, code: string, isSelf: boolean) => Promise<{ success: boolean; isNewAssessment?: boolean }>;
+  logout: () => void;
   resetPassword: (email: string) => Promise<boolean>;
   updatePassword: (password: string) => Promise<boolean>;
 }
 
-// Create context with default values
-const AuthContext = createContext<AuthContextType>({
-  isAuthenticated: false,
-  user: null,
-  role: null,
-  userRole: null,
-  userEmail: null,
-  userName: null,
-  loading: true,
-  signIn: async () => {},
-  login: async () => false,
-  codeLogin: async () => ({ success: false }),
-  signOut: async () => {},
-  logout: async () => {},
-  verifySession: async () => false,
-  resetPassword: async () => false,
-  updatePassword: async () => false,
-});
+// Create context with a default value
+const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-// Hook for using the auth context
+// Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
 
-// AuthProvider component
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<AdminUser | null>(null);
-  const [role, setRole] = useState<UserRole>(null);
-  const [loading, setLoading] = useState(true);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [userRole, setUserRole] = useState<UserRole>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
   const [userCode, setUserCode] = useState<string | null>(null);
+  const [loginInProgress, setLoginInProgress] = useState<boolean>(false);
 
-  // Verify session on component mount
+  // Check local storage for authentication on component mount
   useEffect(() => {
-    const checkAuth = async () => {
-      await verifySession();
-      setLoading(false);
+    const storedAuth = localStorage.getItem("isAuthenticated");
+    const storedRole = localStorage.getItem("userRole") as UserRole;
+    const storedEmail = localStorage.getItem("userEmail");
+    const storedName = localStorage.getItem("userName");
+    const storedCode = localStorage.getItem("userCode");
+
+    if (storedAuth === "true") {
+      setIsAuthenticated(true);
+      setUserRole(storedRole);
+      setUserEmail(storedEmail);
+      setUserName(storedName);
+      setUserCode(storedCode);
+    }
+
+    // Set up auth state change listener for Supabase authentication
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("Auth state change event:", event, session);
+        
+        if (event === "PASSWORD_RECOVERY") {
+          toast.info("You can now reset your password");
+        } else if (event === "SIGNED_IN") {
+          // Handle sign in event
+          if (session?.user) {
+            console.log("User signed in:", session.user);
+            
+            // Check if this user is an admin in your database
+            checkUserRole(session.user.email);
+          }
+        }
+      }
+    );
+
+    // Clean up the subscription when the component unmounts
+    return () => {
+      subscription.unsubscribe();
     };
-    checkAuth();
   }, []);
 
-  // Function to verify the user's session
-  const verifySession = async (): Promise<boolean> => {
+  // Helper function to check user role in admin_users table
+  const checkUserRole = async (email: string | undefined) => {
+    if (!email) return;
+    
     try {
-      // Get session data from Supabase
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        setIsAuthenticated(false);
-        setUser(null);
-        setRole(null);
-        return false;
-      }
-      
-      // Get user data from admin_users table
-      const { data: userData, error: userError } = await supabase
+      const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
         .select('*')
-        .eq('email', session.session.user.email)
+        .eq('email', email.toLowerCase())
         .single();
+
+      if (adminError) {
+        console.error("Error checking admin status:", adminError);
+        return;
+      }
+
+      if (adminData) {
+        // Set admin authentication
+        setIsAuthenticated(true);
+        setUserRole(adminData.role as UserRole);
+        setUserEmail(adminData.email);
+        setUserName(adminData.name || adminData.email.split('@')[0]);
         
-      if (userError || !userData) {
-        console.error('Error fetching user data:', userError);
-        setIsAuthenticated(false);
-        setUser(null);
-        setRole(null);
-        return false;
+        // Store in local storage
+        localStorage.setItem("isAuthenticated", "true");
+        localStorage.setItem("userRole", adminData.role);
+        localStorage.setItem("userEmail", adminData.email);
+        localStorage.setItem("userName", adminData.name || adminData.email.split('@')[0]);
+        
+        toast.success(`Welcome, ${adminData.name || "Admin"}!`);
       }
+    } catch (error) {
+      console.error("Error checking user role:", error);
+    }
+  };
+
+  // Login function
+  const login = async (email: string, password: string): Promise<boolean> => {
+    if (loginInProgress) {
+      toast.error("Login already in progress");
+      return false;
+    }
+    
+    try {
+      setLoginInProgress(true);
       
-      // Safe data access
-      const safeUserData = safeQueryData<DbAdminUser>(userData as DbAdminUser);
-      if (!safeUserData) {
-        setIsAuthenticated(false);
-        setUser(null);
-        setRole(null);
-        return false;
-      }
-      
-      // Set user state and role based on database
-      const userRoleValue = safeUserData.role as UserRole;
-      
-      setIsAuthenticated(true);
-      setUser({
-        id: safeUserData.id,
-        role: userRoleValue,
-        email: safeUserData.email,
-        name: safeUserData.name || safeUserData.email
+      // Try to sign in with Supabase Auth first
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase(),
+        password: password
       });
+
+      if (authData.user) {
+        // Successfully signed in with Supabase Auth
+        console.log("Supabase Auth sign-in successful:", authData.user);
+        
+        // Check if this is an admin user
+        const { data: adminData, error: adminError } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('email', email.toLowerCase())
+          .single();
+
+        if (adminError && adminError.code !== 'PGRST116') {
+          console.error("Error checking admin status:", adminError);
+          toast.error("Login failed. Please try again.");
+          return false;
+        }
+
+        if (adminData) {
+          // Set admin authentication
+          setIsAuthenticated(true);
+          setUserRole(adminData.role as UserRole);
+          setUserEmail(adminData.email);
+          setUserName(adminData.name || adminData.email.split('@')[0]);
+          
+          // Store in local storage
+          localStorage.setItem("isAuthenticated", "true");
+          localStorage.setItem("userRole", adminData.role);
+          localStorage.setItem("userEmail", adminData.email);
+          localStorage.setItem("userName", adminData.name || adminData.email.split('@')[0]);
+          
+          return true;
+        }
+      } else if (authError) {
+        console.log("Supabase Auth error, falling back to legacy login:", authError.message);
+        
+        // Fall back to checking the admin_users table directly
+        const { data: adminData, error: adminError } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('email', email.toLowerCase())
+          .single();
+
+        if (adminError && adminError.code !== 'PGRST116') {
+          console.error("Error checking admin status:", adminError);
+          toast.error("Login failed. Please try again.");
+          return false;
+        }
+
+        // If we found an admin user, verify password
+        if (adminData) {
+          // Simple password check (in a real app, use proper hashing)
+          if (adminData.password === password) {
+            // Set admin authentication
+            setIsAuthenticated(true);
+            setUserRole(adminData.role as UserRole);
+            setUserEmail(adminData.email);
+            setUserName(adminData.name || adminData.email.split('@')[0]);
+            
+            // Store in local storage
+            localStorage.setItem("isAuthenticated", "true");
+            localStorage.setItem("userRole", adminData.role);
+            localStorage.setItem("userEmail", adminData.email);
+            localStorage.setItem("userName", adminData.name || adminData.email.split('@')[0]);
+            
+            return true;
+          } else {
+            toast.error("Invalid password");
+            return false;
+          }
+        }
+      }
       
-      setRole(userRoleValue);
+      // Not an admin, treat as a regular user/rater
+      setIsAuthenticated(true);
+      setUserRole("rater");
+      setUserEmail(email);
+      setUserName(email.split('@')[0]);
+      setUserCode("");
+      
+      // Store in local storage
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("userRole", "rater");
+      localStorage.setItem("userEmail", email);
+      localStorage.setItem("userName", email.split('@')[0]);
       
       return true;
     } catch (error) {
-      console.error('Error verifying session:', error);
-      setIsAuthenticated(false);
-      setUser(null);
-      setRole(null);
+      console.error("Login error:", error);
+      toast.error("Login failed. Please try again.");
+      return false;
+    } finally {
+      setLoginInProgress(false);
+    }
+  };
+  
+  // Reset password function - Updated to use dynamic redirect URL
+  const resetPassword = async (email: string): Promise<boolean> => {
+    try {
+      // Get the dynamic redirect URL for the current environment
+      const redirectTo = `${window.location.origin}/login`;
+      
+      console.log("Using redirect URL for password reset:", redirectTo);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectTo,
+      });
+      
+      if (error) {
+        console.error("Password reset error:", error);
+        toast.error(`Password reset failed: ${error.message}`);
+        return false;
+      }
+      
+      toast.success(`Password reset instructions sent to ${email}`);
+      return true;
+    } catch (error) {
+      console.error("Password reset error:", error);
+      toast.error("Password reset failed. Please try again.");
       return false;
     }
   };
-
-  // Sign in function
-  const signIn = async (email: string, password: string) => {
+  
+  // Update password function
+  const updatePassword = async (password: string): Promise<boolean> => {
     try {
-      setLoading(true);
+      const { error } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (error) {
+        console.error("Password update error:", error);
+        toast.error(`Password update failed: ${error.message}`);
+        return false;
+      }
       
-      // Check if user exists in admin_users table
-      const { data: userData, error: userError } = await supabase
-        .from('admin_users')
+      toast.success("Password updated successfully");
+      return true;
+    } catch (error) {
+      console.error("Password update error:", error);
+      toast.error("Password update failed. Please try again.");
+      return false;
+    }
+  };
+  
+  // Code login function for assessments
+  const codeLogin = async (email: string, name: string, code: string, isSelf: boolean): Promise<{ success: boolean; isNewAssessment?: boolean }> => {
+    try {
+      // Check if an assessment with this code exists
+      const { data: assessmentData, error: assessmentError } = await supabase
+        .from('assessments')
         .select('*')
-        .eq('email', email)
+        .eq('code', code)
         .single();
-        
-      if (userError) {
-        toast.error('Invalid email or password');
-        setLoading(false);
-        return;
-      }
       
-      // Safe data access
-      const safeUserData = safeQueryData<DbAdminUser>(userData as DbAdminUser);
-      if (!safeUserData) {
-        toast.error('User data not found');
-        setLoading(false);
-        return;
-      }
-      
-      // Verify password
-      if (safeUserData.password !== password) {
-        toast.error('Invalid email or password');
-        setLoading(false);
-        return;
-      }
-      
-      // Sign in with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) {
-        toast.error(error.message);
-        setLoading(false);
-        return;
-      }
-      
-      // Set user state and role
-      const userRoleValue = safeUserData.role as UserRole;
-      
+      // Set user authentication for assessment
       setIsAuthenticated(true);
-      setUser({
-        id: safeUserData.id,
-        role: userRoleValue,
-        email: safeUserData.email,
-        name: safeUserData.name || safeUserData.email
-      });
-      setRole(userRoleValue);
-      
-      toast.success('Signed in successfully');
-    } catch (error) {
-      console.error('Sign in error:', error);
-      toast.error('An error occurred during sign in');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Login function (alias for backward compatibility)
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      await signIn(email, password);
-      return isAuthenticated;
-    } catch (error) {
-      return false;
-    }
-  };
-
-  // Sign out function
-  const signOut = async () => {
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        throw error;
-      }
-      
-      setIsAuthenticated(false);
-      setUser(null);
-      setRole(null);
-      setUserCode(null);
-      toast.success('Signed out successfully');
-    } catch (error) {
-      console.error('Sign out error:', error);
-      toast.error('An error occurred during sign out');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Logout function (alias for backward compatibility)
-  const logout = async (): Promise<void> => {
-    await signOut();
-  };
-
-  // For assessment login with code
-  const codeLogin = async (email: string, name: string, code: string, isSelf: boolean) => {
-    try {
-      setLoading(true);
-      
-      // Store the code
+      setUserRole("rater");
+      setUserEmail(email);
+      setUserName(name);
       setUserCode(code);
       
-      // For simplicity, set as authenticated with rater role
-      setIsAuthenticated(true);
-      setUser({
-        role: 'rater',
-        email: email,
-        name: name
-      });
-      setRole('rater');
+      // Store in local storage
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("userRole", "rater");
+      localStorage.setItem("userEmail", email);
+      localStorage.setItem("userName", name);
+      localStorage.setItem("userCode", code);
       
-      // Success response (simplified)
-      return { success: true, isNewAssessment: isSelf && code.length <= 5 };
+      if (assessmentError && assessmentError.code === 'PGRST116') {
+        // Assessment doesn't exist
+        console.log("Assessment doesn't exist, creating new one");
+        
+        if (isSelf) {
+          // For self assessment, we'll create a new assessment
+          return { success: true, isNewAssessment: true };
+        } else {
+          // For rater assessment, if code doesn't exist, return error
+          toast.error("Invalid assessment code");
+          return { success: false };
+        }
+      }
+      
+      // Assessment exists
+      console.log("Assessment exists:", assessmentData);
+      return { success: true, isNewAssessment: false };
     } catch (error) {
-      console.error('Code login error:', error);
+      console.error("Code login error:", error);
+      toast.error("Login failed. Please try again.");
       return { success: false };
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Reset password function 
-  const resetPassword = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) {
-        toast.error(error.message);
-        return false;
-      }
-      return true;
-    } catch (error) {
-      console.error('Reset password error:', error);
-      return false;
-    }
+  // Logout function
+  const logout = () => {
+    // Sign out from Supabase Auth
+    supabase.auth.signOut().catch(error => {
+      console.error("Error signing out from Supabase:", error);
+    });
+    
+    // Clear local state and storage
+    setIsAuthenticated(false);
+    setUserRole(null);
+    setUserEmail(null);
+    setUserName(null);
+    setUserCode(null);
+    
+    // Clear local storage
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userCode");
+    
+    toast.info("You have been logged out");
   };
 
-  // Update password function
-  const updatePassword = async (password: string) => {
-    try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) {
-        toast.error(error.message);
-        return false;
-      }
-      return true;
-    } catch (error) {
-      console.error('Update password error:', error);
-      return false;
-    }
-  };
-
-  // Provide auth context to children
   return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated,
-        user,
-        role,
-        userRole: role, // Alias for backward compatibility
-        userEmail: user?.email || null,
-        userName: user?.name || null,
-        userCode,
-        loading,
-        signIn,
-        login,
-        codeLogin,
-        signOut,
-        logout,
-        verifySession,
-        resetPassword,
-        updatePassword
-      }}
-    >
+    <AuthContext.Provider value={{
+      isAuthenticated,
+      userRole,
+      userEmail,
+      userName,
+      userCode,
+      setUserEmail,
+      setUserName,
+      setUserCode,
+      login,
+      codeLogin,
+      logout,
+      resetPassword,
+      updatePassword
+    }}>
       {children}
     </AuthContext.Provider>
   );

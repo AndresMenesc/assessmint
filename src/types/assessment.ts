@@ -1,7 +1,10 @@
 
-// Types for the assessment model
+export enum RaterType {
+  SELF = "self",
+  RATER1 = "rater1",
+  RATER2 = "rater2"
+}
 
-// Basic types for assessment sections and subsections
 export enum Section {
   ESTEEM = "ESTEEM",
   TRUST = "TRUST",
@@ -25,60 +28,19 @@ export enum SubSection {
   COACHABILITY = "COACHABILITY"
 }
 
-// Types for the rater and responses
-export enum RaterType {
-  SELF = "self",
-  RATER1 = "rater1",
-  RATER2 = "rater2"
-}
-
-// Type for a question in the assessment
-export interface Question {
-  id: string;
-  text: string;
-  section: string;
-  subSection: string;
-  isReversed: boolean;
-  negativeScore: boolean;
-}
-
-// Type for a response to a question
-export interface Response {
+export interface AssessmentResponse {
   questionId: string;
   score: number;
 }
 
-// Extended type used for compatibility with calculation functions
-export interface AssessmentResponse extends Response {
-  assessment_id: string; // Added for compatibility
-}
-
-// Helper function to convert Response to AssessmentResponse
-export function toAssessmentResponse(response: Response, assessmentId: string): AssessmentResponse {
-  return {
-    ...response,
-    assessment_id: assessmentId
-  };
-}
-
-// Type for assessment result scores
-export interface DimensionScore {
-  dimension: string;
-  subDimension: string;
-  score: number;
-  isNegative?: boolean;
-}
-
-// Type for a rater's responses
 export interface RaterResponses {
   raterType: RaterType;
+  responses: AssessmentResponse[];
+  completed: boolean;
   email: string;
   name: string;
-  responses: Response[];
-  completed: boolean;
 }
 
-// Type for an assessment
 export interface Assessment {
   id: string;
   selfRaterEmail: string;
@@ -88,4 +50,21 @@ export interface Assessment {
   completed: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface Question {
+  id: string;
+  text: string;
+  section: Section;
+  subSection: SubSection;
+  isReversed: boolean;
+  negativeScore: boolean;
+}
+
+export interface DimensionScore {
+  dimension: string;
+  score: number;
+  min: number;
+  max: number;
+  color: string;
 }

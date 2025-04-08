@@ -1,695 +1,400 @@
 
+import { v4 as uuidv4 } from "uuid";
+import { Assessment, RaterResponses, RaterType, AssessmentResponse, Question, Section, SubSection } from "@/types/assessment";
+import { toast } from "sonner";
+import { createAssessmentInDb, fetchAssessmentByCode, syncAssessmentWithDb, updateAssessmentInDb } from "./assessmentDbUtils";
 import { supabase } from "@/integrations/supabase/client";
-import { Assessment, RaterType, Response, Question } from "@/types/assessment";
-import { prepareDbObject } from "./dbTypeHelpers";
-import { asParam } from "./supabaseUtils";
 
-export const initializeAssessment = async (selfRaterEmail: string, selfRaterName: string, code: string): Promise<Assessment | null> => {
-  try {
-    const result = await createAssessment(selfRaterEmail, selfRaterName, code);
-    
-    if (!result.success || !result.assessmentId) {
-      throw new Error("Failed to create assessment");
-    }
-    
-    return {
-      id: result.assessmentId,
-      selfRaterEmail,
-      selfRaterName,
-      code,
-      completed: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      raters: [
-        {
-          raterType: RaterType.SELF,
-          email: selfRaterEmail,
-          name: selfRaterName,
-          responses: [],
-          completed: false
-        }
-      ]
-    };
-  } catch (error) {
-    console.error("Error in initializeAssessment:", error);
-    throw error;
-  }
-};
-
-export const initializeRaterAssessment = async (email: string, name: string, code: string) => {
-  try {
-    const assessment = await getAssessmentByCode(code);
-    if (!assessment) {
-      throw new Error("Assessment not found");
-    }
-    
-    const rater = await getRaterByEmail(assessment.id, email);
-    if (rater && rater.completed) {
-      throw new Error("Assessment already completed");
-    }
-    
-    const raterType = rater ? rater.rater_type as RaterType : 
-                     email === assessment.self_rater_email ? RaterType.SELF : RaterType.RATER1;
-    
-    if (!rater) {
-      await addRaterToAssessment(assessment.id, email, name, raterType);
-    }
-    
-    const responses = rater ? await getResponsesForRater(rater.id) : [];
-    
-    return {
-      assessment: {
-        id: assessment.id,
-        selfRaterEmail: assessment.self_rater_email,
-        selfRaterName: assessment.self_rater_name,
-        code: assessment.code,
-        completed: assessment.completed,
-        createdAt: new Date(assessment.created_at),
-        updatedAt: new Date(assessment.updated_at),
-        raters: [
-          {
-            raterType,
-            email,
-            name,
-            responses,
-            completed: rater ? rater.completed : false
-          }
-        ]
-      },
-      raterType
-    };
-  } catch (error) {
-    console.error("Error in initializeRaterAssessment:", error);
-    throw error;
-  }
-};
-
-export const addRater = (assessment: Assessment, email: string, name: string, raterType: RaterType): Assessment | null => {
-  try {
-    const existingRaterIndex = assessment.raters.findIndex(r => r.raterType === raterType);
-    
-    if (existingRaterIndex >= 0) {
-      const updatedRaters = [...assessment.raters];
-      updatedRaters[existingRaterIndex] = {
-        ...updatedRaters[existingRaterIndex],
-        email,
-        name
-      };
-      
-      return {
-        ...assessment,
-        raters: updatedRaters
-      };
-    } else {
-      return {
-        ...assessment,
-        raters: [
-          ...assessment.raters,
-          {
-            raterType,
-            email,
-            name,
-            responses: [],
-            completed: false
-          }
-        ]
-      };
-    }
-  } catch (error) {
-    console.error("Error in addRater:", error);
-    return null;
-  }
-};
-
-export const updateResponse = (assessment: Assessment, raterType: RaterType, questionId: string, score: number) => {
-  try {
-    const updatedRaters = assessment.raters.map(rater => {
-      if (rater.raterType !== raterType) {
-        return rater;
-      }
-      
-      const existingResponseIndex = rater.responses.findIndex(r => r.questionId === questionId);
-      
-      if (existingResponseIndex >= 0) {
-        const updatedResponses = [...rater.responses];
-        updatedResponses[existingResponseIndex] = {
-          ...updatedResponses[existingResponseIndex],
-          score
-        };
-        
-        return {
-          ...rater,
-          responses: updatedResponses
-        };
-      } else {
-        return {
-          ...rater,
-          responses: [
-            ...rater.responses,
-            {
-              questionId,
-              score
-            }
-          ]
-        };
-      }
-    });
-    
-    const updatedAssessment = {
-      ...assessment,
-      raters: updatedRaters
-    };
-    
-    return {
-      updatedAssessment,
-      success: true
-    };
-  } catch (error) {
-    console.error("Error in updateResponse:", error);
-    return {
-      success: false
-    };
-  }
-};
-
-export const completeAssessment = (assessment: Assessment, raterType: RaterType): Assessment | null => {
-  try {
-    const updatedRaters = assessment.raters.map(rater => {
-      if (rater.raterType === raterType) {
-        return {
-          ...rater,
-          completed: true
-        };
-      }
-      return rater;
-    });
-    
-    const allCompleted = updatedRaters.every(r => r.completed);
-    
-    return {
-      ...assessment,
-      raters: updatedRaters,
-      completed: allCompleted
-    };
-  } catch (error) {
-    console.error("Error in completeAssessment:", error);
-    return null;
-  }
-};
-
+/**
+ * Fetches all questions from the database
+ */
 export const fetchQuestions = async (): Promise<Question[]> => {
-  try {
-    return await getAllQuestions();
-  } catch (error) {
-    console.error("Error fetching questions:", error);
-    return [];
-  }
-};
-
-export async function updateAssessment(assessmentId: string, data: any) {
-  try {
-    const { error } = await supabase
-      .from('assessments')
-      .update(prepareDbObject(data))
-      .eq('id', assessmentId);
-      
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error("Error updating assessment:", error);
-    return false;
-  }
-}
-
-export async function createAssessment(selfRaterEmail: string, selfRaterName: string, code: string) {
-  try {
-    const assessmentData = prepareDbObject({
-      self_rater_email: selfRaterEmail,
-      self_rater_name: selfRaterName,
-      code: code,
-      completed: false
-    });
-
-    const { data: createdAssessment, error: assessmentError } = await supabase
-      .from('assessments')
-      .insert(assessmentData)
-      .select('*')
-      .single();
-    
-    if (assessmentError || !createdAssessment) {
-      console.error("Error creating assessment:", assessmentError);
-      return { success: false, assessmentId: null };
-    }
-    
-    const raterData = prepareDbObject({
-      assessment_id: createdAssessment.id,
-      rater_type: RaterType.SELF,
-      email: selfRaterEmail,
-      name: selfRaterName,
-      completed: false
-    });
-
-    const { data: raterData_, error: raterError } = await supabase
-      .from('raters')
-      .insert(raterData)
-      .select('*')
-      .single();
-    
-    if (raterError || !raterData_) {
-      console.error("Error creating self-rater:", raterError);
-      return { success: false, assessmentId: createdAssessment.id };
-    }
-    
-    return { 
-      success: true, 
-      assessmentId: createdAssessment.id,
-      raterId: raterData_.id
-    };
-  } catch (error) {
-    console.error("Error in createAssessment:", error);
-    return { success: false, assessmentId: null };
-  }
-}
-
-export async function addRaterToAssessment(assessmentId: string, email: string, name: string, raterType: RaterType) {
-  try {
-    const { data: existingRaters, error: checkError } = await supabase
-      .from('raters')
-      .select('*')
-      .eq('assessment_id', assessmentId)
-      .eq('email', email);
-    
-    if (checkError) {
-      console.error("Error checking existing raters:", checkError);
-      return { success: false, raterId: null };
-    }
-    
-    if (existingRaters && existingRaters.length > 0) {
-      return { 
-        success: true, 
-        raterId: existingRaters[0].id,
-        isExisting: true
-      };
-    }
-    
-    const raterData = prepareDbObject({
-      assessment_id: assessmentId,
-      rater_type: raterType,
-      email: email,
-      name: name,
-      completed: false
-    });
-
-    const { data: createdRater, error: raterError } = await supabase
-      .from('raters')
-      .insert(raterData)
-      .select('*')
-      .single();
-    
-    if (raterError || !createdRater) {
-      console.error("Error adding rater:", raterError);
-      return { success: false, raterId: null };
-    }
-    
-    return { 
-      success: true, 
-      raterId: createdRater.id,
-      isExisting: false
-    };
-  } catch (error) {
-    console.error("Error in addRaterToAssessment:", error);
-    return { success: false, raterId: null };
-  }
-}
-
-export async function saveResponses(raterId: string, responses: Response[]) {
-  try {
-    const { data: raterData, error: raterError } = await supabase
-      .from('raters')
-      .select('*')
-      .eq('id', raterId)
-      .single();
-    
-    if (raterError || !raterData) {
-      console.error("Error fetching rater:", raterError);
-      return { success: false };
-    }
-    
-    const preparedResponses = responses.map(response => prepareDbObject({
-      rater_id: raterId,
-      question_id: response.questionId,
-      score: response.score
-    }));
-    
-    const { error: responsesError } = await supabase
-      .from('responses')
-      .insert(preparedResponses);
-    
-    if (responsesError) {
-      console.error("Error saving responses:", responsesError);
-      return { success: false };
-    }
-    
-    const { error: updateError } = await supabase
-      .from('raters')
-      .update({ completed: true })
-      .eq('id', raterId);
-    
-    if (updateError) {
-      console.error("Error updating rater completion:", updateError);
-      return { success: false };
-    }
-    
-    const { data: assessmentData, error: assessmentError } = await supabase
-      .from('raters')
-      .select('*')
-      .eq('assessment_id', raterData.assessment_id);
-    
-    if (assessmentError || !assessmentData) {
-      console.error("Error checking assessment completion:", assessmentError);
-      return { success: true, allCompleted: false };
-    }
-    
-    const allCompleted = assessmentData.every(rater => rater.completed);
-    
-    if (allCompleted) {
-      const { error: completeError } = await supabase
-        .from('assessments')
-        .update({ completed: true })
-        .eq('id', raterData.assessment_id);
-      
-      if (completeError) {
-        console.error("Error updating assessment completion:", completeError);
-      }
-    }
-    
-    return { 
-      success: true, 
-      allCompleted,
-      assessmentId: raterData.assessment_id
-    };
-  } catch (error) {
-    console.error("Error in saveResponses:", error);
-    return { success: false };
-  }
-}
-
-export async function getAssessmentByCode(code: string) {
-  try {
-    const { data, error } = await supabase
-      .from('assessments')
-      .select('*')
-      .eq('code', code)
-      .single();
-    
-    if (error || !data) {
-      console.error("Error fetching assessment by code:", error);
-      return null;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error("Error in getAssessmentByCode:", error);
-    return null;
-  }
-}
-
-export async function getRaterByEmail(assessmentId: string, email: string) {
-  try {
-    const { data, error } = await supabase
-      .from('raters')
-      .select('*')
-      .eq('assessment_id', assessmentId)
-      .eq('email', email)
-      .single();
-    
-    if (error || !data) {
-      console.error("Error fetching rater by email:", error);
-      return null;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error("Error in getRaterByEmail:", error);
-    return null;
-  }
-}
-
-export async function getResponsesForRater(raterId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('responses')
-      .select('*')
-      .eq('rater_id', raterId);
-    
-    if (error || !data) {
-      console.error("Error fetching responses for rater:", error);
-      return [];
-    }
-    
-    return data.map(mapResponseData);
-  } catch (error) {
-    console.error("Error in getResponsesForRater:", error);
-    return [];
-  }
-}
-
-export function mapResponseData(responseData: any): Response {
-  return {
-    questionId: responseData.question_id,
-    score: responseData.score
-  };
-}
-
-export async function getAllQuestions(): Promise<Question[]> {
   try {
     const { data, error } = await supabase
       .from('questions')
       .select('*')
       .order('id');
-    
-    if (error || !data) {
+      
+    if (error) {
       console.error("Error fetching questions:", error);
-      return [];
+      throw error;
     }
     
+    // Map database questions to our Question type with proper enum conversion
     return data.map(q => ({
       id: q.id,
       text: q.text,
-      section: q.section,
-      subSection: q.sub_section,
+      section: q.section as Section, // Cast the string to Section enum
+      subSection: q.sub_section as SubSection, // Cast the string to SubSection enum
       isReversed: q.is_reversed,
       negativeScore: q.negative_score
     }));
   } catch (error) {
-    console.error("Error in getAllQuestions:", error);
-    return [];
+    console.error("Error in fetchQuestions:", error);
+    throw error;
   }
-}
+};
 
-export async function getAssessmentDetails(assessmentId: string) {
+/**
+ * Initializes a new assessment for the self-rater
+ */
+export const initializeAssessment = async (
+  selfEmail: string, 
+  selfName: string, 
+  code: string
+): Promise<Assessment | null> => {
   try {
-    const { data: assessmentData, error: assessmentError } = await supabase
-      .from('assessments')
-      .select('*')
-      .eq('id', assessmentId)
-      .single();
+    console.log("Initializing assessment for:", selfEmail, selfName, "with code:", code);
     
-    if (assessmentError || !assessmentData) {
-      console.error("Error fetching assessment details:", assessmentError);
-      return null;
-    }
+    // Check if an assessment with this code already exists
+    const existingAssessment = await fetchAssessmentByCode(code);
     
-    const { data: ratersData, error: ratersError } = await supabase
-      .from('raters')
-      .select('*')
-      .eq('assessment_id', assessmentId);
-    
-    if (ratersError || !ratersData) {
-      console.error("Error fetching raters:", ratersError);
-      return null;
-    }
-    
-    const raters = [];
-    for (const rater of ratersData) {
-      const { data: responsesData, error: responsesError } = await supabase
-        .from('responses')
-        .select('*')
-        .eq('rater_id', rater.id);
+    if (existingAssessment) {
+      // Find the self-rater in the assessment
+      const selfRater = existingAssessment.raters.find(r => r.raterType === RaterType.SELF);
       
-      if (responsesError) {
-        console.error(`Error fetching responses for rater ${rater.id}:`, responsesError);
-        continue;
+      // Allow access to the assessment regardless of email if the assessment isn't complete
+      if (!existingAssessment.completed) {
+        // If it's the same email or assessment isn't completed, allow access
+        if (selfRater && selfRater.email.toLowerCase() === selfEmail.toLowerCase()) {
+          // This is the same person - allow them to continue their assessment
+          console.log("Same user continuing assessment with code:", code);
+          
+          // Check if self-assessment is already completed
+          if (selfRater.completed) {
+            toast.info("You have already completed this assessment.", {
+              description: "The results will be available once all raters have completed their assessments."
+            });
+          } else {
+            toast.info("Continuing your existing assessment.", {
+              description: "Your previous responses have been saved."
+            });
+          }
+          
+          return existingAssessment;
+        } else {
+          // Different person trying to use the same code, but still allow it
+          toast.info("Using an existing assessment code.", {
+            description: "You are continuing an assessment with an existing code."
+          });
+          
+          // Here we can update the assessment with the new email and name
+          const updatedSelfRater = {
+            ...selfRater,
+            email: selfEmail,
+            name: selfName
+          };
+          
+          // Update the rater in the assessment
+          const updatedRaters = existingAssessment.raters.map(r => 
+            r.raterType === RaterType.SELF ? updatedSelfRater : r
+          );
+          
+          const updatedAssessment = {
+            ...existingAssessment,
+            selfRaterEmail: selfEmail,
+            selfRaterName: selfName,
+            raters: updatedRaters,
+            updatedAt: new Date()
+          };
+          
+          // Save the updated assessment
+          await updateAssessmentInDb(updatedAssessment.id, {
+            selfRaterEmail: selfEmail,
+            selfRaterName: selfName,
+            updatedAt: updatedAssessment.updatedAt,
+            raters: updatedRaters
+          });
+          
+          return updatedAssessment;
+        }
+      } else {
+        // Assessment is already completed
+        toast.error("This assessment code has already been completed.", {
+          description: "Please create a new assessment with a different code."
+        });
+        throw new Error("Assessment already completed");
+      }
+    } else {
+      // Creating new assessment
+      const newAssessment: Assessment = {
+        id: uuidv4(),
+        selfRaterEmail: selfEmail,
+        selfRaterName: selfName,
+        code: code,
+        raters: [
+          {
+            raterType: RaterType.SELF,
+            responses: [],
+            completed: false,
+            email: selfEmail,
+            name: selfName
+          }
+        ],
+        completed: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      const success = await createAssessmentInDb(newAssessment);
+      
+      if (!success) {
+        throw new Error("Failed to create assessment in database");
       }
       
-      const responses = responsesData ? responsesData.map(mapResponseData) : [];
-      
-      raters.push({
-        id: rater.id,
-        raterType: rater.rater_type,
-        email: rater.email,
-        name: rater.name,
-        completed: rater.completed,
-        responses
+      return newAssessment;
+    }
+  } catch (error) {
+    console.error("Error initializing assessment:", error);
+    throw error;
+  }
+};
+
+/**
+ * Initializes a rater assessment for someone rating another person
+ */
+export const initializeRaterAssessment = async (
+  raterEmail: string, 
+  raterName: string, 
+  code: string
+): Promise<{ assessment: Assessment; raterType: RaterType } | null> => {
+  try {
+    // Check if an assessment with this code exists
+    const assessmentData = await fetchAssessmentByCode(code);
+    
+    if (!assessmentData) {
+      toast.error("Invalid assessment code. No assessment found with this code.");
+      throw new Error("Invalid assessment code");
+    }
+    
+    // Check if this rater has already completed an assessment for this code
+    const existingRater = assessmentData.raters.find(r => 
+      r.email.toLowerCase() === raterEmail.toLowerCase() && r.raterType !== RaterType.SELF
+    );
+    
+    if (existingRater) {
+      if (existingRater.completed) {
+        toast.error("You have already submitted an assessment for this person.", {
+          description: "You cannot submit multiple assessments for the same person."
+        });
+        throw new Error("Rater already completed assessment");
+      } else {
+        // Rater exists but didn't complete their assessment
+        return { assessment: assessmentData, raterType: existingRater.raterType };
+      }
+    }
+    
+    // Determine rater type
+    let raterType: RaterType;
+    const hasRater1 = assessmentData.raters.some(r => r.raterType === RaterType.RATER1);
+    const hasRater2 = assessmentData.raters.some(r => r.raterType === RaterType.RATER2);
+    
+    if (!hasRater1) {
+      // If no rater1 exists, assign as rater1
+      raterType = RaterType.RATER1;
+    } else if (!hasRater2) {
+      // If rater1 exists but no rater2, assign as rater2
+      raterType = RaterType.RATER2;
+    } else {
+      // Both rater types already exist
+      toast.error("This assessment already has the maximum number of raters.", {
+        description: "No more raters can be added to this assessment."
+      });
+      throw new Error("Assessment full");
+    }
+    
+    // Add the new rater
+    const updatedRaters = [
+      ...assessmentData.raters,
+      {
+        raterType,
+        responses: [],
+        completed: false,
+        email: raterEmail,
+        name: raterName
+      }
+    ];
+    
+    const updatedAssessment = {
+      ...assessmentData,
+      raters: updatedRaters,
+      updatedAt: new Date()
+    };
+    
+    // Update in database
+    const success = await updateAssessmentInDb(assessmentData.id, {
+      raters: updatedRaters,
+      updatedAt: updatedAssessment.updatedAt
+    });
+    
+    if (!success) {
+      throw new Error("Failed to update assessment in database");
+    }
+    
+    return { assessment: updatedAssessment, raterType };
+  } catch (error) {
+    console.error("Error initializing rater assessment:", error);
+    throw error;
+  }
+};
+
+/**
+ * Adds a rater to an existing assessment
+ */
+export const addRater = (
+  assessment: Assessment,
+  email: string,
+  name: string,
+  raterType: RaterType
+): Assessment | null => {
+  if (assessment.raters.some(r => r.raterType === raterType)) {
+    toast.error("This rater type already exists in the assessment.");
+    return null;
+  }
+  
+  const updatedRaters = [
+    ...assessment.raters,
+    {
+      raterType,
+      responses: [],
+      completed: false,
+      email,
+      name
+    }
+  ];
+  
+  const updatedAssessment = {
+    ...assessment,
+    raters: updatedRaters,
+    updatedAt: new Date()
+  };
+  
+  syncAssessmentWithDb(updatedAssessment);
+  
+  toast.success(`${name} (${email}) has been added as a rater.`);
+  
+  return updatedAssessment;
+};
+
+/**
+ * Updates a response for a question in an assessment
+ */
+export const updateResponse = (
+  assessment: Assessment,
+  currentRater: RaterType,
+  questionId: string,
+  score: number,
+  currentResponses: AssessmentResponse[]
+): { updatedAssessment: Assessment; updatedResponses: AssessmentResponse[] } | null => {
+  if (!assessment) return null;
+  
+  const existingResponseIndex = currentResponses.findIndex(r => r.questionId === questionId);
+  let updatedResponses = [...currentResponses];
+  
+  if (existingResponseIndex !== -1) {
+    updatedResponses[existingResponseIndex] = {
+      ...updatedResponses[existingResponseIndex],
+      score
+    };
+  } else {
+    updatedResponses.push({
+      questionId,
+      score
+    });
+  }
+  
+  const raterIndex = assessment.raters.findIndex(r => r.raterType === currentRater);
+  if (raterIndex !== -1) {
+    const updatedRaters = [...assessment.raters];
+    updatedRaters[raterIndex] = {
+      ...updatedRaters[raterIndex],
+      responses: updatedResponses
+    };
+    
+    const updatedAssessment = {
+      ...assessment,
+      raters: updatedRaters,
+      updatedAt: new Date()
+    };
+    
+    syncAssessmentWithDb(updatedAssessment);
+    
+    return { updatedAssessment, updatedResponses };
+  }
+  
+  return null;
+};
+
+/**
+ * Marks the current rater's assessment as completed
+ */
+export const completeAssessment = (
+  assessment: Assessment,
+  currentRater: RaterType
+): Assessment | null => {
+  if (!assessment) return null;
+  
+  const raterIndex = assessment.raters.findIndex(r => r.raterType === currentRater);
+  if (raterIndex !== -1) {
+    const updatedRaters = [...assessment.raters];
+    updatedRaters[raterIndex] = {
+      ...updatedRaters[raterIndex],
+      completed: true
+    };
+    
+    const selfCompleted = updatedRaters.find(r => r.raterType === RaterType.SELF)?.completed || false;
+    const rater1Exists = updatedRaters.some(r => r.raterType === RaterType.RATER1);
+    const rater2Exists = updatedRaters.some(r => r.raterType === RaterType.RATER2);
+    const rater1Completed = updatedRaters.find(r => r.raterType === RaterType.RATER1)?.completed || false;
+    const rater2Completed = updatedRaters.find(r => r.raterType === RaterType.RATER2)?.completed || false;
+    
+    const allRatersAdded = rater1Exists && rater2Exists;
+    const allRatersCompleted = selfCompleted && 
+      (rater1Exists ? rater1Completed : true) && 
+      (rater2Exists ? rater2Completed : true);
+    
+    const allCompleted = allRatersAdded && allRatersCompleted;
+    
+    const updatedAssessment = {
+      ...assessment,
+      raters: updatedRaters,
+      completed: allCompleted,
+      updatedAt: new Date()
+    };
+    
+    // Save to database
+    syncAssessmentWithDb(updatedAssessment)
+      .then(success => {
+        if (success && allCompleted) {
+          // If all raters have completed, save the results
+          import('./assessmentDbUtils').then(dbUtils => {
+            dbUtils.saveAssessmentResults(updatedAssessment)
+              .then(resultSaved => {
+                if (resultSaved) {
+                  console.log("Assessment results saved successfully");
+                } else {
+                  console.error("Failed to save assessment results");
+                }
+              });
+          });
+        }
+      })
+      .catch(error => {
+        console.error("Error syncing assessment:", error);
+      });
+    
+    if (currentRater === RaterType.SELF) {
+      toast.success("Self-Assessment Completed", {
+        description: "Thank you for completing your self-assessment. Your results will be available once all raters have completed their assessments."
+      });
+    } else {
+      toast.success("Assessment Completed", {
+        description: "Thank you for your assessment. The results will be available to the person you rated once all assessments are complete."
       });
     }
     
-    return {
-      id: assessmentData.id,
-      selfRaterEmail: assessmentData.self_rater_email,
-      selfRaterName: assessmentData.self_rater_name,
-      code: assessmentData.code,
-      completed: assessmentData.completed,
-      createdAt: new Date(assessmentData.created_at),
-      updatedAt: new Date(assessmentData.updated_at),
-      raters
-    };
-  } catch (error) {
-    console.error("Error in getAssessmentDetails:", error);
-    return null;
+    return updatedAssessment;
   }
-}
-
-export async function getAllAssessments() {
-  try {
-    const { data, error } = await supabase
-      .from('assessments')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error || !data) {
-      console.error("Error fetching all assessments:", error);
-      return [];
-    }
-    
-    return data.map(assessment => ({
-      id: assessment.id,
-      selfRaterEmail: assessment.self_rater_email,
-      selfRaterName: assessment.self_rater_name,
-      code: assessment.code,
-      completed: assessment.completed,
-      createdAt: new Date(assessment.created_at),
-      updatedAt: new Date(assessment.updated_at)
-    }));
-  } catch (error) {
-    console.error("Error in getAllAssessments:", error);
-    return [];
-  }
-}
-
-export async function deleteAssessment(assessmentId: string) {
-  try {
-    const { data: ratersData, error: ratersError } = await supabase
-      .from('raters')
-      .select('id')
-      .eq('assessment_id', assessmentId);
-    
-    if (ratersError) {
-      console.error("Error fetching raters for deletion:", ratersError);
-      return false;
-    }
-    
-    if (ratersData && ratersData.length > 0) {
-      const raterIds = ratersData.map(r => r.id);
-      
-      const { error: responsesError } = await supabase
-        .from('responses')
-        .delete()
-        .in('rater_id', raterIds);
-      
-      if (responsesError) {
-        console.error("Error deleting responses:", responsesError);
-        return false;
-      }
-    }
-    
-    const { error: deleteRatersError } = await supabase
-      .from('raters')
-      .delete()
-      .eq('assessment_id', assessmentId);
-    
-    if (deleteRatersError) {
-      console.error("Error deleting raters:", deleteRatersError);
-      return false;
-    }
-    
-    const { error: deleteResultsError } = await supabase
-      .from('results')
-      .delete()
-      .eq('assessment_id', assessmentId);
-    
-    if (deleteResultsError) {
-      console.error("Error deleting results:", deleteResultsError);
-      // Continue anyway as results might not exist
-    }
-    
-    const { error: deleteAssessmentError } = await supabase
-      .from('assessments')
-      .delete()
-      .eq('id', assessmentId);
-    
-    if (deleteAssessmentError) {
-      console.error("Error deleting assessment:", deleteAssessmentError);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Error in deleteAssessment:", error);
-    return false;
-  }
-}
-
-export async function saveResults(assessmentId: string, dimensionScores: any, selfAwareness: number, coachabilityAwareness: number, profileType: string) {
-  try {
-    const resultsData = prepareDbObject({
-      assessment_id: assessmentId,
-      dimension_scores: dimensionScores,
-      self_awareness: selfAwareness,
-      coachability_awareness: coachabilityAwareness,
-      profile_type: profileType
-    });
-
-    const { error } = await supabase
-      .from('results')
-      .insert(resultsData);
-    
-    if (error) {
-      console.error("Error saving results:", error);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Error in saveResults:", error);
-    return false;
-  }
-}
-
-export async function getResults(assessmentId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('results')
-      .select('*')
-      .eq('assessment_id', assessmentId)
-      .single();
-    
-    if (error || !data) {
-      console.error("Error fetching results:", error);
-      return null;
-    }
-    
-    return {
-      assessmentId: data.assessment_id,
-      dimensionScores: data.dimension_scores,
-      selfAwareness: data.self_awareness,
-      coachabilityAwareness: data.coachability_awareness,
-      profileType: data.profile_type,
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at)
-    };
-  } catch (error) {
-    console.error("Error in getResults:", error);
-    return null;
-  }
-}
+  
+  return null;
+};

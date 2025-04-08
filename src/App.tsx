@@ -22,7 +22,6 @@ import NotFound from "./pages/NotFound";
 import AdminPage from "./pages/AdminPage";
 import StartPage from "./pages/StartPage";
 import RaterStartPage from "./pages/RaterStartPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
@@ -43,8 +42,8 @@ const AppContent = () => {
           toast.error("Database tables need to be set up. Please contact an administrator.");
         } else {
           console.log("Database tables exist, proceeding with import...");
-          // Tables exist, just import questions with an empty array to use default questions
-          importQuestionsToDb([]);
+          // Tables exist, just import questions
+          importQuestionsToDb();
         }
       } catch (error) {
         console.error("Error setting up database:", error);
@@ -59,11 +58,10 @@ const AppContent = () => {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="*" element={<NotFound />} />
       
-      {/* Assessment related routes - All wrapped in AssessmentProvider */}
+      {/* Assessment related routes */}
       <Route path="/start" element={
         <ProtectedRoute requiredRole={null}>
           <StartPage />
@@ -81,7 +79,7 @@ const AppContent = () => {
       } />
       <Route path="/completion" element={<CompletionPage />} />
       
-      {/* Admin routes with protection - Also wrapped in AssessmentProvider */}
+      {/* Admin routes with protection */}
       <Route path="/results" element={
         <ProtectedRoute requiredRole="admin">
           <ResultsPage />
@@ -96,7 +94,8 @@ const AppContent = () => {
   );
 };
 
-// The App component structure ensures that the AuthProvider wraps everything including the AssessmentProvider
+// The App component structure ensures that the AssessmentProvider wraps all routes
+// IMPORTANT: The order of providers matters! AuthProvider must wrap AssessmentProvider
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>

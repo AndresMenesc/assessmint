@@ -9,10 +9,10 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated, userRole } = useAuth();
   const location = useLocation();
 
-  console.log("ProtectedRoute check:", { isAuthenticated, role, requiredRole });
+  console.log("ProtectedRoute check:", { isAuthenticated, userRole, requiredRole });
 
   // Not logged in - redirect to login
   if (!isAuthenticated) {
@@ -22,26 +22,26 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   // If a specific role is required, check it
   if (requiredRole) {
     // Super admin can access everything
-    if (role === "super_admin") {
+    if (userRole === "super_admin") {
       return <>{children}</>;
     }
     
     // Admin access control
-    if (requiredRole === "admin" && ["admin", "super_admin"].includes(role || '')) {
+    if (requiredRole === "admin" && ["admin", "super_admin"].includes(userRole)) {
       return <>{children}</>;
     }
     
     // Rater access control - handle rater and other roles
-    if (requiredRole === "rater" && ["rater", "admin", "super_admin"].includes(role || '')) {
+    if (requiredRole === "rater" && ["rater", "admin", "super_admin"].includes(userRole)) {
       return <>{children}</>;
     }
     
     // Redirect based on role - if they don't have permission for the requested page
-    if (role === "admin") {
+    if (userRole === "admin") {
       return <Navigate to="/results" replace />;
     }
     
-    if (role === "rater") {
+    if (userRole === "rater") {
       return <Navigate to="/assessment" replace />;
     }
     

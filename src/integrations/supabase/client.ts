@@ -11,11 +11,11 @@ const getRedirectURL = () => {
   // Check if we're on the production domain
   const hostname = window.location.hostname;
   if (hostname === 'www.orbit-insights.com' || hostname === 'orbit-insights.com') {
-    return 'https://www.orbit-insights.com';
+    return 'https://www.orbit-insights.com/login';
   }
   
   // In development, use the local dev URL
-  return window.location.origin;
+  return `${window.location.origin}/login`;
 };
 
 // Import the supabase client like this:
@@ -31,8 +31,8 @@ export type ExtendedDatabase = Database & {
           assessment_id: string;
           rater_type: string;
           responses: any;
-          email?: string | null;
-          name?: string | null;
+          email?: string;
+          name?: string;
           completed: boolean;
           created_at: string;
           updated_at: string;
@@ -42,8 +42,8 @@ export type ExtendedDatabase = Database & {
           assessment_id: string;
           rater_type: string;
           responses?: any;
-          email?: string | null;
-          name?: string | null;
+          email?: string;
+          name?: string;
           completed?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -53,8 +53,8 @@ export type ExtendedDatabase = Database & {
           assessment_id?: string;
           rater_type?: string;
           responses?: any;
-          email?: string | null;
-          name?: string | null;
+          email?: string;
+          name?: string;
           completed?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -73,13 +73,7 @@ export const supabase = createClient<ExtendedDatabase>(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storage: localStorage,
-      flowType: 'pkce',
-      // Fix for redirectTo property - use storage key for now
-      // redirectTo property is removed as it's not supported in this version
+      storage: localStorage
     }
   }
 );
-
-// Add redirect URL configuration for auth operations that need it
-export const getAuthRedirectUrl = () => getRedirectURL();

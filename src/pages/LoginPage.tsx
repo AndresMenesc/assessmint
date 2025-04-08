@@ -72,14 +72,12 @@ const LoginPage = () => {
     const checkForRecoveryToken = () => {
       const url = new URL(window.location.href);
       const type = url.searchParams.get('type');
-      const token = url.searchParams.get('token');
       
-      if (type === 'recovery' && token) {
-        console.log('Recovery token detected in URL params:', token);
-        setRecoveryToken(token);
+      if (type === 'recovery') {
+        console.log('Recovery type detected in URL params');
         setIsNewPasswordDialogOpen(true);
         toast.success('You can now set your new password');
-        return true;
+        return;
       }
       
       if (window.location.hash) {
@@ -217,20 +215,14 @@ const LoginPage = () => {
   const handleResetPassword = async (values: z.infer<typeof resetPasswordFormSchema>) => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/reset-password`
-      });
+      const success = await resetPassword(values.email);
       
-      if (error) {
-        console.error("Reset password error:", error);
-        toast.error(`Password reset failed: ${error.message}`);
-      } else {
+      if (success) {
         setIsResetEmailSent(true);
-        toast.success(`Password reset instructions sent to ${values.email}`);
       }
     } catch (error) {
       console.error("Reset password error:", error);
-      toast.error("Password reset failed. Please try again.");
+      toast.error("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -241,22 +233,25 @@ const LoginPage = () => {
     try {
       let success;
       
-      const { error } = await supabase.auth.updateUser({ 
-        password: values.password 
-      });
-      
-      success = !error;
-      
-      if (error) {
-        console.error("Update password error:", error);
-        toast.error(error.message || "Failed to update password");
+      if (recoveryToken) {
+        const { error } = await supabase.auth.updateUser({ 
+          password: values.password 
+        });
+        
+        success = !error;
+        
+        if (error) {
+          console.error("Update password error with token:", error);
+          toast.error(error.message || "Failed to update password");
+        }
+      } else {
+        success = await updatePassword(values.password);
       }
       
       if (success) {
         setIsNewPasswordDialogOpen(false);
         toast.success("Your password has been updated successfully. Please log in.");
         newPasswordForm.reset();
-        setRecoveryToken(null);
         setActiveTab("admin");
       }
     } catch (error) {

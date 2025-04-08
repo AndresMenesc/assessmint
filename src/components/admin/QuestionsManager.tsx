@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ const QuestionsManager = () => {
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   
+  // Filter questions based on search and filter criteria
   const filteredQuestions = localQuestions.filter(q => {
     const matchesSearch = q.text.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          q.id.toLowerCase().includes(searchTerm.toLowerCase());
