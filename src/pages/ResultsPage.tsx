@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +40,7 @@ const ResultsPage = () => {
     const fetchAssessments = async () => {
       setLoading(true);
       try {
+        // First get all assessments
         const { data: assessmentData, error: assessmentError } = await supabase
           .from('assessments')
           .select('*')
@@ -46,8 +48,10 @@ const ResultsPage = () => {
 
         if (assessmentError) throw assessmentError;
 
+        // Get count of raters for each assessment
         const assessmentsWithRaters = await Promise.all(
           assessmentData.map(async (assessment) => {
+            // Get count of responses
             const { count: raterCount, error: raterError } = await supabase
               .from('assessment_responses')
               .select('id', { count: 'exact', head: true })
@@ -55,6 +59,7 @@ const ResultsPage = () => {
             
             if (raterError) throw raterError;
             
+            // Check if results exist for this assessment
             const { data: resultsData, error: resultsError } = await supabase
               .from('results')
               .select('id')
@@ -192,7 +197,7 @@ const ResultsPage = () => {
                         </TableCell>
                         <TableCell>
                           {assessment.completed ? (
-                            <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200">
+                            <Badge variant="success" className="bg-green-100 text-green-800 hover:bg-green-200">
                               Completed
                             </Badge>
                           ) : (
