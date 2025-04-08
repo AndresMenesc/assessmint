@@ -11,11 +11,11 @@ const getRedirectURL = () => {
   // Check if we're on the production domain
   const hostname = window.location.hostname;
   if (hostname === 'www.orbit-insights.com' || hostname === 'orbit-insights.com') {
-    return 'https://www.orbit-insights.com/login';
+    return 'https://www.orbit-insights.com';
   }
   
   // In development, use the local dev URL
-  return `${window.location.origin}/login`;
+  return window.location.origin;
 };
 
 // Import the supabase client like this:
@@ -75,6 +75,11 @@ export const supabase = createClient<ExtendedDatabase>(
       detectSessionInUrl: true,
       storage: localStorage,
       flowType: 'pkce',
+      redirect: {
+        login: `${getRedirectURL()}/login`,
+        signUp: `${getRedirectURL()}/login`,  
+        resetPassword: `${getRedirectURL()}/reset-password` 
+      }
     }
   }
 );

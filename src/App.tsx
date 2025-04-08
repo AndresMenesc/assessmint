@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 import AdminPage from "./pages/AdminPage";
 import StartPage from "./pages/StartPage";
 import RaterStartPage from "./pages/RaterStartPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const AppContent = () => {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="*" element={<NotFound />} />
       

@@ -217,14 +217,20 @@ const LoginPage = () => {
   const handleResetPassword = async (values: z.infer<typeof resetPasswordFormSchema>) => {
     setIsLoading(true);
     try {
-      const success = await resetPassword(values.email);
+      const { data, error } = await supabase.auth.resetPasswordForEmail(values.email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      });
       
-      if (success) {
+      if (error) {
+        console.error("Reset password error:", error);
+        toast.error(`Password reset failed: ${error.message}`);
+      } else {
         setIsResetEmailSent(true);
+        toast.success(`Password reset instructions sent to ${values.email}`);
       }
     } catch (error) {
       console.error("Reset password error:", error);
-      toast.error("An error occurred. Please try again.");
+      toast.error("Password reset failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
