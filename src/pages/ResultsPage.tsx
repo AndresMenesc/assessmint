@@ -186,7 +186,7 @@ const ResultsPage = () => {
     (a.selfRaterName && a.selfRaterName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const getSingleRaterResults = async (assessment: Assessment, raterType: RaterType) => {
+  const getSingleRaterResults = async (assessment: Assessment, raterType: RaterType): Promise<DimensionScore[] | null> => {
     if (!assessment) return null;
     
     const rater = assessment.raters.find(r => r.raterType === raterType);

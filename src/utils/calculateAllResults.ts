@@ -87,6 +87,7 @@ export function calculateResults(raters: RaterResponses[]) {
     
     // Calculate dimension scores for all raters
     const dimensionScores = calculateDimensionScores(raters);
+    
     if (!dimensionScores || dimensionScores.length === 0) {
       console.error("Failed to calculate dimension scores");
       return null;

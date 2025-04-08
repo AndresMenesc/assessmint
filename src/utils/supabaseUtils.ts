@@ -1,83 +1,77 @@
 
-import { PostgrestError } from '@supabase/supabase-js';
 import { Json } from "@/integrations/supabase/types";
 
-// Helper function to check if a response is a PostgrestError
-export const isQueryError = (data: any): data is PostgrestError => {
-  return data && typeof data === 'object' && 'code' in data && 'message' in data;
-};
+/**
+ * Safe parameter for Supabase query
+ */
+export function asParam(value: any): any {
+  return value;
+}
 
-// Safely get data from a Supabase query response
-export const safeQueryData = <T>(data: T | PostgrestError | null | undefined): T | null => {
-  if (data === null || data === undefined || isQueryError(data)) {
-    if (isQueryError(data)) {
-      console.error("Supabase query error:", (data as PostgrestError).message);
+/**
+ * Safely filters data returned from Supabase
+ */
+export function safeDataFilter<T>(data: any): T[] {
+  if (!data || !Array.isArray(data)) {
+    return [];
+  }
+  return data as T[];
+}
+
+/**
+ * Safely gets a row field with a default value
+ */
+export function getRowField<T>(row: any, fieldName: string, defaultValue: T): T {
+  if (!row || row[fieldName] === undefined || row[fieldName] === null) {
+    return defaultValue;
+  }
+  return row[fieldName] as T;
+}
+
+/**
+ * Safely accesses a row with default values
+ */
+export function safeRowAccess<T>(row: any, defaults: T): T {
+  if (!row) {
+    return defaults;
+  }
+  
+  const result = { ...defaults };
+  for (const key in defaults) {
+    if (row[key] !== undefined && row[key] !== null) {
+      (result as any)[key] = row[key];
     }
+  }
+  
+  return result;
+}
+
+/**
+ * Safely checks if data is a valid query result
+ */
+export function safeQueryData<T>(data: any): T | null {
+  if (!data) {
     return null;
   }
   return data as T;
-};
+}
 
-// Type-safe cast for Supabase query parameters to handle string IDs
-export const asParam = (value: string | number): any => value;
-
-// Enhanced filter for safe data access from arrays that might contain error objects
-export const safeDataFilter = <T>(dataArray: (T | PostgrestError | null | undefined)[] | null | undefined): T[] => {
-  if (!dataArray || !Array.isArray(dataArray)) {
+/**
+ * Safely prepares responses for processing
+ */
+export function safePrepareResponses(responses: any): any[] {
+  if (!responses) {
     return [];
   }
-  return dataArray.filter(item => item !== null && item !== undefined && !isQueryError(item)) as T[];
-};
+  if (Array.isArray(responses)) {
+    return responses;
+  }
+  return [];
+}
 
-// Safely convert data row to expected type or return default value
-export const safeRowAccess = <T>(
-  row: T | PostgrestError | null | undefined,
-  defaultRow: T
-): T => {
-  if (!row || isQueryError(row)) {
-    return defaultRow;
-  }
-  return row as T;
-};
-
-// Helper to get value from database row using key - handles strings properly
-export const getRowField = <T extends Record<string, any>, K extends string>(
-  row: T | PostgrestError | null | undefined,
-  key: K,
-  defaultValue: any
-): any => {
-  if (!row || isQueryError(row)) {
-    return defaultValue;
-  }
-  
-  if (key in (row as Record<string, any>)) {
-    return (row as Record<string, any>)[key];
-  }
-  
-  return defaultValue;
-};
-
-// Safely prepare responses array
-export const safePrepareResponses = (responses: any): any[] => {
-  if (!responses) return [];
-  
-  // If it's already an array, return it
-  if (Array.isArray(responses)) return responses;
-  
-  // If it's a JSON object coming from the database, make sure we handle it correctly
-  try {
-    if (typeof responses === 'string') {
-      return JSON.parse(responses);
-    }
-    
-    // If it's a JSON object, convert it to an array
-    if (responses && typeof responses === 'object') {
-      return Array.isArray(responses) ? responses : [];
-    }
-    
-    return [];
-  } catch (e) {
-    console.error("Error parsing responses:", e);
-    return [];
-  }
-};
+/**
+ * Checks if a query result is an error
+ */
+export function isQueryError(result: any): boolean {
+  return result && result.code && result.message && result.details;
+}

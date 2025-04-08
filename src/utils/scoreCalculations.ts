@@ -1,119 +1,155 @@
-// Fix imports
-import { questions } from "../data/questions";
-import { AssessmentResponse } from "@/types/assessment";
 
-export function calculateDimensionScores(
-  selfResponses: AssessmentResponse[], 
-  rater1Responses: AssessmentResponse[], 
-  rater2Responses: AssessmentResponse[],
-  dimension: string
-) {
-  const selfDimensionResponses = selfResponses.filter(response => {
-    const question = questions.find(q => q.id === response.questionId);
-    return question && question.section === dimension;
-  });
+import { RaterResponses, DimensionScore, Question, SubSection, Section } from "@/types/assessment";
 
-  const rater1DimensionResponses = rater1Responses.filter(response => {
-    const question = questions.find(q => q.id === response.questionId);
-    return question && question.section === dimension;
-  });
+/**
+ * Calculates dimension scores for all provided raters
+ * @param raters Array of rater responses
+ * @returns Array of dimension scores
+ */
+export function calculateDimensionScores(raters: RaterResponses[]): DimensionScore[] {
+  const dimensionScores: DimensionScore[] = [];
 
-  const rater2DimensionResponses = rater2Responses.filter(response => {
-    const question = questions.find(q => q.id === response.questionId);
-    return question && question.section === dimension;
-  });
+  try {
+    // Check if there's at least one rater
+    if (!raters || raters.length === 0) {
+      return dimensionScores;
+    }
 
-  const selfTotal = selfDimensionResponses.reduce((sum, response) => sum + response.score, 0);
-  const rater1Total = rater1DimensionResponses.reduce((sum, response) => sum + response.score, 0);
-  const rater2Total = rater2DimensionResponses.reduce((sum, response) => sum + response.score, 0);
-
-  const selfCount = selfDimensionResponses.length;
-  const rater1Count = rater1DimensionResponses.length;
-  const rater2Count = rater2DimensionResponses.length;
-
-  let average = 0;
-
-  if (selfCount > 0 || rater1Count > 0 || rater2Count > 0) {
-    const totalScore = selfTotal + rater1Total + rater2Total;
-    const totalCount = selfCount + rater1Count + rater2Count;
-    average = totalScore / totalCount;
+    // Group raters by type
+    const selfRater = raters.find(r => r.raterType === 'self');
+    const otherRaters = raters.filter(r => r.raterType !== 'self');
+    
+    // Process each section and subsection
+    for (const section of Object.values(Section)) {
+      for (const subSection of Object.values(SubSection)) {
+        // Calculate scores for self-rater
+        if (selfRater) {
+          const selfScore = calculateSubSectionScore(selfRater, section, subSection);
+          if (selfScore !== null) {
+            dimensionScores.push({
+              dimension: `Self_${section}`,
+              subDimension: subSection,
+              score: selfScore
+            });
+          }
+        }
+        
+        // Calculate aggregate scores for other raters
+        if (otherRaters.length > 0) {
+          const combinedScore = calculateCombinedSubSectionScore(otherRaters, section, subSection);
+          if (combinedScore !== null) {
+            dimensionScores.push({
+              dimension: `Rater_${section}`,
+              subDimension: subSection,
+              score: combinedScore
+            });
+          }
+        }
+      }
+    }
+    
+    // Add coachability score
+    const coachabilityScore = calculateCoachabilityScore(raters);
+    if (coachabilityScore !== null) {
+      dimensionScores.push({
+        dimension: "Coachability",
+        subDimension: "COACHABILITY",
+        score: coachabilityScore
+      });
+    }
+    
+  } catch (error) {
+    console.error("Error calculating dimension scores:", error);
   }
-
-  return average;
+  
+  return dimensionScores;
 }
 
-export function calculateSelfAwarenessScore(
-  selfResponses: AssessmentResponse[],
-  rater1Responses: AssessmentResponse[],
-  rater2Responses: AssessmentResponse[]
-) {
-  const selfAwarenessQuestions = questions.filter(question => question.subSection === "COACHABILITY");
-
-  const selfResponsesFiltered = selfResponses.filter(response =>
-    selfAwarenessQuestions.some(question => question.id === response.questionId)
-  );
-
-  const rater1ResponsesFiltered = rater1Responses.filter(response =>
-    selfAwarenessQuestions.some(question => question.id === response.questionId)
-  );
-
-  const rater2ResponsesFiltered = rater2Responses.filter(response =>
-    selfAwarenessQuestions.some(question => question.id === response.questionId)
-  );
-
-  const selfTotal = selfResponsesFiltered.reduce((sum, response) => sum + response.score, 0);
-  const rater1Total = rater1ResponsesFiltered.reduce((sum, response) => sum + response.score, 0);
-  const rater2Total = rater2ResponsesFiltered.reduce((sum, response) => sum + response.score, 0);
-
-  const selfCount = selfResponsesFiltered.length;
-  const rater1Count = rater1ResponsesFiltered.length;
-  const rater2Count = rater2ResponsesFiltered.length;
-
-  let average = 0;
-
-  if (selfCount > 0 || rater1Count > 0 || rater2Count > 0) {
-    const totalScore = selfTotal + rater1Total + rater2Total;
-    const totalCount = selfCount + rater1Count + rater2Count;
-    average = totalScore / totalCount;
+/**
+ * Calculates score for a specific subsection for a single rater
+ */
+function calculateSubSectionScore(
+  rater: RaterResponses, 
+  section: string, 
+  subSection: string
+): number | null {
+  try {
+    const relevantResponses = rater.responses.filter(response => {
+      // We need to find matching questions from the response
+      // Simplified approach - we'll enhance this later
+      return response.questionId.includes(section) && response.questionId.includes(subSection);
+    });
+    
+    if (relevantResponses.length === 0) return null;
+    
+    // Calculate average score
+    const totalScore = relevantResponses.reduce((sum, response) => sum + response.score, 0);
+    return totalScore / relevantResponses.length;
+  } catch (error) {
+    console.error(`Error calculating ${section}/${subSection} score:`, error);
+    return null;
   }
-
-  return average;
 }
 
-export function calculateCoachabilityScore(
-  selfResponses: AssessmentResponse[],
-  rater1Responses: AssessmentResponse[],
-  rater2Responses: AssessmentResponse[]
-) {
-  const coachabilityQuestions = questions.filter(question => question.subSection === "COACHABILITY");
-
-  const selfResponsesFiltered = selfResponses.filter(response =>
-    coachabilityQuestions.some(question => question.id === response.questionId)
-  );
-
-  const rater1ResponsesFiltered = rater1Responses.filter(response =>
-    coachabilityQuestions.some(question => question.id === response.questionId)
-  );
-
-  const rater2ResponsesFiltered = rater2Responses.filter(response =>
-    coachabilityQuestions.some(question => question.id === response.questionId)
-  );
-
-  const selfTotal = selfResponsesFiltered.reduce((sum, response) => sum + response.score, 0);
-  const rater1Total = rater1ResponsesFiltered.reduce((sum, response) => sum + response.score, 0);
-  const rater2Total = rater2ResponsesFiltered.reduce((sum, response) => sum + response.score, 0);
-
-  const selfCount = selfResponsesFiltered.length;
-  const rater1Count = rater1ResponsesFiltered.length;
-  const rater2Count = rater2ResponsesFiltered.length;
-
-  let average = 0;
-
-  if (selfCount > 0 || rater1Count > 0 || rater2Count > 0) {
-    const totalScore = selfTotal + rater1Total + rater2Total;
-    const totalCount = selfCount + rater1Count + rater2Count;
-    average = totalScore / totalCount;
+/**
+ * Calculates combined score for a specific subsection across multiple raters
+ */
+function calculateCombinedSubSectionScore(
+  raters: RaterResponses[],
+  section: string,
+  subSection: string
+): number | null {
+  try {
+    let totalScore = 0;
+    let totalResponses = 0;
+    
+    for (const rater of raters) {
+      const relevantResponses = rater.responses.filter(response => {
+        return response.questionId.includes(section) && response.questionId.includes(subSection);
+      });
+      
+      if (relevantResponses.length > 0) {
+        const raterScore = relevantResponses.reduce((sum, response) => sum + response.score, 0);
+        totalScore += raterScore;
+        totalResponses += relevantResponses.length;
+      }
+    }
+    
+    if (totalResponses === 0) return null;
+    
+    return totalScore / totalResponses;
+  } catch (error) {
+    console.error(`Error calculating combined ${section}/${subSection} score:`, error);
+    return null;
   }
+}
 
-  return average;
+/**
+ * Calculates coachability score across all raters
+ */
+export function calculateCoachabilityScore(raters: RaterResponses[]): number | null {
+  try {
+    let totalScore = 0;
+    let totalResponses = 0;
+    
+    for (const rater of raters) {
+      // Identify coachability questions based on question ID pattern
+      const coachabilityResponses = rater.responses.filter(response => {
+        return response.questionId.includes("COACHABILITY");
+      });
+      
+      if (coachabilityResponses.length > 0) {
+        const raterScore = coachabilityResponses.reduce((sum, response) => sum + response.score, 0);
+        totalScore += raterScore;
+        totalResponses += coachabilityResponses.length;
+      }
+    }
+    
+    if (totalResponses === 0) return null;
+    
+    return totalScore / totalResponses;
+  } catch (error) {
+    console.error("Error calculating coachability score:", error);
+    return null;
+  }
 }

@@ -1,6 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { RaterType, Assessment, RaterResponses } from "@/types/assessment";
+import { RaterType, Assessment, RaterResponses, Response } from "@/types/assessment";
 import { prepareDbObject, prepareResponsesForDb, raterTypeToString } from "./dbTypeHelpers";
 import { Json } from "@/integrations/supabase/types";
 import { DbAssessment, DbQuestion } from "@/types/db-types";
@@ -23,10 +22,6 @@ export function prepareAssessmentResponseData(data: any, assessmentId: string) {
     name: data.name,
     completed: data.completed || false,
     responses: prepareResponsesForDb(data.responses || []),
-  }, {
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    id: undefined
   });
 }
 
@@ -37,10 +32,6 @@ export function prepareRaterData(data: any, assessmentId: string) {
     email: data.email,
     name: data.name,
     completed: data.completed || false,
-  }, {
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    id: undefined
   });
 }
 
@@ -49,10 +40,6 @@ export function prepareResponseData(data: any, raterId: string) {
     rater_id: raterId,
     question_id: data.questionId,
     score: data.score,
-  }, {
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    id: undefined
   });
 }
 
@@ -94,7 +81,7 @@ export const fetchAssessmentByCode = async (code: string): Promise<Assessment | 
       throw assessmentError;
     }
     
-    const safeData = safeQueryData<DbAssessment>(assessmentData as DbAssessment);
+    const safeData = safeQueryData<DbAssessment>(assessmentData);
     if (!safeData) {
       console.error("Invalid assessment data");
       return null;
