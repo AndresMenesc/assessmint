@@ -1,68 +1,74 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Question, Section, SubSection, DbQuestion } from "@/types/assessment";
-import { safeQueryData, isQueryError, asParam, safeDataFilter, asDbParam } from "./supabaseHelpers";
+import { defaultQuestions } from "@/data/questions";
+import { Question, Section, SubSection } from "@/types/assessment";
+import { toast } from "sonner";
+import { DbQuestion } from "@/types/db-types";
+import { 
+  safeQueryData, 
+  safeDataFilter, 
+  getRowField, 
+  getDbFormValues 
+} from "./supabaseHelpers";
 
-export const fetchAllQuestions = async (): Promise<Question[]> => {
+export const importQuestionsToDb = async (customQuestions: Question[] = []): Promise<void> => {
   try {
-    const { data: questions, error } = await supabase
-      .from("questions")
-      .select("*");
-
-    if (error) {
-      console.error("Error fetching questions:", error);
-      return [];
-    }
-
-    // Convert database format to our Question type format
-    return safeDataFilter(questions).map(q => {
-      const question = q as DbQuestion;
-      return {
-        id: question.id,
-        text: question.text,
-        section: question.section as Section,
-        subSection: question.sub_section as SubSection,
-        isReversed: question.is_reversed,
-        negativeScore: question.negative_score
-      };
-    });
-  } catch (error) {
-    console.error("Unexpected error fetching questions:", error);
-    return [];
-  }
-};
-
-export const importQuestionsToDb = async (questions: Question[] = []) => {
-  try {
-    if (questions.length === 0) {
-      // If no questions provided, use the ones from the data file
-      const { questions: defaultQuestions } = await import("../data/questions");
-      questions = defaultQuestions;
+    console.log("Importing questions to database...");
+    
+    // Check if questions already exist in the database
+    const { data: existingQuestionsData, error: fetchError } = await supabase
+      .from('questions')
+      .select('*')
+      .limit(1);
+      
+    if (fetchError) {
+      console.error("Error checking for existing questions:", fetchError);
+      toast.error("Error importing questions");
+      return;
     }
     
-    // Format questions for database
-    const dbQuestions = questions.map((q) => ({
+    const existingQuestions = safeDataFilter<DbQuestion>(existingQuestionsData);
+    
+    // Skip import if questions already exist and no custom questions provided
+    if (existingQuestions.length > 0 && customQuestions.length === 0) {
+      console.log("Questions already exist in the database. Skipping import.");
+      return;
+    }
+    
+    const questionsToImport = customQuestions.length > 0 ? customQuestions : defaultQuestions;
+    
+    console.log(`Importing ${questionsToImport.length} questions to the database...`);
+    
+    // Format questions for the database
+    const formattedQuestions = questionsToImport.map(q => ({
       id: q.id,
       text: q.text,
       section: q.section,
       sub_section: q.subSection,
       is_reversed: q.isReversed,
       negative_score: q.negativeScore,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }));
-
-    // Insert questions into the database
-    const { data, error } = await supabase
-      .from("questions")
-      .upsert(asDbParam(dbQuestions));
-
-    if (error) {
-      console.error("Error importing questions:", error);
-      return { success: false, error };
+    
+    // Insert questions into the database using upsert to avoid duplicates
+    const { error: insertError } = await supabase
+      .from('questions')
+      .upsert(getDbFormValues(formattedQuestions), {
+        onConflict: 'id',
+        ignoreDuplicates: false
+      });
+      
+    if (insertError) {
+      console.error("Error importing questions:", insertError);
+      toast.error("Error importing questions");
+      return;
     }
-
-    return { success: true, data };
+    
+    console.log("Questions imported successfully.");
+    
   } catch (error) {
-    console.error("Unexpected error importing questions:", error);
-    return { success: false, error };
+    console.error("Unexpected error during question import:", error);
+    toast.error("Error importing questions");
   }
 };

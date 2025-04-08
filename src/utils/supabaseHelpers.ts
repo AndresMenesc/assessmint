@@ -1,4 +1,3 @@
-
 /**
  * Helper functions to handle Supabase query responses more safely
  */
@@ -30,6 +29,11 @@ export const safeDataAccess = <T>(
   return obj as T;
 };
 
+// Cast database object to match required types for insert/update operations 
+export const asDbParam = <T>(obj: any): T => {
+  return obj as unknown as T;
+};
+
 // Type-safe cast for Supabase query parameters to handle string IDs
 export const asParam = (value: string | number): any => value;
 
@@ -52,11 +56,6 @@ export const safeRowAccess = <T>(
   return row as T;
 };
 
-// Cast database object to the required type for insert/update operations
-export const asDbParam = <T>(obj: any): T => {
-  return obj as unknown as T;
-};
-
 // Helper to get value from database row using key
 export const getRowField = <T, K extends keyof T>(
   row: T | null | undefined | { code: string; message: string },
@@ -67,4 +66,49 @@ export const getRowField = <T, K extends keyof T>(
     return defaultValue;
   }
   return (row as T)[key] !== undefined ? (row as T)[key] : defaultValue;
+};
+
+// Safely serialize JSON data for database operations
+export const safeJsonSerialize = <T>(data: T): any => {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  
+  try {
+    // If already a string, parse and then stringify to ensure valid format
+    if (typeof data === 'string') {
+      return JSON.parse(data);
+    }
+    // Otherwise just convert to JSON
+    return data;
+  } catch (e) {
+    console.error("Error serializing JSON data:", e);
+    return [];
+  }
+};
+
+// Safely get form values for database operations
+export const getDbFormValues = <T>(values: any): T => {
+  // Convert any form values to database-compatible format
+  return values as unknown as T;
+};
+
+// Special handler for responses array
+export const safePrepareResponses = (responses: any): any[] => {
+  if (!responses) return [];
+  
+  // If it's already an array, return it
+  if (Array.isArray(responses)) return responses;
+  
+  // If it's a Json object coming from the database, make sure we handle it correctly
+  try {
+    if (typeof responses === 'string') {
+      return JSON.parse(responses);
+    }
+    
+    return [];
+  } catch (e) {
+    console.error("Error parsing responses:", e);
+    return [];
+  }
 };

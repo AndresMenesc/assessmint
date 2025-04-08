@@ -1,10 +1,23 @@
 
-import { Assessment, RaterResponses, RaterType, DbAssessment, DbAssessmentResponse } from "@/types/assessment";
+import { Assessment, RaterResponses, RaterType } from "@/types/assessment";
+import { DbAssessment, DbAssessmentResponse, DbAdminUser } from "@/types/db-types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { calculateAllResults } from "./calculateAllResults";
 import { Json } from "@/integrations/supabase/types";
-import { safeQueryData, safeDataAccess, isQueryError, asParam, safeDataFilter, safeRowAccess, asDbParam } from "./supabaseHelpers";
+import { 
+  safeQueryData, 
+  safeDataAccess, 
+  isQueryError, 
+  asParam, 
+  safeDataFilter, 
+  safeRowAccess, 
+  asDbParam, 
+  getRowField,
+  getDbFormValues,
+  safePrepareResponses,
+  safeJsonSerialize
+} from "./supabaseHelpers";
 
 /**
  * Converts an Assessment object to the format expected by the database
@@ -44,7 +57,7 @@ export const fetchAssessmentByCode = async (code: string): Promise<Assessment | 
       throw assessmentError;
     }
     
-    const safeData = safeQueryData(assessmentData);
+    const safeData = safeQueryData<DbAssessment>(assessmentData as DbAssessment);
     if (!safeData) {
       console.error("Invalid assessment data");
       return null;
@@ -63,7 +76,7 @@ export const fetchAssessmentByCode = async (code: string): Promise<Assessment | 
     
     // Convert the database response to our Assessment type
     const assessment: Assessment = {
-      id: safeData.id,
+      id: safeData.id || '',
       code: safeData.code,
       selfRaterEmail: safeData.self_rater_email,
       selfRaterName: safeData.self_rater_name,
@@ -71,20 +84,18 @@ export const fetchAssessmentByCode = async (code: string): Promise<Assessment | 
       createdAt: new Date(safeData.created_at),
       updatedAt: new Date(safeData.updated_at),
       raters: safeDataFilter(responseData).map(r => {
-        const safeR = safeRowAccess(r, {
-          rater_type: RaterType.SELF,
-          email: "",
-          name: "",
-          responses: [],
-          completed: false
-        });
+        const raterType = getRowField(r, 'rater_type', RaterType.SELF) as RaterType;
+        const email = getRowField(r, 'email', '');
+        const name = getRowField(r, 'name', '');
+        const completed = getRowField(r, 'completed', false);
+        const responses = safePrepareResponses(getRowField(r, 'responses', []));
         
         return {
-          raterType: safeR.rater_type as RaterType,
-          email: safeR.email || '',
-          name: safeR.name || '',
-          responses: safeR.responses || [],
-          completed: safeR.completed
+          raterType,
+          email: email || '',
+          name: name || '',
+          responses,
+          completed
         };
       })
     };
@@ -246,7 +257,7 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment): Promise<
     // First update the assessment
     const { error } = await supabase
       .from('assessments')
-      .upsert(asDbParam(dbAssessment));
+      .upsert(getDbFormValues<DbAssessment>(dbAssessment));
       
     if (error) {
       console.error("Error syncing assessment with database:", error);
@@ -271,18 +282,18 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment): Promise<
       }
       
       // Prepare responses data for database
-      const safeResponses = rater.responses || [];
+      const safeResponses = safeJsonSerialize(rater.responses || []);
       console.log(`Responses for rater ${rater.raterType}:`, JSON.stringify(safeResponses));
       
       const safeEmail = rater.email || null;
       const safeName = rater.name || null;
       
       if (existingResponse && !isQueryError(existingResponse)) {
-        console.log(`Updating existing responses for rater ${rater.raterType}, ID: ${existingResponse.id}`);
+        console.log(`Updating existing responses for rater ${rater.raterType}, ID: ${getRowField(existingResponse, 'id', '')}`);
         
         // Update existing responses
         const updateData: Partial<DbAssessmentResponse> = {
-          responses: safeResponses as unknown as Json,
+          responses: safeResponses,
           completed: rater.completed,
           email: safeEmail,
           name: safeName,
@@ -291,8 +302,8 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment): Promise<
         
         const { data, error: updateError } = await supabase
           .from('assessment_responses')
-          .update(asDbParam(updateData))
-          .eq('id', existingResponse.id)
+          .update(getDbFormValues<Partial<DbAssessmentResponse>>(updateData))
+          .eq('id', getRowField(existingResponse, 'id', ''))
           .select();
           
         if (updateError) {
@@ -309,7 +320,7 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment): Promise<
         const insertData: DbAssessmentResponse = {
           assessment_id: assessmentData.id,
           rater_type: rater.raterType,
-          responses: safeResponses as unknown as Json,
+          responses: safeResponses,
           completed: rater.completed,
           email: safeEmail,
           name: safeName,
@@ -319,7 +330,7 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment): Promise<
         
         const { data, error: createError } = await supabase
           .from('assessment_responses')
-          .insert(asDbParam(insertData))
+          .insert(getDbFormValues<DbAssessmentResponse>(insertData))
           .select();
           
         if (createError) {
@@ -519,7 +530,7 @@ export const saveAssessmentResults = async (assessment: Assessment): Promise<boo
 
     const { data, error } = await supabase
       .from('results')
-      .upsert(asDbParam(resultsData), {
+      .upsert(getDbFormValues(resultsData), {
         onConflict: 'assessment_id'
       });
 

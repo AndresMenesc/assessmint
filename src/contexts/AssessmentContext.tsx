@@ -10,15 +10,22 @@ import {
   saveAssessmentResults,
 } from "@/utils/assessmentDbUtils";
 import {
-  initializeAssessment,
-  initializeRaterAssessment,
-  addRater,
-  updateResponse,
-  completeAssessment,
-  fetchQuestions
+  initializeAssessment as initAssessment,
+  initializeRaterAssessment as initRaterAssessment,
+  addRater as addRaterToAssessment,
+  updateResponse as updateAssessmentResponse,
+  completeAssessment as completeUserAssessment,
+  fetchQuestions as fetchAllQuestions
 } from "@/utils/assessmentOperations";
 import { calculateAllResults as calculateResults } from "@/utils/calculateAllResults";
-import { safeQueryData, safeDataFilter, asParam, safeDataAccess, isQueryError, safeRowAccess } from "@/utils/supabaseHelpers";
+import { 
+  safeQueryData, 
+  safeDataFilter, 
+  asParam, 
+  safeRowAccess, 
+  getRowField, 
+  safePrepareResponses 
+} from "@/utils/supabaseHelpers";
 
 interface AssessmentContextProps {
   assessment: Assessment | null;
@@ -63,7 +70,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     const loadQuestions = async () => {
       try {
-        const fetchedQuestions = await fetchQuestions();
+        const fetchedQuestions = await fetchAllQuestions();
         setQuestions(fetchedQuestions);
       } catch (error) {
         console.error("Error loading questions:", error);
@@ -78,7 +85,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setLoading(true);
     try {
       console.log(`Initializing assessment with email: ${email}, name: ${name}, code: ${code}`);
-      const initializedAssessment = await initializeAssessment(email, name, code);
+      const initializedAssessment = await initAssessment(email, name, code);
       
       if (initializedAssessment) {
         console.log("Assessment initialized successfully:", initializedAssessment);
@@ -116,7 +123,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setLoading(true);
     try {
       console.log(`Initializing rater assessment with email: ${email}, name: ${name}, code: ${code}`);
-      const result = await initializeRaterAssessment(email, name, code);
+      const result = await initRaterAssessment(email, name, code);
       
       if (result && result.assessment) {
         console.log("Rater assessment initialized successfully:", result);
@@ -140,7 +147,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (!assessment) return;
     
     console.log(`Adding rater: ${email}, ${name}, ${raterType} to assessment ${assessment.id}`);
-    const updatedAssessment = addRater(assessment, email, name, raterType);
+    const updatedAssessment = addRaterToAssessment(assessment, email, name, raterType);
     
     if (updatedAssessment) {
       console.log("Rater added successfully, updated assessment:", updatedAssessment);
@@ -154,7 +161,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const currentRaterResponses = assessment.raters.find(r => r.raterType === currentRater)?.responses || [];
     console.log(`Updating response for question ${questionId} with score ${score}, rater: ${currentRater}`);
     
-    const result = updateResponse(assessment, currentRater, questionId, score);
+    const result = updateAssessmentResponse(assessment, currentRater, questionId, score);
     if (result && result.updatedAssessment) {
       console.log("Response updated successfully");
       setAssessment(result.updatedAssessment);
@@ -165,7 +172,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (!assessment) return;
     
     console.log(`Completing assessment for rater: ${currentRater}, assessment ID: ${assessment.id}`);
-    const updatedAssessment = completeAssessment(assessment, currentRater);
+    const updatedAssessment = completeUserAssessment(assessment, currentRater);
     
     if (updatedAssessment) {
       console.log("Assessment completed successfully");
@@ -221,20 +228,18 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             console.log("Found data in assessment_responses table:", ratersData);
             
             const processedRaters = safeDataFilter(ratersData).map(rater => {
-              const safeRater = safeRowAccess(rater, {
-                rater_type: RaterType.SELF,
-                email: "",
-                name: "",
-                completed: false,
-                responses: []
-              });
+              const raterType = getRowField(rater, 'rater_type', RaterType.SELF) as RaterType;
+              const email = getRowField(rater, 'email', '');
+              const name = getRowField(rater, 'name', '');
+              const completed = getRowField(rater, 'completed', false);
+              const responses = safePrepareResponses(getRowField(rater, 'responses', []));
               
               return {
-                raterType: safeRater.rater_type as RaterType,
-                email: safeRater.email || "",
-                name: safeRater.name || "",
-                completed: safeRater.completed,
-                responses: safeRater.responses || []
+                raterType,
+                email: email || '',
+                name: name || '',
+                completed,
+                responses
               };
             });
             
@@ -289,20 +294,18 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           console.log(`Found ${responsesData.length} entries in assessment_responses`);
           
           const processedRaters = safeDataFilter(responsesData).map(rater => {
-            const safeRater = safeRowAccess(rater, {
-              rater_type: RaterType.SELF,
-              email: "",
-              name: "",
-              completed: false,
-              responses: []
-            });
+            const raterType = getRowField(rater, 'rater_type', RaterType.SELF) as RaterType;
+            const email = getRowField(rater, 'email', '');
+            const name = getRowField(rater, 'name', '');
+            const completed = getRowField(rater, 'completed', false);
+            const responses = safePrepareResponses(getRowField(rater, 'responses', []));
             
             return {
-              raterType: safeRater.rater_type as RaterType,
-              email: safeRater.email || "",
-              name: safeRater.name || "",
-              completed: safeRater.completed,
-              responses: safeRater.responses || []
+              raterType,
+              email: email || '',
+              name: name || '',
+              completed,
+              responses
             };
           });
           
