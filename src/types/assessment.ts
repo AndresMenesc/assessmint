@@ -89,13 +89,3 @@ export interface Assessment {
   createdAt: Date;
   updatedAt: Date;
 }
-
-// Type for the assessment response in database format
-export interface AssessmentResponseDb {
-  id?: string;
-  assessment_id: string;
-  questionId: string;
-  score: number;
-  created_at?: string;
-  updated_at?: string;
-}

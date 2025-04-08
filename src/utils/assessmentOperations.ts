@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Assessment, RaterType, Response, Question } from "@/types/assessment";
 import { prepareDbObject } from "./dbTypeHelpers";
@@ -222,43 +223,47 @@ export async function updateAssessment(assessmentId: string, data: any) {
 
 export async function createAssessment(selfRaterEmail: string, selfRaterName: string, code: string) {
   try {
-    const { data: assessmentData, error: assessmentError } = await supabase
+    const assessmentData = prepareDbObject({
+      self_rater_email: selfRaterEmail,
+      self_rater_name: selfRaterName,
+      code: code,
+      completed: false
+    });
+
+    const { data: createdAssessment, error: assessmentError } = await supabase
       .from('assessments')
-      .insert(prepareDbObject({
-        self_rater_email: selfRaterEmail,
-        self_rater_name: selfRaterName,
-        code: code,
-        completed: false
-      }))
+      .insert(assessmentData)
       .select('*')
       .single();
     
-    if (assessmentError || !assessmentData) {
+    if (assessmentError || !createdAssessment) {
       console.error("Error creating assessment:", assessmentError);
       return { success: false, assessmentId: null };
     }
     
-    const { data: raterData, error: raterError } = await supabase
+    const raterData = prepareDbObject({
+      assessment_id: createdAssessment.id,
+      rater_type: RaterType.SELF,
+      email: selfRaterEmail,
+      name: selfRaterName,
+      completed: false
+    });
+
+    const { data: raterData_, error: raterError } = await supabase
       .from('raters')
-      .insert(prepareDbObject({
-        assessment_id: assessmentData.id,
-        rater_type: RaterType.SELF,
-        email: selfRaterEmail,
-        name: selfRaterName,
-        completed: false
-      }))
+      .insert(raterData)
       .select('*')
       .single();
     
-    if (raterError || !raterData) {
+    if (raterError || !raterData_) {
       console.error("Error creating self-rater:", raterError);
-      return { success: false, assessmentId: assessmentData.id };
+      return { success: false, assessmentId: createdAssessment.id };
     }
     
     return { 
       success: true, 
-      assessmentId: assessmentData.id,
-      raterId: raterData.id
+      assessmentId: createdAssessment.id,
+      raterId: raterData_.id
     };
   } catch (error) {
     console.error("Error in createAssessment:", error);
@@ -287,26 +292,28 @@ export async function addRaterToAssessment(assessmentId: string, email: string, 
       };
     }
     
-    const { data: raterData, error: raterError } = await supabase
+    const raterData = prepareDbObject({
+      assessment_id: assessmentId,
+      rater_type: raterType,
+      email: email,
+      name: name,
+      completed: false
+    });
+
+    const { data: createdRater, error: raterError } = await supabase
       .from('raters')
-      .insert(prepareDbObject({
-        assessment_id: assessmentId,
-        rater_type: raterType,
-        email: email,
-        name: name,
-        completed: false
-      }))
+      .insert(raterData)
       .select('*')
       .single();
     
-    if (raterError || !raterData) {
+    if (raterError || !createdRater) {
       console.error("Error adding rater:", raterError);
       return { success: false, raterId: null };
     }
     
     return { 
       success: true, 
-      raterId: raterData.id,
+      raterId: createdRater.id,
       isExisting: false
     };
   } catch (error) {
@@ -635,15 +642,17 @@ export async function deleteAssessment(assessmentId: string) {
 
 export async function saveResults(assessmentId: string, dimensionScores: any, selfAwareness: number, coachabilityAwareness: number, profileType: string) {
   try {
+    const resultsData = prepareDbObject({
+      assessment_id: assessmentId,
+      dimension_scores: dimensionScores,
+      self_awareness: selfAwareness,
+      coachability_awareness: coachabilityAwareness,
+      profile_type: profileType
+    });
+
     const { error } = await supabase
       .from('results')
-      .insert(prepareDbObject({
-        assessment_id: assessmentId,
-        dimension_scores: dimensionScores,
-        self_awareness: selfAwareness,
-        coachability_awareness: coachabilityAwareness,
-        profile_type: profileType
-      }));
+      .insert(resultsData);
     
     if (error) {
       console.error("Error saving results:", error);

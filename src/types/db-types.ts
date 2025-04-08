@@ -45,11 +45,3 @@ export interface DbAdminUser {
 }
 
 export type UserRole = 'super_admin' | 'admin' | 'rater' | null;
-
-export interface RaterResponses {
-  raterType: string;
-  email: string;
-  name: string;
-  responses: any[];
-  completed: boolean;
-}

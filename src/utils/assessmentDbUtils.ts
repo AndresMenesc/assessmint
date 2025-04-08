@@ -1,7 +1,19 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { RaterType } from "@/types/assessment";
+import { RaterType, Assessment, RaterResponses } from "@/types/assessment";
 import { prepareDbObject, prepareResponsesForDb, raterTypeToString } from "./dbTypeHelpers";
 import { Json } from "@/integrations/supabase/types";
+import { DbAssessment, DbQuestion } from "@/types/db-types";
+import { 
+  asParam, 
+  safeQueryData, 
+  safeDataFilter, 
+  safeRowAccess, 
+  getRowField, 
+  safePrepareResponses,
+  isQueryError 
+} from "./supabaseUtils";
+import { calculateResults } from "./calculateAllResults";
 
 export function prepareAssessmentResponseData(data: any, assessmentId: string) {
   return prepareDbObject({
@@ -155,7 +167,7 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
     let raters: RaterResponses[] = [];
     
     if (responsesData && Array.isArray(responsesData) && responsesData.length > 0) {
-      console.log("Found responses data in assessment_responses table:", responsesData);
+      console.log("Found data in assessment_responses table:", responsesData);
       
       // Map the responses from the new table format
       raters = safeDataFilter(responsesData).map(r => {
@@ -504,7 +516,7 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
  */
 export const saveAssessmentResults = async (assessment: Assessment): Promise<boolean> => {
   try {
-    const results = calculateAllResults(assessment.raters);
+    const results = calculateResults(assessment.raters);
     
     if (!results) {
       console.error("No results to save");

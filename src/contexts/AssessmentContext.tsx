@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Assessment, RaterType, Question, AssessmentResponse, Response } from "@/types/assessment";
 import { v4 as uuidv4 } from "uuid";
@@ -10,12 +11,12 @@ import {
   saveAssessmentResults,
 } from "@/utils/assessmentDbUtils";
 import {
-  initializeAssessment as initAssessment,
-  initializeRaterAssessment as initRaterAssessment,
-  addRater as addRaterToAssessment,
-  updateResponse as updateAssessmentResponse,
-  completeAssessment as completeUserAssessment,
-  fetchQuestions as fetchAllQuestions
+  createAssessment,
+  getAssessmentByCode,
+  getRaterByEmail,
+  getResponsesForRater,
+  addRaterToAssessment as addRaterDbOperation,
+  getAllQuestions,
 } from "@/utils/assessmentOperations";
 import { calculateResults } from "@/utils/calculateAllResults";
 import { 
@@ -70,7 +71,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     const loadQuestions = async () => {
       try {
-        const fetchedQuestions = await fetchAllQuestions();
+        const fetchedQuestions = await getAllQuestions();
         setQuestions(fetchedQuestions);
       } catch (error) {
         console.error("Error loading questions:", error);
@@ -85,26 +86,44 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setLoading(true);
     try {
       console.log(`Initializing assessment with email: ${email}, name: ${name}, code: ${code}`);
-      const initializedAssessment = await initAssessment(email, name, code);
       
-      if (initializedAssessment) {
-        console.log("Assessment initialized successfully:", initializedAssessment);
-        console.log("Assessment ID:", initializedAssessment.id);
-        console.log("Raters:", JSON.stringify(initializedAssessment.raters));
-        
-        setAssessment(initializedAssessment);
-        setCurrentRater(RaterType.SELF);
-        
-        try {
-          const { data, error } = await supabase
-            .from('assessment_responses')
-            .select('*')
-            .eq('assessment_id', asParam(initializedAssessment.id));
-            
-          console.log("Assessment responses in DB:", data, "Error:", error);
-        } catch (dbError) {
-          console.error("Error checking assessment responses:", dbError);
-        }
+      const result = await createAssessment(email, name, code);
+      
+      if (!result.success || !result.assessmentId) {
+        throw new Error("Failed to create assessment");
+      }
+      
+      const initializedAssessment: Assessment = {
+        id: result.assessmentId,
+        selfRaterEmail: email,
+        selfRaterName: name,
+        code,
+        completed: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        raters: [
+          {
+            raterType: RaterType.SELF,
+            email: email,
+            name: name,
+            responses: [],
+            completed: false
+          }
+        ]
+      };
+      
+      setAssessment(initializedAssessment);
+      setCurrentRater(RaterType.SELF);
+      
+      try {
+        const { data, error } = await supabase
+          .from('assessment_responses')
+          .select('*')
+          .eq('assessment_id', asParam(initializedAssessment.id));
+          
+        console.log("Assessment responses in DB:", data, "Error:", error);
+      } catch (dbError) {
+        console.error("Error checking assessment responses:", dbError);
       }
     } catch (error) {
       console.error("Error initializing assessment:", error);
@@ -123,13 +142,49 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setLoading(true);
     try {
       console.log(`Initializing rater assessment with email: ${email}, name: ${name}, code: ${code}`);
-      const result = await initRaterAssessment(email, name, code);
       
-      if (result && result.assessment) {
-        console.log("Rater assessment initialized successfully:", result);
-        setAssessment(result.assessment);
-        setCurrentRater(RaterType.RATER1); // Set a default rater type
+      const assessmentData = await getAssessmentByCode(code);
+      
+      if (!assessmentData) {
+        throw new Error("Assessment not found");
       }
+      
+      const rater = await getRaterByEmail(assessmentData.id, email);
+      if (rater && rater.completed) {
+        throw new Error("Assessment already completed");
+      }
+      
+      const raterType = rater ? rater.rater_type as RaterType : 
+                       email === assessmentData.self_rater_email ? RaterType.SELF : RaterType.RATER1;
+      
+      if (!rater) {
+        await addRaterDbOperation(assessmentData.id, email, name, raterType);
+      }
+      
+      const responses = rater ? await getResponsesForRater(rater.id) : [];
+      
+      const raterAssessment: Assessment = {
+        id: assessmentData.id,
+        selfRaterEmail: assessmentData.self_rater_email,
+        selfRaterName: assessmentData.self_rater_name,
+        code: assessmentData.code,
+        completed: assessmentData.completed,
+        createdAt: new Date(assessmentData.created_at),
+        updatedAt: new Date(assessmentData.updated_at),
+        raters: [
+          {
+            raterType,
+            email,
+            name,
+            responses,
+            completed: rater ? rater.completed : false
+          }
+        ]
+      };
+      
+      setAssessment(raterAssessment);
+      setCurrentRater(raterType);
+      
     } catch (error) {
       console.error("Error initializing rater assessment:", error);
       if (error instanceof Error) {
@@ -147,11 +202,35 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (!assessment) return;
     
     console.log(`Adding rater: ${email}, ${name}, ${raterType} to assessment ${assessment.id}`);
-    const updatedAssessment = addRaterToAssessment(assessment, email, name, raterType);
     
-    if (updatedAssessment) {
-      console.log("Rater added successfully, updated assessment:", updatedAssessment);
-      setAssessment(updatedAssessment as Assessment);
+    const existingRaterIndex = assessment.raters.findIndex(r => r.raterType === raterType);
+    
+    if (existingRaterIndex >= 0) {
+      const updatedRaters = [...assessment.raters];
+      updatedRaters[existingRaterIndex] = {
+        ...updatedRaters[existingRaterIndex],
+        email,
+        name
+      };
+      
+      setAssessment({
+        ...assessment,
+        raters: updatedRaters
+      });
+    } else {
+      setAssessment({
+        ...assessment,
+        raters: [
+          ...assessment.raters,
+          {
+            raterType,
+            email,
+            name,
+            responses: [],
+            completed: false
+          }
+        ]
+      });
     }
   };
   
@@ -161,28 +240,72 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const currentRaterResponses = assessment.raters.find(r => r.raterType === currentRater)?.responses || [];
     console.log(`Updating response for question ${questionId} with score ${score}, rater: ${currentRater}`);
     
-    const result = updateAssessmentResponse(assessment, currentRater, questionId, score);
-    if (result && result.updatedAssessment) {
-      console.log("Response updated successfully");
-      setAssessment(result.updatedAssessment);
-    }
+    const updatedRaters = assessment.raters.map(rater => {
+      if (rater.raterType !== currentRater) {
+        return rater;
+      }
+      
+      const existingResponseIndex = rater.responses.findIndex(r => r.questionId === questionId);
+      
+      if (existingResponseIndex >= 0) {
+        const updatedResponses = [...rater.responses];
+        updatedResponses[existingResponseIndex] = {
+          ...updatedResponses[existingResponseIndex],
+          score
+        };
+        
+        return {
+          ...rater,
+          responses: updatedResponses
+        };
+      } else {
+        return {
+          ...rater,
+          responses: [
+            ...rater.responses,
+            {
+              questionId,
+              score
+            }
+          ]
+        };
+      }
+    });
+    
+    setAssessment({
+      ...assessment,
+      raters: updatedRaters
+    });
   };
   
   const completeAssessmentHandler = async (): Promise<void> => {
     if (!assessment) return;
     
     console.log(`Completing assessment for rater: ${currentRater}, assessment ID: ${assessment.id}`);
-    const updatedAssessment = completeUserAssessment(assessment, currentRater);
     
-    if (updatedAssessment) {
-      console.log("Assessment completed successfully");
-      setAssessment(updatedAssessment);
-      
-      const allRatersCompleted = updatedAssessment.raters.every(r => r.completed);
-      if (allRatersCompleted) {
-        console.log("All raters completed, saving final results");
-        await saveAssessmentResults(updatedAssessment);
+    const updatedRaters = assessment.raters.map(rater => {
+      if (rater.raterType === currentRater) {
+        return {
+          ...rater,
+          completed: true
+        };
       }
+      return rater;
+    });
+    
+    const allCompleted = updatedRaters.every(r => r.completed);
+    
+    const updatedAssessment = {
+      ...assessment,
+      raters: updatedRaters,
+      completed: allCompleted
+    };
+    
+    setAssessment(updatedAssessment);
+    
+    if (allCompleted) {
+      console.log("All raters completed, saving final results");
+      await saveAssessmentResults(updatedAssessment);
     }
   };
   
