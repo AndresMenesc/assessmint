@@ -1,5 +1,4 @@
-
-import { RaterResponses, Section } from "@/types/assessment";
+import { Response, RaterResponses, Section } from "@/types/assessment";
 import { calculateDimensionScore, calculateCoachabilityScore, calculateSelfAwareness, calculateCoachabilityAwareness } from "./scoreCalculations";
 
 /**

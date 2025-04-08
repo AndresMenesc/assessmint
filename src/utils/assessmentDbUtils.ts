@@ -1,4 +1,3 @@
-
 import { Assessment, RaterResponses, RaterType } from "@/types/assessment";
 import { DbAssessment, DbAssessmentResponse, DbAdminUser } from "@/types/db-types";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +17,7 @@ import {
   safePrepareResponses,
   safeJsonSerialize
 } from "./supabaseHelpers";
+import { prepareDbObject, prepareAssessmentResponse, prepareResponsesForDb, raterTypeToString } from "./dbTypeHelpers";
 
 /**
  * Converts an Assessment object to the format expected by the database
@@ -257,7 +257,7 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment): Promise<
     // First update the assessment
     const { error } = await supabase
       .from('assessments')
-      .upsert(getDbFormValues<DbAssessment>(dbAssessment));
+      .upsert(dbAssessment);
       
     if (error) {
       console.error("Error syncing assessment with database:", error);
@@ -282,27 +282,24 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment): Promise<
       }
       
       // Prepare responses data for database
-      const safeResponses = safeJsonSerialize(rater.responses || []);
+      const safeResponses = prepareResponsesForDb(rater.responses || []);
       console.log(`Responses for rater ${rater.raterType}:`, JSON.stringify(safeResponses));
-      
-      const safeEmail = rater.email || null;
-      const safeName = rater.name || null;
       
       if (existingResponse && !isQueryError(existingResponse)) {
         console.log(`Updating existing responses for rater ${rater.raterType}, ID: ${getRowField(existingResponse, 'id', '')}`);
         
         // Update existing responses
-        const updateData: Partial<DbAssessmentResponse> = {
+        const updateData = prepareDbObject({
           responses: safeResponses,
           completed: rater.completed,
-          email: safeEmail,
-          name: safeName,
+          email: rater.email || null,
+          name: rater.name || null,
           updated_at: new Date().toISOString()
-        };
+        });
         
         const { data, error: updateError } = await supabase
           .from('assessment_responses')
-          .update(getDbFormValues<Partial<DbAssessmentResponse>>(updateData))
+          .update(updateData)
           .eq('id', getRowField(existingResponse, 'id', ''))
           .select();
           
@@ -317,20 +314,20 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment): Promise<
         console.log(`Creating new responses for rater ${rater.raterType}`);
         
         // Create new responses
-        const insertData: DbAssessmentResponse = {
+        const insertData = prepareDbObject({
           assessment_id: assessmentData.id,
-          rater_type: rater.raterType,
+          rater_type: raterTypeToString(rater.raterType),
           responses: safeResponses,
           completed: rater.completed,
-          email: safeEmail,
-          name: safeName,
+          email: rater.email || null,
+          name: rater.name || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        };
+        });
         
         const { data, error: createError } = await supabase
           .from('assessment_responses')
-          .insert(getDbFormValues<DbAssessmentResponse>(insertData))
+          .insert(insertData)
           .select();
           
         if (createError) {
@@ -363,7 +360,7 @@ export const createAssessmentInDb = async (assessment: Assessment): Promise<bool
     // First create the assessment
     const { error } = await supabase
       .from('assessments')
-      .insert(asDbParam(dbAssessment));
+      .insert(dbAssessment);
       
     if (error) {
       console.error("Error saving new assessment to database:", error);
@@ -371,29 +368,24 @@ export const createAssessmentInDb = async (assessment: Assessment): Promise<bool
     }
     
     // Then create the initial rater responses in the new table
-    const selfRater = assessment.raters.find(r => r.raterType === 'self');
+    const selfRater = assessment.raters.find(r => raterTypeToString(r.raterType) === 'self');
     if (selfRater) {
       console.log("Adding self-rater responses to DB");
       
-      // Safely prepare responses data
-      const safeResponses = selfRater.responses || [];
-      const safeEmail = selfRater.email || null;
-      const safeName = selfRater.name || null;
-      
-      const insertData: DbAssessmentResponse = {
-        assessment_id: assessment.id,
-        rater_type: selfRater.raterType,
-        responses: safeResponses as unknown as Json,
+      // Create proper DB object with all required fields
+      const insertData = prepareAssessmentResponse({
+        rater_type: raterTypeToString(selfRater.raterType),
+        responses: selfRater.responses || [],
         completed: selfRater.completed,
-        email: safeEmail,
-        name: safeName,
+        email: selfRater.email || null,
+        name: selfRater.name || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      };
+      }, assessment.id);
       
       const { data, error: raterError } = await supabase
         .from('assessment_responses')
-        .insert(asDbParam(insertData))
+        .insert(insertData)
         .select();
         
       if (raterError) {
@@ -429,7 +421,7 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
     
     const { error } = await supabase
       .from('assessments')
-      .update(asDbParam(dbUpdates))
+      .update(dbUpdates)
       .eq('id', asParam(assessmentId));
       
     if (error) {
@@ -452,23 +444,24 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
           continue;
         }
         
+        // Prepare proper DB object with all required fields
         const safeResponses = rater.responses || [];
         const safeEmail = rater.email || null;
         const safeName = rater.name || null;
         
         if (existingResponse && !isQueryError(existingResponse)) {
           // Update existing responses
-          const updateData: Partial<DbAssessmentResponse> = {
-            responses: JSON.parse(JSON.stringify(safeResponses)) as Json,
+          const updateData = prepareDbObject({
+            responses: prepareResponsesForDb(safeResponses),
             completed: rater.completed,
             email: safeEmail,
             name: safeName,
             updated_at: new Date().toISOString()
-          };
+          });
           
           const { error: updateError } = await supabase
             .from('assessment_responses')
-            .update(asDbParam(updateData))
+            .update(updateData)
             .eq('id', existingResponse.id);
             
           if (updateError) {
@@ -477,20 +470,19 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
           }
         } else {
           // Create new responses
-          const insertData: DbAssessmentResponse = {
-            assessment_id: assessmentId,
-            rater_type: rater.raterType,
-            responses: JSON.parse(JSON.stringify(safeResponses)) as Json,
+          const insertData = prepareAssessmentResponse({
+            rater_type: raterTypeToString(rater.raterType),
+            responses: prepareResponsesForDb(safeResponses),
             completed: rater.completed,
             email: safeEmail,
             name: safeName,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          };
+          }, assessmentId);
           
           const { error: createError } = await supabase
             .from('assessment_responses')
-            .insert(asDbParam(insertData));
+            .insert(insertData);
             
           if (createError) {
             console.error("Error creating assessment responses:", createError);
@@ -528,9 +520,9 @@ export const saveAssessmentResults = async (assessment: Assessment): Promise<boo
       profile_type: results.profileType
     };
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('results')
-      .upsert(getDbFormValues(resultsData), {
+      .upsert(resultsData, {
         onConflict: 'assessment_id'
       });
 

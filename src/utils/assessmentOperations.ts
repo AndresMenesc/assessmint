@@ -1,12 +1,13 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { Assessment, AssessmentResponse, Section, SubSection, Question, DbAssessment, DbAssessmentResponse, DbQuestion } from "@/types/assessment";
+import { Assessment, Response, Section, SubSection, Question } from "@/types/assessment";
+import { DbAssessment } from "@/types/db-types";
 import { safeQueryData, isQueryError, asParam, safeDataFilter, asDbParam } from "./supabaseHelpers";
+import { prepareDbObject, prepareAssessmentResponse } from "./dbTypeHelpers";
 
 // Function to create a new assessment in the database
 export const createAssessmentInDb = async (assessment: Assessment): Promise<Assessment> => {
   try {
-    const dbAssessment: DbAssessment = {
+    const dbAssessment = {
       id: assessment.id || undefined as any,
       self_rater_email: assessment.selfRaterEmail,
       self_rater_name: assessment.selfRaterName,
@@ -16,9 +17,12 @@ export const createAssessmentInDb = async (assessment: Assessment): Promise<Asse
       updated_at: assessment.updatedAt.toISOString()
     };
 
+    // Properly prepare database object to ensure all fields are present
+    const preparedAssessment = prepareDbObject<DbAssessment>(dbAssessment);
+
     const { data, error } = await supabase
       .from('assessments')
-      .insert(asDbParam<DbAssessment>(dbAssessment))
+      .insert(preparedAssessment)
       .select()
       .single();
 
@@ -263,7 +267,7 @@ export const saveAssessmentResponseToDb = async (assessmentResponse: AssessmentR
 };
 
 // Function to fetch assessment responses by assessment ID from the database
-export const fetchAssessmentResponsesByAssessmentId = async (assessmentId: string): Promise<AssessmentResponse[]> => {
+export const fetchAssessmentResponsesByAssessmentId = async (assessmentId: string): Promise<Response[]> => {
   try {
     const { data: assessmentResponses, error } = await supabase
       .from("assessment_responses")
@@ -275,17 +279,21 @@ export const fetchAssessmentResponsesByAssessmentId = async (assessmentId: strin
       return [];
     }
 
-    return safeDataFilter(assessmentResponses).map(ar => {
-      const result = ar as any;
-      return {
-        id: result.id,
-        assessment_id: result.assessment_id,
-        questionId: result.question_id,
-        score: result.score,
-        created_at: result.created_at,
-        updated_at: result.updated_at
-      };
+    // Transform database responses format to our app format
+    // Extract responses from the response array in each record
+    const allResponses: Response[] = [];
+    
+    safeDataFilter(assessmentResponses).forEach(responseRecord => {
+      if (responseRecord.responses && Array.isArray(responseRecord.responses)) {
+        const recordResponses = responseRecord.responses.map(r => ({
+          questionId: r.questionId,
+          score: r.score
+        }));
+        allResponses.push(...recordResponses);
+      }
     });
+
+    return allResponses;
   } catch (error) {
     console.error("Unexpected error fetching assessment responses:", error);
     return [];
@@ -353,10 +361,6 @@ export const syncAssessmentWithDb = async (assessment: Assessment): Promise<Asse
     throw error;
   }
 };
-
-//
-// Export additional assessment operations functions
-//
 
 // Initialize a new assessment
 export const initializeAssessment = async (email: string, name: string, code: string): Promise<Assessment> => {
@@ -455,12 +459,13 @@ export const fetchQuestions = async (): Promise<Question[]> => {
     }
     
     return safeDataFilter(questionsData).map(q => {
-      const question = q as DbQuestion;
+      // Use type assertion to handle properly
+      const question = q as any;
       return {
         id: question.id,
         text: question.text,
-        section: question.section as Section,
-        subSection: question.sub_section as SubSection,
+        section: question.section,
+        subSection: question.sub_section,
         isReversed: question.is_reversed,
         negativeScore: question.negative_score
       };

@@ -1,9 +1,8 @@
-
-import { AssessmentResponse, Question, RaterResponses, RaterType, Section } from "../types/assessment";
+import { AssessmentResponse, Question, RaterResponses, RaterType, Response, Section } from "../types/assessment";
 import { questions } from "../data/questions";
 
 // Calculate the score for a specific dimension
-export function calculateDimensionScore(responses: AssessmentResponse[], dimension: Section): number {
+export function calculateDimensionScore(responses: Response[], dimension: Section): number {
   const dimensionQuestions = questions.filter(q => q.section === dimension);
   
   console.log(`Calculating ${dimension} score from ${responses.length} responses and ${dimensionQuestions.length} questions`);

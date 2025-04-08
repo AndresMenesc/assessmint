@@ -2,7 +2,7 @@
 import { Question, Section, SubSection } from "@/types/assessment";
 
 // Default questions for the assessment
-export const defaultQuestions: Question[] = [
+export const questions: Question[] = [
   // Esteem section - Insecure subsection
   {
     id: "esteem-insecure-1",
@@ -207,3 +207,6 @@ export const defaultQuestions: Question[] = [
     negativeScore: false
   }
 ];
+
+// Export the defaultQuestions as well for backward compatibility
+export const defaultQuestions = questions;
