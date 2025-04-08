@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { LogIn, UserIcon, Mail, Lock, User, Hash, KeyRound } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Logo from "@/components/Logo";
+import { supabase } from "@/integrations/supabase/client";
 
 const userFormSchema = z.object({
   name: z.string().min(2, {
@@ -44,14 +45,28 @@ const resetPasswordFormSchema = z.object({
   }),
 });
 
+const newPasswordFormSchema = z.object({
+  password: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
+  }),
+  confirmPassword: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
+  }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, codeLogin, userRole, resetPassword } = useAuth();
+  const { login, codeLogin, userRole, resetPassword, updatePassword } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"user" | "admin">("user");
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isResetEmailSent, setIsResetEmailSent] = useState(false);
+  const [isNewPasswordDialogOpen, setIsNewPasswordDialogOpen] = useState(false);
+  const [recoveryToken, setRecoveryToken] = useState<string | null>(null);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -59,6 +74,17 @@ const LoginPage = () => {
     
     if (type === 'recovery') {
       toast.success('You can now set your new password');
+    }
+    
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    if (hashParams.get('type') === 'recovery') {
+      const accessToken = hashParams.get('access_token');
+      if (accessToken) {
+        setRecoveryToken(accessToken);
+        setIsNewPasswordDialogOpen(true);
+        
+        window.history.replaceState(null, '', window.location.pathname);
+      }
     }
   }, []);
 
@@ -84,6 +110,14 @@ const LoginPage = () => {
     resolver: zodResolver(resetPasswordFormSchema),
     defaultValues: {
       email: "",
+    },
+  });
+  
+  const newPasswordForm = useForm<z.infer<typeof newPasswordFormSchema>>({
+    resolver: zodResolver(newPasswordFormSchema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
     },
   });
 
@@ -174,6 +208,24 @@ const LoginPage = () => {
       }
     } catch (error) {
       console.error("Reset password error:", error);
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async (values: z.infer<typeof newPasswordFormSchema>) => {
+    setIsLoading(true);
+    try {
+      const success = await updatePassword(values.password);
+      
+      if (success) {
+        setIsNewPasswordDialogOpen(false);
+        toast.success("Your password has been updated successfully. Please log in.");
+        newPasswordForm.reset();
+      }
+    } catch (error) {
+      console.error("Update password error:", error);
       toast.error("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
@@ -484,6 +536,78 @@ const LoginPage = () => {
               </Button>
             </DialogFooter>
           )}
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isNewPasswordDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsNewPasswordDialogOpen(false);
+          newPasswordForm.reset();
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set New Password</DialogTitle>
+            <DialogDescription>
+              Please enter your new password below.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...newPasswordForm}>
+            <form onSubmit={newPasswordForm.handleSubmit(handleUpdatePassword)} className="space-y-4">
+              <FormField
+                control={newPasswordForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <Label htmlFor="new-password">New Password</Label>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="new-password"
+                          type="password"
+                          className="pl-10"
+                          placeholder="Enter your new password"
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={newPasswordForm.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="confirm-password"
+                          type="password"
+                          className="pl-10"
+                          placeholder="Confirm your new password"
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter className="sm:justify-end">
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? "Updating..." : "Update Password"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

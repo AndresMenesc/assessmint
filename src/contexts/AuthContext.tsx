@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -19,6 +20,7 @@ interface AuthContextProps {
   codeLogin: (email: string, name: string, code: string, isSelf: boolean) => Promise<{ success: boolean; isNewAssessment?: boolean }>;
   logout: () => void;
   resetPassword: (email: string) => Promise<boolean>;
+  updatePassword: (password: string) => Promise<boolean>;
 }
 
 // Create context with a default value
@@ -233,7 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetPassword = async (email: string): Promise<boolean> => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login`,
+        redirectTo: `${window.location.origin}/login?type=recovery`,
       });
       
       if (error) {
@@ -247,6 +249,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error("Password reset error:", error);
       toast.error("Password reset failed. Please try again.");
+      return false;
+    }
+  };
+  
+  // Update password function (new)
+  const updatePassword = async (password: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (error) {
+        console.error("Password update error:", error);
+        toast.error(`Password update failed: ${error.message}`);
+        return false;
+      }
+      
+      toast.success("Password updated successfully");
+      return true;
+    } catch (error) {
+      console.error("Password update error:", error);
+      toast.error("Password update failed. Please try again.");
       return false;
     }
   };
@@ -336,7 +360,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login,
       codeLogin,
       logout,
-      resetPassword
+      resetPassword,
+      updatePassword
     }}>
       {children}
     </AuthContext.Provider>
