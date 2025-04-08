@@ -19,11 +19,6 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Special case for super admin (rebecca@acharavet.com)
-  if (userRole === "super_admin") {
-    return <>{children}</>;
-  }
-
   // If a specific role is required, check it
   if (requiredRole) {
     // Super admin can access everything
