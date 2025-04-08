@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -42,8 +41,8 @@ const AppContent = () => {
           toast.error("Database tables need to be set up. Please contact an administrator.");
         } else {
           console.log("Database tables exist, proceeding with import...");
-          // Tables exist, just import questions
-          importQuestionsToDb();
+          // Tables exist, just import questions - fixing the error by passing an empty array
+          importQuestionsToDb([]);
         }
       } catch (error) {
         console.error("Error setting up database:", error);

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Question, Section, SubSection } from "@/types/assessment";
 
@@ -14,7 +15,15 @@ export const fetchAllQuestions = async (): Promise<Question[]> => {
       return [];
     }
 
-    return questions as Question[];
+    // Convert database format to our Question type format
+    return questions.map(q => ({
+      id: q.id,
+      text: q.text,
+      section: q.section as Section,
+      subSection: q.sub_section as SubSection,
+      isReversed: q.is_reversed,
+      negativeScore: q.negative_score
+    }));
   } catch (error) {
     console.error("Unexpected error fetching questions:", error);
     return [];
@@ -23,6 +32,12 @@ export const fetchAllQuestions = async (): Promise<Question[]> => {
 
 export const importQuestionsToDb = async (questions: Question[]) => {
   try {
+    if (!questions || questions.length === 0) {
+      // If no questions provided, use the ones from the data file
+      const { questions: defaultQuestions } = await import("../data/questions");
+      questions = defaultQuestions;
+    }
+    
     // Format questions for database
     const dbQuestions = questions.map((q) => ({
       id: q.id,

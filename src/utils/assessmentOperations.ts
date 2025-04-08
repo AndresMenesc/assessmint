@@ -160,10 +160,7 @@ export const initializeRaterAssessment = async (
     };
     
     // Update in database
-    const success = await updateAssessmentInDb(assessmentData.id, {
-      raters: updatedRaters,
-      updatedAt: updatedAssessment.updatedAt
-    });
+    const success = await syncAssessmentWithDb(updatedAssessment);
     
     if (!success) {
       throw new Error("Failed to update assessment in database");
