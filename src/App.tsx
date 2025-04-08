@@ -96,7 +96,7 @@ const AppContent = () => {
   );
 };
 
-// The App component structure ensures that the AssessmentProvider wraps all routes
+// The App component structure ensures that the AuthProvider wraps everything including the AssessmentProvider
 // IMPORTANT: The order of providers matters! AuthProvider must wrap AssessmentProvider
 const App = () => (
   <QueryClientProvider client={queryClient}>

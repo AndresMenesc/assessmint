@@ -31,7 +31,7 @@ export const safeDataAccess = <T>(
 };
 
 // Type-safe cast for Supabase query parameters to handle string IDs
-export const asParam = (value: string | number): any => value as any;
+export const asParam = (value: string | number): any => value;
 
 // Enhanced filter for safe data access from arrays that might contain error objects
 export const safeDataFilter = <T>(dataArray: (T | { code: string; message: string } | null | undefined)[] | null | undefined): T[] => {
@@ -55,4 +55,16 @@ export const safeRowAccess = <T>(
 // Cast database object to the required type for insert/update operations
 export const asDbParam = <T>(obj: any): T => {
   return obj as unknown as T;
+};
+
+// Helper to get value from database row using key
+export const getRowField = <T, K extends keyof T>(
+  row: T | null | undefined | { code: string; message: string },
+  key: K,
+  defaultValue: T[K]
+): T[K] => {
+  if (!row || isQueryError(row)) {
+    return defaultValue;
+  }
+  return (row as T)[key] !== undefined ? (row as T)[key] : defaultValue;
 };

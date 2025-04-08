@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Assessment, RaterType, Question, AssessmentResponse } from "@/types/assessment";
 import { v4 as uuidv4 } from "uuid";
@@ -56,7 +55,10 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [currentRater, setCurrentRater] = useState<RaterType>(RaterType.SELF);
   const [loading, setLoading] = useState<boolean>(false);
-  const { userEmail, userName } = useAuth();
+  
+  const auth = useAuth();
+  const userEmail = auth?.userEmail;
+  const userName = auth?.userName;
   
   useEffect(() => {
     const loadQuestions = async () => {
