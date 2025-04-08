@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 // Define user role types
 export type UserRole = "super_admin" | "admin" | "rater" | null;
@@ -20,6 +21,7 @@ interface AuthContextProps {
   codeLogin: (email: string, name: string, code: string, isSelf: boolean) => Promise<{ success: boolean; isNewAssessment?: boolean }>;
   logout: () => void;
   resetPassword: (email: string) => Promise<boolean>;
+  deleteReport: (reportId: string) => Promise<boolean>;
 }
 
 // Create context with a default value
@@ -303,6 +305,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Delete report function
+  const deleteReport = async (reportId: string): Promise<boolean> => {
+    try {
+      // First delete related assessment_responses
+      const { error: responseError } = await supabase
+        .from('assessment_responses')
+        .delete()
+        .eq('assessment_id', reportId);
+      
+      if (responseError) {
+        console.error("Error deleting assessment responses:", responseError);
+        toast.error("Failed to delete assessment responses");
+        return false;
+      }
+      
+      // Then delete results
+      const { error: resultError } = await supabase
+        .from('results')
+        .delete()
+        .eq('assessment_id', reportId);
+      
+      if (resultError) {
+        console.error("Error deleting results:", resultError);
+        toast.error("Failed to delete results");
+        return false;
+      }
+
+      // Finally delete the assessment
+      const { error: assessmentError } = await supabase
+        .from('assessments')
+        .delete()
+        .eq('id', reportId);
+      
+      if (assessmentError) {
+        console.error("Error deleting assessment:", assessmentError);
+        toast.error("Failed to delete assessment");
+        return false;
+      }
+      
+      toast.success("Report successfully deleted");
+      return true;
+    } catch (error) {
+      console.error("Delete report error:", error);
+      toast.error("Failed to delete report");
+      return false;
+    }
+  };
+
   // Logout function
   const logout = () => {
     // Sign out from Supabase Auth
@@ -340,7 +390,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login,
       codeLogin,
       logout,
-      resetPassword
+      resetPassword,
+      deleteReport
     }}>
       {children}
     </AuthContext.Provider>

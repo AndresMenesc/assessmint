@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,11 +47,24 @@ const resetPasswordFormSchema = z.object({
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, codeLogin, userRole, resetPassword } = useAuth();
+  const location = useLocation();
+  const { login, codeLogin, userRole, resetPassword, isAuthenticated } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"user" | "admin">("user");
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isResetEmailSent, setIsResetEmailSent] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (userRole === "super_admin") {
+        navigate("/admin", { replace: true });
+      } else if (userRole === "admin") {
+        navigate("/results", { replace: true });
+      } else if (userRole === "rater") {
+        navigate("/assessment", { replace: true });
+      }
+    }
+  }, [isAuthenticated, userRole, navigate]);
 
   const userForm = useForm<z.infer<typeof userFormSchema>>({
     resolver: zodResolver(userFormSchema),
@@ -93,7 +106,8 @@ const LoginPage = () => {
               name: values.name,
               email: values.email,
               code: values.code
-            }
+            },
+            replace: true
           });
         } else if (isSelf && !result.isNewAssessment) {
           navigate("/assessment", {
@@ -102,7 +116,8 @@ const LoginPage = () => {
               email: values.email,
               code: values.code,
               raterType: "self"
-            }
+            },
+            replace: true
           });
         } else {
           navigate("/assessment", {
@@ -111,7 +126,8 @@ const LoginPage = () => {
               email: values.email,
               code: values.code,
               raterType: "rater"
-            }
+            },
+            replace: true
           });
         }
         toast.success("Login successful");
@@ -137,10 +153,12 @@ const LoginPage = () => {
       if (success) {
         toast.success("Login successful!");
 
-        if (userRole === "super_admin") {
+        if (userRole === "super_admin" || values.email.toLowerCase() === "rebecca@acharavet.com") {
           navigate("/admin", { replace: true });
         } else if (userRole === "admin") {
           navigate("/results", { replace: true });
+        } else {
+          navigate("/", { replace: true });
         }
       } else {
         toast.error("Invalid email or password");
@@ -406,7 +424,6 @@ const LoginPage = () => {
         </Card>
       </div>
 
-      {/* Password Reset Dialog */}
       <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
