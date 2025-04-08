@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Question } from "@/types/assessment";
 import { getQuestions } from "@/data/questions";
@@ -12,7 +13,7 @@ import {
 
 export async function importQuestionsToDb(customQuestions: Question[] = []) {
   try {
-    const existingQuestions = await getExistingQuestions();
+    const existingQuestionsCheck = await getExistingQuestions();
     const defaultQuestionsToUse = getQuestions();
     
     console.log("Importing questions to database...");
@@ -29,10 +30,10 @@ export async function importQuestionsToDb(customQuestions: Question[] = []) {
       return;
     }
     
-    const existingQuestions = safeDataFilter<DbQuestion>(existingQuestionsData);
+    const databaseQuestions = safeDataFilter<DbQuestion>(existingQuestionsData);
     
     // Skip import if questions already exist and no custom questions provided
-    if (existingQuestions.length > 0 && customQuestions.length === 0) {
+    if (databaseQuestions.length > 0 && customQuestions.length === 0) {
       console.log("Questions already exist in the database. Skipping import.");
       return;
     }
