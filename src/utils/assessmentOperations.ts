@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Assessment, AssessmentResponse } from "@/types/assessment";
+import { Assessment, AssessmentResponse, Section, SubSection, Question } from "@/types/assessment";
 
 import { safeQueryData, isQueryError, asParam, safeDataFilter } from "./supabaseHelpers";
 
@@ -9,7 +9,15 @@ export const createAssessmentInDb = async (assessment: Assessment): Promise<Asse
   try {
     const { data, error } = await supabase
       .from('assessments')
-      .insert([assessment])
+      .insert([{
+        id: assessment.id || undefined,
+        self_rater_email: assessment.selfRaterEmail,
+        self_rater_name: assessment.selfRaterName,
+        code: assessment.code,
+        completed: assessment.completed,
+        created_at: assessment.createdAt.toISOString(),
+        updated_at: assessment.updatedAt.toISOString()
+      }])
       .select()
       .single();
 
@@ -18,7 +26,18 @@ export const createAssessmentInDb = async (assessment: Assessment): Promise<Asse
       throw error;
     }
 
-    return safeQueryData(data) as Assessment;
+    // Transform database format to app format
+    const result = data as any;
+    return {
+      id: result.id,
+      selfRaterEmail: result.self_rater_email,
+      selfRaterName: result.self_rater_name,
+      code: result.code,
+      completed: result.completed,
+      createdAt: new Date(result.created_at),
+      updatedAt: new Date(result.updated_at),
+      raters: []
+    };
   } catch (error) {
     console.error("Unexpected error creating assessment:", error);
     throw error;
@@ -30,7 +49,14 @@ export const updateAssessmentInDb = async (assessment: Assessment): Promise<Asse
     try {
       const { data, error } = await supabase
         .from('assessments')
-        .update(assessment)
+        .update({
+          self_rater_email: assessment.selfRaterEmail,
+          self_rater_name: assessment.selfRaterName,
+          code: assessment.code,
+          completed: assessment.completed,
+          created_at: assessment.createdAt.toISOString(),
+          updated_at: assessment.updatedAt.toISOString()
+        })
         .eq('id', asParam(assessment.id))
         .select()
         .single();
@@ -40,7 +66,18 @@ export const updateAssessmentInDb = async (assessment: Assessment): Promise<Asse
         throw error;
       }
   
-      return safeQueryData(data) as Assessment;
+      // Transform database format to app format
+      const result = data as any;
+      return {
+        id: result.id,
+        selfRaterEmail: result.self_rater_email,
+        selfRaterName: result.self_rater_name,
+        code: result.code,
+        completed: result.completed,
+        createdAt: new Date(result.created_at),
+        updatedAt: new Date(result.updated_at),
+        raters: assessment.raters
+      };
     } catch (error) {
       console.error("Unexpected error updating assessment:", error);
       throw error;
@@ -78,7 +115,17 @@ export const fetchAssessmentByCode = async (code: string): Promise<Assessment | 
       return null;
     }
 
-    return safeQueryData(data) as Assessment;
+    const result = data as any;
+    return {
+      id: result.id,
+      selfRaterEmail: result.self_rater_email,
+      selfRaterName: result.self_rater_name,
+      code: result.code,
+      completed: result.completed,
+      createdAt: new Date(result.created_at),
+      updatedAt: new Date(result.updated_at),
+      raters: []
+    };
   } catch (error) {
     console.error("Unexpected error fetching assessment by code:", error);
     return null;
@@ -100,7 +147,17 @@ export const fetchAssessmentById = async (id: string): Promise<Assessment | null
         return null;
       }
   
-      return safeQueryData(data) as Assessment;
+      const result = data as any;
+      return {
+        id: result.id,
+        selfRaterEmail: result.self_rater_email,
+        selfRaterName: result.self_rater_name,
+        code: result.code,
+        completed: result.completed,
+        createdAt: new Date(result.created_at),
+        updatedAt: new Date(result.updated_at),
+        raters: []
+      };
     } catch (error) {
       console.error("Unexpected error fetching assessment by id:", error);
       return null;
@@ -112,7 +169,14 @@ export const createAssessmentResponseInDb = async (assessmentResponse: Assessmen
   try {
     const { data, error } = await supabase
       .from('assessment_responses')
-      .insert([assessmentResponse])
+      .insert([{
+        id: assessmentResponse.id || undefined,
+        assessment_id: assessmentResponse.assessment_id,
+        question_id: assessmentResponse.questionId,
+        score: assessmentResponse.score,
+        created_at: assessmentResponse.created_at || new Date().toISOString(),
+        updated_at: assessmentResponse.updated_at || new Date().toISOString()
+      }])
       .select()
       .single();
 
@@ -121,7 +185,15 @@ export const createAssessmentResponseInDb = async (assessmentResponse: Assessmen
       throw error;
     }
 
-    return safeQueryData(data) as AssessmentResponse;
+    const result = data as any;
+    return {
+      id: result.id,
+      assessment_id: result.assessment_id,
+      questionId: result.question_id,
+      score: result.score,
+      created_at: result.created_at,
+      updated_at: result.updated_at
+    };
   } catch (error) {
     console.error("Unexpected error creating assessment response:", error);
     throw error;
@@ -133,7 +205,12 @@ export const updateAssessmentResponseInDb = async (assessmentResponse: Assessmen
   try {
     const { data, error } = await supabase
       .from('assessment_responses')
-      .update(assessmentResponse)
+      .update({
+        assessment_id: assessmentResponse.assessment_id,
+        question_id: assessmentResponse.questionId,
+        score: assessmentResponse.score,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', asParam(assessmentResponse.id))
       .select()
       .single();
@@ -143,7 +220,15 @@ export const updateAssessmentResponseInDb = async (assessmentResponse: Assessmen
       throw error;
     }
 
-    return safeQueryData(data) as AssessmentResponse;
+    const result = data as any;
+    return {
+      id: result.id,
+      assessment_id: result.assessment_id,
+      questionId: result.question_id,
+      score: result.score,
+      created_at: result.created_at,
+      updated_at: result.updated_at
+    };
   } catch (error) {
     console.error("Unexpected error updating assessment response:", error);
     throw error;
@@ -179,17 +264,17 @@ export const fetchAssessmentResponsesByAssessmentId = async (assessmentId: strin
       return [];
     }
 
-    return safeDataFilter(assessmentResponses).map(ar => ({
-      id: ar.id,
-      assessment_id: ar.assessment_id,
-      rater_type: ar.rater_type,
-      responses: ar.responses,
-      email: ar.email,
-      name: ar.name,
-      completed: ar.completed,
-      created_at: ar.created_at,
-      updated_at: ar.updated_at
-    }));
+    return safeDataFilter(assessmentResponses).map(ar => {
+      const result = ar as any;
+      return {
+        id: result.id,
+        assessment_id: result.assessment_id,
+        questionId: result.question_id,
+        score: result.score,
+        created_at: result.created_at,
+        updated_at: result.updated_at
+      };
+    });
   } catch (error) {
     console.error("Unexpected error fetching assessment responses:", error);
     return [];
@@ -211,7 +296,15 @@ export const fetchAssessmentResponseById = async (id: string): Promise<Assessmen
         return null;
       }
   
-      return safeQueryData(data) as AssessmentResponse;
+      const result = data as any;
+      return {
+        id: result.id,
+        assessment_id: result.assessment_id,
+        questionId: result.question_id,
+        score: result.score,
+        created_at: result.created_at,
+        updated_at: result.updated_at
+      };
     } catch (error) {
       console.error("Unexpected error fetching assessment response by id:", error);
       return null;
@@ -304,9 +397,14 @@ export const updateResponse = (assessment: Assessment, raterType: string, questi
       if (r.raterType === raterType) {
         const existingResponseIndex = r.responses.findIndex(resp => resp.questionId === questionId);
         if (existingResponseIndex >= 0) {
-          r.responses[existingResponseIndex].score = score;
+          const updatedResponses = [...r.responses];
+          updatedResponses[existingResponseIndex] = {
+            ...updatedResponses[existingResponseIndex],
+            score: score
+          };
+          return {...r, responses: updatedResponses};
         } else {
-          r.responses.push({ questionId, score });
+          return {...r, responses: [...r.responses, { questionId, score }]};
         }
       }
       return r;
@@ -343,17 +441,24 @@ export const fetchQuestions = async (): Promise<Question[]> => {
       return [];
     }
     
-    return safeDataFilter(questionsData).map(q => ({
-      id: q.id,
-      text: q.text,
-      section: q.section as Section,
-      subSection: q.sub_section as SubSection,
-      isReversed: q.is_reversed,
-      negativeScore: q.negative_score
-    }));
+    return safeDataFilter(questionsData).map(q => {
+      const question = q as any;
+      return {
+        id: question.id,
+        text: question.text,
+        section: question.section as Section,
+        subSection: question.sub_section as SubSection,
+        isReversed: question.is_reversed,
+        negativeScore: question.negative_score
+      };
+    });
   } catch (error) {
     console.error("Error fetching questions:", error);
     return [];
   }
 };
 
+// Make sure to export the functions so they can be imported
+export {
+  // Additional exports as needed
+};

@@ -75,7 +75,7 @@ export const supabase = createClient<ExtendedDatabase>(
       detectSessionInUrl: true,
       storage: localStorage,
       flowType: 'pkce',
-      redirect: {
+      redirectTo: {
         login: `${getRedirectURL()}/login`,
         signUp: `${getRedirectURL()}/login`,  
         resetPassword: `${getRedirectURL()}/reset-password` 

@@ -1,3 +1,4 @@
+
 export enum RaterType {
   SELF = "self",
   RATER1 = "rater1",

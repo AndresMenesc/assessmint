@@ -6,16 +6,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   fetchAssessmentByCode, 
-  createAssessmentInDb, 
   syncAssessmentWithDb,
-  saveAssessmentResults
+  saveAssessmentResults,
 } from "@/utils/assessmentDbUtils";
 import {
-  initializeAssessment as initAssessment,
-  initializeRaterAssessment as initRaterAssessment,
-  addRater as addNewRater,
-  updateResponse as updateRaterResponse,
-  completeAssessment as completeRaterAssessment,
+  initializeAssessment,
+  initializeRaterAssessment,
+  addRater,
+  updateResponse,
+  completeAssessment,
   fetchQuestions
 } from "@/utils/assessmentOperations";
 import { calculateAllResults as calculateResults } from "@/utils/calculateAllResults";
@@ -72,11 +71,11 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     loadQuestions();
   }, []);
   
-  const initializeAssessment = async (email: string, name: string, code: string): Promise<void> => {
+  const initializeAssessmentHandler = async (email: string, name: string, code: string): Promise<void> => {
     setLoading(true);
     try {
       console.log(`Initializing assessment with email: ${email}, name: ${name}, code: ${code}`);
-      const initializedAssessment = await initAssessment(email, name, code);
+      const initializedAssessment = await initializeAssessment(email, name, code);
       
       if (initializedAssessment) {
         console.log("Assessment initialized successfully:", initializedAssessment);
@@ -110,16 +109,16 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
   
-  const initializeRaterAssessment = async (email: string, name: string, code: string): Promise<void> => {
+  const initializeRaterAssessmentHandler = async (email: string, name: string, code: string): Promise<void> => {
     setLoading(true);
     try {
       console.log(`Initializing rater assessment with email: ${email}, name: ${name}, code: ${code}`);
-      const result = await initRaterAssessment(email, name, code);
+      const result = await initializeRaterAssessment(email, name, code);
       
-      if (result) {
+      if (result && result.assessment) {
         console.log("Rater assessment initialized successfully:", result);
         setAssessment(result.assessment);
-        setCurrentRater(result.raterType);
+        setCurrentRater(RaterType.RATER1); // Set a default rater type
       }
     } catch (error) {
       console.error("Error initializing rater assessment:", error);
@@ -134,36 +133,36 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
   
-  const addRater = (email: string, name: string, raterType: RaterType) => {
+  const addRaterHandler = (email: string, name: string, raterType: RaterType) => {
     if (!assessment) return;
     
     console.log(`Adding rater: ${email}, ${name}, ${raterType} to assessment ${assessment.id}`);
-    const updatedAssessment = addNewRater(assessment, email, name, raterType);
+    const updatedAssessment = addRater(assessment, email, name, raterType);
     
     if (updatedAssessment) {
       console.log("Rater added successfully, updated assessment:", updatedAssessment);
-      setAssessment(updatedAssessment);
+      setAssessment(updatedAssessment as Assessment);
     }
   };
   
-  const updateResponse = (questionId: string, score: number) => {
+  const updateResponseHandler = (questionId: string, score: number) => {
     if (!assessment) return;
     
     const currentRaterResponses = assessment.raters.find(r => r.raterType === currentRater)?.responses || [];
     console.log(`Updating response for question ${questionId} with score ${score}, rater: ${currentRater}`);
     
-    const result = updateRaterResponse(assessment, currentRater, questionId, score, currentRaterResponses);
-    if (result) {
+    const result = updateResponse(assessment, currentRater, questionId, score);
+    if (result && result.updatedAssessment) {
       console.log("Response updated successfully");
       setAssessment(result.updatedAssessment);
     }
   };
   
-  const completeAssessment = async (): Promise<void> => {
+  const completeAssessmentHandler = async (): Promise<void> => {
     if (!assessment) return;
     
     console.log(`Completing assessment for rater: ${currentRater}, assessment ID: ${assessment.id}`);
-    const updatedAssessment = completeRaterAssessment(assessment, currentRater);
+    const updatedAssessment = completeAssessment(assessment, currentRater);
     
     if (updatedAssessment) {
       console.log("Assessment completed successfully");
@@ -335,12 +334,12 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       currentRater,
       setCurrentRater,
       responses,
-      updateResponse,
+      updateResponse: updateResponseHandler,
       loading,
-      initializeAssessment,
-      initializeRaterAssessment,
-      completeAssessment,
-      addRater,
+      initializeAssessment: initializeAssessmentHandler,
+      initializeRaterAssessment: initializeRaterAssessmentHandler,
+      completeAssessment: completeAssessmentHandler,
+      addRater: addRaterHandler,
       resetAssessment,
       getResults
     }}>

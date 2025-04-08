@@ -16,14 +16,17 @@ export const fetchAllQuestions = async (): Promise<Question[]> => {
     }
 
     // Convert database format to our Question type format
-    return safeDataFilter(questions).map(q => ({
-      id: q.id,
-      text: q.text,
-      section: q.section as Section,
-      subSection: q.sub_section as SubSection,
-      isReversed: q.is_reversed,
-      negativeScore: q.negative_score
-    }));
+    return safeDataFilter(questions).map(q => {
+      const question = q as any;
+      return {
+        id: question.id,
+        text: question.text,
+        section: question.section as Section,
+        subSection: question.sub_section as SubSection,
+        isReversed: question.is_reversed,
+        negativeScore: question.negative_score
+      };
+    });
   } catch (error) {
     console.error("Unexpected error fetching questions:", error);
     return [];
