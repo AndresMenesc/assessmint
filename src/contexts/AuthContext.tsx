@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -165,7 +164,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem("userEmail", adminData.email);
           localStorage.setItem("userName", adminData.name || adminData.email.split('@')[0]);
           
-          toast.success(`Welcome, ${adminData.name || "Admin"}!`);
           return true;
         }
       } else if (authError) {
@@ -200,7 +198,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem("userEmail", adminData.email);
             localStorage.setItem("userName", adminData.name || adminData.email.split('@')[0]);
             
-            toast.success(`Welcome, ${adminData.name || "Admin"}!`);
             return true;
           } else {
             toast.error("Invalid password");
@@ -222,7 +219,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem("userEmail", email);
       localStorage.setItem("userName", email.split('@')[0]);
       
-      toast.success(`Welcome, ${email.split('@')[0]}!`);
       return true;
     } catch (error) {
       console.error("Login error:", error);

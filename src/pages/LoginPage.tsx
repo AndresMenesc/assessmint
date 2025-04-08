@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { LogIn, UserIcon, Mail, Lock, User, Hash, KeyRound } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Logo from "@/components/Logo";
-import { supabase } from "@/integrations/supabase/client";
 
 const userFormSchema = z.object({
   name: z.string().min(2, {
@@ -47,6 +46,7 @@ const resetPasswordFormSchema = z.object({
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, codeLogin, userRole, resetPassword } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"user" | "admin">("user");
@@ -135,12 +135,15 @@ const LoginPage = () => {
     try {
       const success = await login(values.email, values.password);
       if (success) {
-        toast.success("Login successful!");
-
         if (userRole === "super_admin") {
           navigate("/admin", { replace: true });
+          toast.success("Login successful!");
         } else if (userRole === "admin") {
           navigate("/results", { replace: true });
+          toast.success("Login successful!");
+        } else {
+          navigate("/assessment", { replace: true });
+          toast.success("Login successful!");
         }
       } else {
         toast.error("Invalid email or password");
