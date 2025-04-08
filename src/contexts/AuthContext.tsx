@@ -1,6 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { safeQueryData, isQueryError } from "@/utils/supabaseHelpers";
 
 // Define user role types
 export type UserRole = "super_admin" | "admin" | "rater" | null;
@@ -91,7 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
         .select('*')
-        .eq('email', email.toLowerCase())
+        .eq('email', email.toLowerCase() as any)
         .single();
 
       if (adminError) {
@@ -99,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      if (adminData) {
+      if (adminData && !isQueryError(adminData)) {
         // Set admin authentication
         setIsAuthenticated(true);
         setUserRole(adminData.role as UserRole);
@@ -143,7 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: adminData, error: adminError } = await supabase
           .from('admin_users')
           .select('*')
-          .eq('email', email.toLowerCase())
+          .eq('email', email.toLowerCase() as any)
           .single();
 
         if (adminError && adminError.code !== 'PGRST116') {
@@ -152,18 +154,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return false;
         }
 
-        if (adminData) {
+        const safeAdminData = safeQueryData(adminData);
+        if (safeAdminData) {
           // Set admin authentication
           setIsAuthenticated(true);
-          setUserRole(adminData.role as UserRole);
-          setUserEmail(adminData.email);
-          setUserName(adminData.name || adminData.email.split('@')[0]);
+          setUserRole(safeAdminData.role as UserRole);
+          setUserEmail(safeAdminData.email);
+          setUserName(safeAdminData.name || safeAdminData.email.split('@')[0]);
           
           // Store in local storage
           localStorage.setItem("isAuthenticated", "true");
-          localStorage.setItem("userRole", adminData.role);
-          localStorage.setItem("userEmail", adminData.email);
-          localStorage.setItem("userName", adminData.name || adminData.email.split('@')[0]);
+          localStorage.setItem("userRole", safeAdminData.role);
+          localStorage.setItem("userEmail", safeAdminData.email);
+          localStorage.setItem("userName", safeAdminData.name || safeAdminData.email.split('@')[0]);
           
           return true;
         }
@@ -174,7 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: adminData, error: adminError } = await supabase
           .from('admin_users')
           .select('*')
-          .eq('email', email.toLowerCase())
+          .eq('email', email.toLowerCase() as any)
           .single();
 
         if (adminError && adminError.code !== 'PGRST116') {
@@ -183,21 +186,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return false;
         }
 
+        const safeAdminData = safeQueryData(adminData);
         // If we found an admin user, verify password
-        if (adminData) {
+        if (safeAdminData) {
           // Simple password check (in a real app, use proper hashing)
-          if (adminData.password === password) {
+          if (safeAdminData.password === password) {
             // Set admin authentication
             setIsAuthenticated(true);
-            setUserRole(adminData.role as UserRole);
-            setUserEmail(adminData.email);
-            setUserName(adminData.name || adminData.email.split('@')[0]);
+            setUserRole(safeAdminData.role as UserRole);
+            setUserEmail(safeAdminData.email);
+            setUserName(safeAdminData.name || safeAdminData.email.split('@')[0]);
             
             // Store in local storage
             localStorage.setItem("isAuthenticated", "true");
-            localStorage.setItem("userRole", adminData.role);
-            localStorage.setItem("userEmail", adminData.email);
-            localStorage.setItem("userName", adminData.name || adminData.email.split('@')[0]);
+            localStorage.setItem("userRole", safeAdminData.role);
+            localStorage.setItem("userEmail", safeAdminData.email);
+            localStorage.setItem("userName", safeAdminData.name || safeAdminData.email.split('@')[0]);
             
             return true;
           } else {
@@ -279,7 +283,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: assessmentData, error: assessmentError } = await supabase
         .from('assessments')
         .select('*')
-        .eq('code', code)
+        .eq('code', code as any)
         .single();
       
       // Set user authentication for assessment

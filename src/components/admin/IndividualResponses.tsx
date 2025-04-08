@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { safeQueryData, isQueryError } from "@/utils/supabaseHelpers";
 
 interface IndividualResponsesProps {
   assessment: Assessment;
@@ -46,16 +47,23 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
         const { data: ratersData, error: ratersError } = await supabase
           .from('assessment_responses')
           .select('*')
-          .eq('assessment_id', assessment.id);
+          .eq('assessment_id', assessment.id as any);
         
         if (ratersError) {
           console.error("Error fetching raters from assessment_responses:", ratersError);
           return;
         }
         
-        const selfRater = ratersData.find(r => r.rater_type === 'self');
-        const rater1 = ratersData.find(r => r.rater_type === 'rater1');
-        const rater2 = ratersData.find(r => r.rater_type === 'rater2');
+        if (!ratersData || !Array.isArray(ratersData)) {
+          console.error("No valid raters data returned");
+          return;
+        }
+        
+        const safeRatersData = ratersData.filter(r => !isQueryError(r));
+        
+        const selfRater = safeRatersData.find(r => r.rater_type === 'self');
+        const rater1 = safeRatersData.find(r => r.rater_type === 'rater1');
+        const rater2 = safeRatersData.find(r => r.rater_type === 'rater2');
         
         console.log("Individual responses - raters from assessment_responses:", { selfRater, rater1, rater2 });
         
@@ -68,17 +76,19 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
           console.error("Error fetching questions:", questionsError);
           return;
         }
+
+        const safeQuestionsData = Array.isArray(questionsData) ? questionsData.filter(q => !isQueryError(q)) : [];
         
         // Helper function to format responses using assessment_responses data
         const formatResponses = (rater: any): ResponseData[] => {
-          if (!rater || !rater.responses) return [];
+          if (!rater || !rater.responses || !Array.isArray(rater.responses)) return [];
           
           const responses = rater.responses;
           console.log(`Found ${responses.length} responses for rater ${rater.rater_type}`);
           
           // Join responses with questions data
           return responses.map((response: any) => {
-            const question = questionsData.find(q => q.id === response.questionId);
+            const question = safeQuestionsData.find(q => q.id === response.questionId);
             
             return {
               question_id: response.questionId,

@@ -31,8 +31,8 @@ export type ExtendedDatabase = Database & {
           assessment_id: string;
           rater_type: string;
           responses: any;
-          email?: string;
-          name?: string;
+          email?: string | null;
+          name?: string | null;
           completed: boolean;
           created_at: string;
           updated_at: string;
@@ -42,8 +42,8 @@ export type ExtendedDatabase = Database & {
           assessment_id: string;
           rater_type: string;
           responses?: any;
-          email?: string;
-          name?: string;
+          email?: string | null;
+          name?: string | null;
           completed?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -53,8 +53,8 @@ export type ExtendedDatabase = Database & {
           assessment_id?: string;
           rater_type?: string;
           responses?: any;
-          email?: string;
-          name?: string;
+          email?: string | null;
+          name?: string | null;
           completed?: boolean;
           created_at?: string;
           updated_at?: string;
