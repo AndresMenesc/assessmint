@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { safeQueryData, isQueryError } from "@/utils/supabaseHelpers";
+import { safeQueryData, safeDataFilter, asParam, safeDataAccess } from "@/utils/supabaseHelpers";
 
 interface IndividualResponsesProps {
   assessment: Assessment;
@@ -47,7 +47,7 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
         const { data: ratersData, error: ratersError } = await supabase
           .from('assessment_responses')
           .select('*')
-          .eq('assessment_id', assessment.id as any);
+          .eq('assessment_id', asParam(assessment.id));
         
         if (ratersError) {
           console.error("Error fetching raters from assessment_responses:", ratersError);
@@ -59,7 +59,7 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
           return;
         }
         
-        const safeRatersData = ratersData.filter(r => !isQueryError(r));
+        const safeRatersData = safeDataFilter(ratersData);
         
         const selfRater = safeRatersData.find(r => r.rater_type === 'self');
         const rater1 = safeRatersData.find(r => r.rater_type === 'rater1');
@@ -77,7 +77,7 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
           return;
         }
 
-        const safeQuestionsData = Array.isArray(questionsData) ? questionsData.filter(q => !isQueryError(q)) : [];
+        const safeQuestionsData = safeDataFilter(questionsData);
         
         // Helper function to format responses using assessment_responses data
         const formatResponses = (rater: any): ResponseData[] => {

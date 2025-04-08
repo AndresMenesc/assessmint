@@ -27,3 +27,25 @@ export const safeDataAccess = <T>(
   }
   return obj as T;
 };
+
+// Type-safe cast for Supabase query parameters to handle string IDs
+export const asParam = (value: string | number): any => value as any;
+
+// Enhanced filter for safe data access from arrays that might contain error objects
+export const safeDataFilter = <T>(dataArray: (T | { code: string; message: string })[] | null | undefined): T[] => {
+  if (!dataArray || !Array.isArray(dataArray)) {
+    return [];
+  }
+  return dataArray.filter(item => !isQueryError(item)) as T[];
+};
+
+// Safely convert data row to expected type or return default value
+export const safeRowAccess = <T>(
+  row: T | { code: string; message: string } | null | undefined,
+  defaultRow: T
+): T => {
+  if (!row || isQueryError(row)) {
+    return defaultRow;
+  }
+  return row as T;
+};

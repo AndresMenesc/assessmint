@@ -18,11 +18,9 @@ import {
   completeAssessment as completeRaterAssessment,
   fetchQuestions
 } from "@/utils/assessmentOperations";
-
-// Import the real calculation functions
 import { calculateAllResults as calculateResults } from "@/utils/calculateAllResults";
+import { safeQueryData, safeDataFilter, asParam, safeDataAccess, isQueryError } from "@/utils/supabaseHelpers";
 
-// Define the context type
 interface AssessmentContextProps {
   assessment: Assessment | null;
   setAssessment: (assessment: Assessment | null) => void;
@@ -42,10 +40,8 @@ interface AssessmentContextProps {
   getResults: (assessmentToUse?: Assessment) => any;
 }
 
-// Create context with a default value
 const AssessmentContext = createContext<AssessmentContextProps | undefined>(undefined);
 
-// Custom hook to use the assessment context
 export const useAssessment = () => {
   const context = useContext(AssessmentContext);
   if (!context) {
@@ -62,7 +58,6 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [loading, setLoading] = useState<boolean>(false);
   const { userEmail, userName } = useAuth();
   
-  // Load questions
   useEffect(() => {
     const loadQuestions = async () => {
       try {
@@ -77,7 +72,6 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     loadQuestions();
   }, []);
   
-  // Initialize a new assessment or load existing
   const initializeAssessment = async (email: string, name: string, code: string): Promise<void> => {
     setLoading(true);
     try {
@@ -92,12 +86,11 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setAssessment(initializedAssessment);
         setCurrentRater(RaterType.SELF);
         
-        // Verify that the assessment was saved in the database
         try {
           const { data, error } = await supabase
             .from('assessment_responses')
             .select('*')
-            .eq('assessment_id', initializedAssessment.id);
+            .eq('assessment_id', asParam(initializedAssessment.id));
             
           console.log("Assessment responses in DB:", data, "Error:", error);
         } catch (dbError) {
@@ -107,7 +100,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch (error) {
       console.error("Error initializing assessment:", error);
       if (error instanceof Error) {
-        // No need to display toast here, the initAssessment function already does it
+        toast.error("Error initializing assessment");
       } else {
         toast.error("Error initializing assessment");
       }
@@ -117,7 +110,6 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
   
-  // Initialize as a rater for someone else's assessment
   const initializeRaterAssessment = async (email: string, name: string, code: string): Promise<void> => {
     setLoading(true);
     try {
@@ -142,7 +134,6 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
   
-  // Add a rater to the assessment (by self-rater)
   const addRater = (email: string, name: string, raterType: RaterType) => {
     if (!assessment) return;
     
@@ -155,7 +146,6 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
   
-  // Update response for current question
   const updateResponse = (questionId: string, score: number) => {
     if (!assessment) return;
     
@@ -169,7 +159,6 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
   
-  // Mark current rater's assessment as complete
   const completeAssessment = async (): Promise<void> => {
     if (!assessment) return;
     
@@ -180,7 +169,6 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       console.log("Assessment completed successfully");
       setAssessment(updatedAssessment);
       
-      // If all raters have completed, save the final results
       const allRatersCompleted = updatedAssessment.raters.every(r => r.completed);
       if (allRatersCompleted) {
         console.log("All raters completed, saving final results");
@@ -189,17 +177,14 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
   
-  // Reset the assessment
   const resetAssessment = () => {
     setAssessment(null);
     setCurrentQuestionIndex(0);
     setCurrentRater(RaterType.SELF);
   };
   
-  // Get the responses for the current rater
   const responses = assessment?.raters.find(r => r.raterType === currentRater)?.responses || [];
   
-  // Calculate and return results using the real calculation function
   const getResults = (assessmentToUse?: Assessment) => {
     const targetAssessment = assessmentToUse || assessment;
     
@@ -219,12 +204,11 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (!targetAssessment.raters || targetAssessment.raters.length === 0) {
         console.log("Assessment has no raters:", targetAssessment);
         
-        // Try to fetch raters from assessment_responses table
         const fetchRatersFromAssessmentResponses = async () => {
           const { data: ratersData, error } = await supabase
             .from('assessment_responses')
             .select('*')
-            .eq('assessment_id', targetAssessment.id);
+            .eq('assessment_id', asParam(targetAssessment.id));
             
           if (error) {
             console.error("Error fetching from assessment_responses:", error);
@@ -234,8 +218,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           if (ratersData && ratersData.length > 0) {
             console.log("Found data in assessment_responses table:", ratersData);
             
-            // Process responses data into the format expected by calculateResults
-            const processedRaters = ratersData.map(rater => {
+            const processedRaters = safeDataFilter(ratersData).map(rater => {
               return {
                 raterType: rater.rater_type as RaterType,
                 email: rater.email || "",
@@ -245,7 +228,6 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
               };
             });
             
-            // Use the real calculation function with the fetched raters
             console.log("Calculating results with fetched raters from assessment_responses:", processedRaters);
             const results = calculateResults(processedRaters);
             
@@ -265,11 +247,9 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           };
         };
         
-        // Return a promise that resolves to the results
         return fetchRatersFromAssessmentResponses();
       }
       
-      // Check if raters have responses
       let hasResponses = false;
       targetAssessment.raters.forEach(rater => {
         if (rater.responses && rater.responses.length > 0) {
@@ -280,12 +260,11 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (!hasResponses) {
         console.log("No responses found in assessment object:", targetAssessment);
         
-        // Try fetching responses from assessment_responses table
         const fetchResponsesFromAssessmentResponses = async () => {
           const { data: responsesData, error: responsesError } = await supabase
             .from('assessment_responses')
             .select('*')
-            .eq('assessment_id', targetAssessment.id);
+            .eq('assessment_id', asParam(targetAssessment.id));
             
           if (responsesError || !responsesData) {
             console.error("Error fetching from assessment_responses:", responsesError);
@@ -299,7 +278,6 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           
           console.log(`Found ${responsesData.length} entries in assessment_responses`);
           
-          // Create raters array from assessment_responses
           const processedRaters = responsesData.map(rater => {
             return {
               raterType: rater.rater_type as RaterType,
@@ -310,7 +288,6 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             };
           });
           
-          // Calculate results with the fetched data
           const results = calculateResults(processedRaters);
           return results || {
             dimensionScores: [],
@@ -323,7 +300,6 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         return fetchResponsesFromAssessmentResponses();
       }
       
-      // Use the real calculation function with existing raters and responses
       const results = calculateResults(targetAssessment.raters);
       console.log("Calculated results:", results);
       
@@ -342,7 +318,7 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       console.error("Error calculating results:", error);
       return {
         dimensionScores: [],
-        selfAwareness: 0, 
+        selfAwareness: 0,
         coachabilityAwareness: 0,
         profileType: ""
       };

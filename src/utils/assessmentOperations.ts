@@ -1,151 +1,89 @@
-
+import { Assessment, RaterType, Question, AssessmentResponse, RaterResponses } from "@/types/assessment";
 import { v4 as uuidv4 } from "uuid";
-import { Assessment, RaterResponses, RaterType, AssessmentResponse, Question, Section, SubSection } from "@/types/assessment";
-import { toast } from "sonner";
-import { createAssessmentInDb, fetchAssessmentByCode, syncAssessmentWithDb, updateAssessmentInDb } from "./assessmentDbUtils";
 import { supabase } from "@/integrations/supabase/client";
+import { 
+  fetchAssessmentByCode,
+  createAssessmentInDb,
+  syncAssessmentWithDb
+} from "@/utils/assessmentDbUtils";
+import { toast } from "sonner";
+import { safeQueryData, isQueryError, safeDataFilter, asParam } from "./supabaseHelpers";
 
 /**
- * Fetches all questions from the database
+ * Fetch questions from the database
  */
 export const fetchQuestions = async (): Promise<Question[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('questions')
-      .select('*')
-      .order('id');
-      
-    if (error) {
-      console.error("Error fetching questions:", error);
-      throw error;
-    }
-    
-    // Map database questions to our Question type with proper enum conversion
-    return data.map(q => ({
-      id: q.id,
-      text: q.text,
-      section: q.section as Section, // Cast the string to Section enum
-      subSection: q.sub_section as SubSection, // Cast the string to SubSection enum
-      isReversed: q.is_reversed,
-      negativeScore: q.negative_score
-    }));
-  } catch (error) {
-    console.error("Error in fetchQuestions:", error);
-    throw error;
+  const { data, error } = await supabase.from('questions').select('*');
+  
+  if (error) {
+    console.error("Error fetching questions:", error);
+    throw new Error("Failed to load questions");
   }
+  
+  // Filter out any error responses and convert to Question type
+  return safeDataFilter(data).map(q => ({
+    id: q.id,
+    text: q.text,
+    section: q.section as any,
+    subSection: q.sub_section as any,
+    isReversed: q.is_reversed,
+    negativeScore: q.negative_score
+  }));
 };
 
 /**
- * Initializes a new assessment for the self-rater
+ * Initialize an assessment for the self-rater
  */
 export const initializeAssessment = async (
-  selfEmail: string, 
-  selfName: string, 
+  email: string,
+  name: string,
   code: string
 ): Promise<Assessment | null> => {
   try {
-    console.log("Initializing assessment for:", selfEmail, selfName, "with code:", code);
-    
     // Check if an assessment with this code already exists
     const existingAssessment = await fetchAssessmentByCode(code);
     
     if (existingAssessment) {
-      // Find the self-rater in the assessment
-      const selfRater = existingAssessment.raters.find(r => r.raterType === RaterType.SELF);
-      
-      // Allow access to the assessment regardless of email if the assessment isn't complete
-      if (!existingAssessment.completed) {
-        // If it's the same email or assessment isn't completed, allow access
-        if (selfRater && selfRater.email.toLowerCase() === selfEmail.toLowerCase()) {
-          // This is the same person - allow them to continue their assessment
-          console.log("Same user continuing assessment with code:", code);
-          
-          // Check if self-assessment is already completed
-          if (selfRater.completed) {
-            toast.info("You have already completed this assessment.", {
-              description: "The results will be available once all raters have completed their assessments."
-            });
-          } else {
-            toast.info("Continuing your existing assessment.", {
-              description: "Your previous responses have been saved."
-            });
-          }
-          
-          return existingAssessment;
-        } else {
-          // Different person trying to use the same code, but still allow it
-          toast.info("Using an existing assessment code.", {
-            description: "You are continuing an assessment with an existing code."
-          });
-          
-          // Here we can update the assessment with the new email and name
-          const updatedSelfRater = {
-            ...selfRater,
-            email: selfEmail,
-            name: selfName
-          };
-          
-          // Update the rater in the assessment
-          const updatedRaters = existingAssessment.raters.map(r => 
-            r.raterType === RaterType.SELF ? updatedSelfRater : r
-          );
-          
-          const updatedAssessment = {
-            ...existingAssessment,
-            selfRaterEmail: selfEmail,
-            selfRaterName: selfName,
-            raters: updatedRaters,
-            updatedAt: new Date()
-          };
-          
-          // Save the updated assessment
-          await updateAssessmentInDb(updatedAssessment.id, {
-            selfRaterEmail: selfEmail,
-            selfRaterName: selfName,
-            updatedAt: updatedAssessment.updatedAt,
-            raters: updatedRaters
-          });
-          
-          return updatedAssessment;
-        }
-      } else {
-        // Assessment is already completed
-        toast.error("This assessment code has already been completed.", {
-          description: "Please create a new assessment with a different code."
-        });
-        throw new Error("Assessment already completed");
-      }
-    } else {
-      // Creating new assessment
-      const newAssessment: Assessment = {
-        id: uuidv4(),
-        selfRaterEmail: selfEmail,
-        selfRaterName: selfName,
-        code: code,
-        raters: [
-          {
-            raterType: RaterType.SELF,
-            responses: [],
-            completed: false,
-            email: selfEmail,
-            name: selfName
-          }
-        ],
-        completed: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      
-      const success = await createAssessmentInDb(newAssessment);
-      
-      if (!success) {
-        throw new Error("Failed to create assessment in database");
-      }
-      
-      return newAssessment;
+      // Assessment with this code exists
+      console.log("Assessment with this code found:", existingAssessment);
+      return existingAssessment;
     }
+    
+    // Create a new assessment
+    console.log("Creating new assessment with code:", code);
+    const now = new Date();
+    const assessmentId = uuidv4();
+    
+    const newAssessment: Assessment = {
+      id: assessmentId,
+      selfRaterEmail: email,
+      selfRaterName: name,
+      code,
+      completed: false,
+      createdAt: now,
+      updatedAt: now,
+      raters: [
+        {
+          raterType: RaterType.SELF,
+          email,
+          name,
+          completed: false,
+          responses: []
+        }
+      ]
+    };
+    
+    // Save to the database
+    const saved = await createAssessmentInDb(newAssessment);
+    
+    if (!saved) {
+      throw new Error("Failed to create assessment");
+    }
+    
+    return newAssessment;
   } catch (error) {
     console.error("Error initializing assessment:", error);
+    toast.error("Error initializing assessment");
     throw error;
   }
 };

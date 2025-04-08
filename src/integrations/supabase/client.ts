@@ -75,7 +75,9 @@ export const supabase = createClient<ExtendedDatabase>(
       detectSessionInUrl: true,
       storage: localStorage,
       flowType: 'pkce',
-      redirectTo: getRedirectURL()
     }
   }
 );
+
+// Add redirect URL configuration for auth operations that need it
+export const getAuthRedirectUrl = () => getRedirectURL();

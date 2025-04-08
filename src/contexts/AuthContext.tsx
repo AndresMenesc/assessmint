@@ -1,13 +1,10 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { safeQueryData, isQueryError } from "@/utils/supabaseHelpers";
+import { safeQueryData, isQueryError, safeDataFilter, asParam, safeRowAccess } from "@/utils/supabaseHelpers";
 
-// Define user role types
 export type UserRole = "super_admin" | "admin" | "rater" | null;
 
-// Define context type
 interface AuthContextProps {
   isAuthenticated: boolean;
   userRole: UserRole;
@@ -24,10 +21,8 @@ interface AuthContextProps {
   updatePassword: (password: string) => Promise<boolean>;
 }
 
-// Create context with a default value
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-// Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -44,7 +39,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userCode, setUserCode] = useState<string | null>(null);
   const [loginInProgress, setLoginInProgress] = useState<boolean>(false);
 
-  // Check local storage for authentication on component mount
   useEffect(() => {
     const storedAuth = localStorage.getItem("isAuthenticated");
     const storedRole = localStorage.getItem("userRole") as UserRole;
@@ -60,7 +54,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserCode(storedCode);
     }
 
-    // Set up auth state change listener for Supabase authentication
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state change event:", event, session);
@@ -68,24 +61,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (event === "PASSWORD_RECOVERY") {
           toast.info("You can now reset your password");
         } else if (event === "SIGNED_IN") {
-          // Handle sign in event
           if (session?.user) {
             console.log("User signed in:", session.user);
             
-            // Check if this user is an admin in your database
             checkUserRole(session.user.email);
           }
         }
       }
     );
 
-    // Clean up the subscription when the component unmounts
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
-  // Helper function to check user role in admin_users table
   const checkUserRole = async (email: string | undefined) => {
     if (!email) return;
     
@@ -93,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
         .select('*')
-        .eq('email', email.toLowerCase() as any)
+        .eq('email', asParam(email.toLowerCase()))
         .single();
 
       if (adminError) {
@@ -101,27 +90,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      if (adminData && !isQueryError(adminData)) {
-        // Set admin authentication
+      const safeAdminData = safeQueryData(adminData);
+      if (safeAdminData && !isQueryError(safeAdminData)) {
         setIsAuthenticated(true);
-        setUserRole(adminData.role as UserRole);
-        setUserEmail(adminData.email);
-        setUserName(adminData.name || adminData.email.split('@')[0]);
+        setUserRole(safeAdminData.role as UserRole);
+        setUserEmail(safeAdminData.email);
+        setUserName(safeAdminData.name || safeAdminData.email.split('@')[0]);
         
-        // Store in local storage
         localStorage.setItem("isAuthenticated", "true");
-        localStorage.setItem("userRole", adminData.role);
-        localStorage.setItem("userEmail", adminData.email);
-        localStorage.setItem("userName", adminData.name || adminData.email.split('@')[0]);
+        localStorage.setItem("userRole", safeAdminData.role);
+        localStorage.setItem("userEmail", safeAdminData.email);
+        localStorage.setItem("userName", safeAdminData.name || safeAdminData.email.split('@')[0]);
         
-        toast.success(`Welcome, ${adminData.name || "Admin"}!`);
+        toast.success(`Welcome, ${safeAdminData.name || "Admin"}!`);
       }
     } catch (error) {
       console.error("Error checking user role:", error);
     }
   };
 
-  // Login function
   const login = async (email: string, password: string): Promise<boolean> => {
     if (loginInProgress) {
       toast.error("Login already in progress");
@@ -131,21 +118,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoginInProgress(true);
       
-      // Try to sign in with Supabase Auth first
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email.toLowerCase(),
         password: password
       });
 
       if (authData.user) {
-        // Successfully signed in with Supabase Auth
         console.log("Supabase Auth sign-in successful:", authData.user);
         
-        // Check if this is an admin user
         const { data: adminData, error: adminError } = await supabase
           .from('admin_users')
           .select('*')
-          .eq('email', email.toLowerCase() as any)
+          .eq('email', asParam(email.toLowerCase()))
           .single();
 
         if (adminError && adminError.code !== 'PGRST116') {
@@ -156,13 +140,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const safeAdminData = safeQueryData(adminData);
         if (safeAdminData) {
-          // Set admin authentication
           setIsAuthenticated(true);
           setUserRole(safeAdminData.role as UserRole);
           setUserEmail(safeAdminData.email);
           setUserName(safeAdminData.name || safeAdminData.email.split('@')[0]);
           
-          // Store in local storage
           localStorage.setItem("isAuthenticated", "true");
           localStorage.setItem("userRole", safeAdminData.role);
           localStorage.setItem("userEmail", safeAdminData.email);
@@ -173,11 +155,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (authError) {
         console.log("Supabase Auth error, falling back to legacy login:", authError.message);
         
-        // Fall back to checking the admin_users table directly
         const { data: adminData, error: adminError } = await supabase
           .from('admin_users')
           .select('*')
-          .eq('email', email.toLowerCase() as any)
+          .eq('email', asParam(email.toLowerCase()))
           .single();
 
         if (adminError && adminError.code !== 'PGRST116') {
@@ -187,17 +168,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         const safeAdminData = safeQueryData(adminData);
-        // If we found an admin user, verify password
         if (safeAdminData) {
-          // Simple password check (in a real app, use proper hashing)
           if (safeAdminData.password === password) {
-            // Set admin authentication
             setIsAuthenticated(true);
             setUserRole(safeAdminData.role as UserRole);
             setUserEmail(safeAdminData.email);
             setUserName(safeAdminData.name || safeAdminData.email.split('@')[0]);
             
-            // Store in local storage
             localStorage.setItem("isAuthenticated", "true");
             localStorage.setItem("userRole", safeAdminData.role);
             localStorage.setItem("userEmail", safeAdminData.email);
@@ -211,14 +188,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       
-      // Not an admin, treat as a regular user/rater
       setIsAuthenticated(true);
       setUserRole("rater");
       setUserEmail(email);
       setUserName(email.split('@')[0]);
       setUserCode("");
       
-      // Store in local storage
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("userRole", "rater");
       localStorage.setItem("userEmail", email);
@@ -233,8 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoginInProgress(false);
     }
   };
-  
-  // Reset password function - Using dynamic redirect URL from client config
+
   const resetPassword = async (email: string): Promise<boolean> => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email);
@@ -253,8 +227,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
   };
-  
-  // Update password function
+
   const updatePassword = async (password: string): Promise<boolean> => {
     try {
       const { error } = await supabase.auth.updateUser({
@@ -275,25 +248,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
   };
-  
-  // Code login function for assessments
+
   const codeLogin = async (email: string, name: string, code: string, isSelf: boolean): Promise<{ success: boolean; isNewAssessment?: boolean }> => {
     try {
-      // Check if an assessment with this code exists
       const { data: assessmentData, error: assessmentError } = await supabase
         .from('assessments')
         .select('*')
-        .eq('code', code as any)
+        .eq('code', asParam(code))
         .single();
       
-      // Set user authentication for assessment
       setIsAuthenticated(true);
       setUserRole("rater");
       setUserEmail(email);
       setUserName(name);
       setUserCode(code);
       
-      // Store in local storage
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("userRole", "rater");
       localStorage.setItem("userEmail", email);
@@ -301,20 +270,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem("userCode", code);
       
       if (assessmentError && assessmentError.code === 'PGRST116') {
-        // Assessment doesn't exist
         console.log("Assessment doesn't exist, creating new one");
         
         if (isSelf) {
-          // For self assessment, we'll create a new assessment
           return { success: true, isNewAssessment: true };
         } else {
-          // For rater assessment, if code doesn't exist, return error
           toast.error("Invalid assessment code");
           return { success: false };
         }
       }
       
-      // Assessment exists
       console.log("Assessment exists:", assessmentData);
       return { success: true, isNewAssessment: false };
     } catch (error) {
@@ -324,21 +289,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Logout function
   const logout = () => {
-    // Sign out from Supabase Auth
     supabase.auth.signOut().catch(error => {
       console.error("Error signing out from Supabase:", error);
     });
     
-    // Clear local state and storage
     setIsAuthenticated(false);
     setUserRole(null);
     setUserEmail(null);
     setUserName(null);
     setUserCode(null);
     
-    // Clear local storage
     localStorage.removeItem("isAuthenticated");
     localStorage.removeItem("userRole");
     localStorage.removeItem("userEmail");

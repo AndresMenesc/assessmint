@@ -1,10 +1,9 @@
-
 import { Assessment, RaterResponses, RaterType } from "@/types/assessment";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { calculateAllResults } from "./calculateAllResults";
 import { Json } from "@/integrations/supabase/types";
-import { safeQueryData, safeDataAccess, isQueryError } from "./supabaseHelpers";
+import { safeQueryData, safeDataAccess, isQueryError, asParam, safeDataFilter, safeRowAccess } from "./supabaseHelpers";
 
 /**
  * Converts an Assessment object to the format expected by the database
@@ -32,7 +31,7 @@ export const fetchAssessmentByCode = async (code: string): Promise<Assessment | 
     const { data: assessmentData, error: assessmentError } = await supabase
       .from('assessments')
       .select('*')
-      .eq('code', code as any)
+      .eq('code', asParam(code))
       .single();
       
     if (assessmentError) {
@@ -48,7 +47,7 @@ export const fetchAssessmentByCode = async (code: string): Promise<Assessment | 
     const { data: responseData, error: responseError } = await supabase
       .from('assessment_responses')
       .select('*')
-      .eq('assessment_id', assessmentData.id as any);
+      .eq('assessment_id', asParam(safeQueryData(assessmentData)?.id || ''));
       
     if (responseError) {
       console.error("Error fetching assessment responses:", responseError);
@@ -70,14 +69,12 @@ export const fetchAssessmentByCode = async (code: string): Promise<Assessment | 
       completed: safeAssessmentData.completed,
       createdAt: new Date(safeAssessmentData.created_at),
       updatedAt: new Date(safeAssessmentData.updated_at),
-      raters: (Array.isArray(responseData) ? responseData : [])
-        .filter(r => !isQueryError(r))
-        .map(r => ({
-          raterType: r.rater_type as RaterType,
-          email: r.email || '',
-          name: r.name || '',
-          responses: r.responses || [],
-          completed: r.completed
+      raters: safeDataFilter(responseData).map(r => ({
+        raterType: r.rater_type as RaterType,
+        email: r.email || '',
+        name: r.name || '',
+        responses: r.responses || [],
+        completed: r.completed
       }))
     };
     
@@ -100,7 +97,7 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
     const { data: responsesData, error: responsesError } = await supabase
       .from('assessment_responses')
       .select('*')
-      .eq('assessment_id', data.id as any);
+      .eq('assessment_id', asParam(data.id));
       
     if (responsesError) {
       console.error("Error fetching assessment responses:", responsesError);
@@ -114,14 +111,12 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
       console.log("Found responses data in assessment_responses table:", responsesData);
       
       // Map the responses from the new table format
-      raters = responsesData
-        .filter(r => !isQueryError(r))
-        .map(r => ({
-          raterType: r.rater_type as RaterType, 
-          responses: r.responses as any[] || [],
-          completed: r.completed,
-          email: r.email || "", 
-          name: r.name || ""
+      raters = safeDataFilter(responsesData).map(r => ({
+        raterType: r.rater_type as RaterType, 
+        responses: r.responses as any[] || [],
+        completed: r.completed,
+        email: r.email || "", 
+        name: r.name || ""
       }));
     }
     
@@ -132,20 +127,18 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
       const { data: oldRatersData, error: oldRatersError } = await supabase
         .from('raters')
         .select('*')
-        .eq('assessment_id', data.id as any);
+        .eq('assessment_id', asParam(data.id));
         
       if (!oldRatersError && oldRatersData && Array.isArray(oldRatersData) && oldRatersData.length > 0) {
         console.log("Found raters in legacy raters table:", oldRatersData);
         
-        for (const rater of oldRatersData) {
-          if (isQueryError(rater)) continue;
-          
+        for (const rater of safeDataFilter(oldRatersData)) {
           // For each old rater, check if there's data in the new responses table
           const { data: newResponsesData, error: newResponsesError } = await supabase
             .from('assessment_responses')
             .select('*')
-            .eq('assessment_id', data.id as any)
-            .eq('rater_type', rater.rater_type as any)
+            .eq('assessment_id', asParam(data.id))
+            .eq('rater_type', asParam(rater.rater_type))
             .maybeSingle();
           
           if (!newResponsesError && newResponsesData && !isQueryError(newResponsesData)) {
@@ -162,15 +155,12 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
             const { data: oldResponsesData } = await supabase
               .from('responses')
               .select('*')
-              .eq('rater_id', rater.id as any);
+              .eq('rater_id', asParam(rater.id));
               
-            const responses = oldResponsesData && Array.isArray(oldResponsesData) ? 
-              oldResponsesData
-                .filter(r => !isQueryError(r))
-                .map(r => ({
-                  questionId: r.question_id,
-                  score: r.score
-                })) : [];
+            const responses = safeDataFilter(oldResponsesData).map(r => ({
+              questionId: r.question_id,
+              score: r.score
+            }));
             
             raters.push({
               raterType: rater.rater_type as RaterType,
@@ -212,9 +202,7 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
     // First update the assessment
     const { error } = await supabase
       .from('assessments')
-      .upsert(dbAssessment as any, {
-        onConflict: 'id'
-      });
+      .upsert(dbAssessment);
       
     if (error) {
       console.error("Error syncing assessment with database:", error);
@@ -229,8 +217,8 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
       const { data: existingResponse, error: findResponseError } = await supabase
         .from('assessment_responses')
         .select('id')
-        .eq('assessment_id', assessmentData.id as any)
-        .eq('rater_type', rater.raterType as any)
+        .eq('assessment_id', asParam(assessmentData.id))
+        .eq('rater_type', asParam(rater.raterType))
         .maybeSingle();
         
       if (findResponseError) {
@@ -259,8 +247,8 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
         
         const { data, error: updateError } = await supabase
           .from('assessment_responses')
-          .update(updateData as any)
-          .eq('id', existingResponse.id)
+          .update(updateData)
+          .eq('id', safeRowAccess(existingResponse, { id: '' }).id)
           .select();
           
         if (updateError) {
@@ -281,11 +269,11 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
           completed: rater.completed,
           email: safeEmail,
           name: safeName
-        };
+        } as any; // Use type assertion as any to avoid TS errors
         
         const { data, error: createError } = await supabase
           .from('assessment_responses')
-          .insert(insertData as any)
+          .insert(insertData)
           .select();
           
         if (createError) {
@@ -318,7 +306,7 @@ export const createAssessmentInDb = async (assessment: Assessment) => {
     // First create the assessment
     const { error } = await supabase
       .from('assessments')
-      .insert(dbAssessment as any);
+      .insert(dbAssessment);
       
     if (error) {
       console.error("Error saving new assessment to database:", error);
@@ -342,11 +330,11 @@ export const createAssessmentInDb = async (assessment: Assessment) => {
         completed: selfRater.completed,
         email: safeEmail,
         name: safeName
-      };
+      } as any; // Use type assertion to avoid TS errors
       
       const { data, error: raterError } = await supabase
         .from('assessment_responses')
-        .insert(insertData as any)
+        .insert(insertData)
         .select();
         
       if (raterError) {
@@ -382,8 +370,8 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
     
     const { error } = await supabase
       .from('assessments')
-      .update(dbUpdates as any)
-      .eq('id', assessmentId as any);
+      .update(dbUpdates)
+      .eq('id', asParam(assessmentId));
       
     if (error) {
       console.error("Error updating assessment in database:", error);
@@ -396,8 +384,8 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
         const { data: existingResponse, error: findResponseError } = await supabase
           .from('assessment_responses')
           .select('id')
-          .eq('assessment_id', assessmentId as any)
-          .eq('rater_type', rater.raterType as any)
+          .eq('assessment_id', asParam(assessmentId))
+          .eq('rater_type', asParam(rater.raterType))
           .maybeSingle();
           
         if (findResponseError) {
@@ -417,12 +405,12 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
             email: safeEmail,
             name: safeName,
             updated_at: new Date().toISOString()
-          };
+          } as any; // Use type assertion to avoid TS errors
           
           const { error: updateError } = await supabase
             .from('assessment_responses')
-            .update(updateData as any)
-            .eq('id', existingResponse.id);
+            .update(updateData)
+            .eq('id', safeRowAccess(existingResponse, { id: '' }).id);
             
           if (updateError) {
             console.error("Error updating assessment responses:", updateError);
@@ -437,11 +425,11 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
             completed: rater.completed,
             email: safeEmail,
             name: safeName
-          };
+          } as any; // Use type assertion to avoid TS errors
           
           const { error: createError } = await supabase
             .from('assessment_responses')
-            .insert(insertData as any);
+            .insert(insertData);
             
           if (createError) {
             console.error("Error creating assessment responses:", createError);
@@ -477,11 +465,11 @@ export const saveAssessmentResults = async (assessment: Assessment) => {
       self_awareness: results.selfAwareness,
       coachability_awareness: results.coachabilityAwareness,
       profile_type: results.profileType
-    };
+    } as any; // Use type assertion to avoid TS errors
 
     const { data, error } = await supabase
       .from('results')
-      .upsert(resultsData as any, {
+      .upsert(resultsData, {
         onConflict: 'assessment_id'
       });
 
