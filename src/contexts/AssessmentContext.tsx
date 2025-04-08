@@ -1,5 +1,6 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Assessment, RaterType, Question, AssessmentResponse } from "@/types/assessment";
+import { Assessment, RaterType, Question, AssessmentResponse, Response } from "@/types/assessment";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +27,7 @@ import {
   getRowField, 
   safePrepareResponses 
 } from "@/utils/supabaseHelpers";
+import { PostgrestError } from "@supabase/supabase-js";
 
 interface AssessmentContextProps {
   assessment: Assessment | null;
@@ -35,7 +37,7 @@ interface AssessmentContextProps {
   setCurrentQuestionIndex: (index: number) => void;
   currentRater: RaterType;
   setCurrentRater: (rater: RaterType) => void;
-  responses: AssessmentResponse[];
+  responses: Response[];
   updateResponse: (questionId: string, score: number) => void;
   loading: boolean;
   initializeAssessment: (email: string, name: string, code: string) => Promise<void>;
@@ -228,18 +230,12 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             console.log("Found data in assessment_responses table:", ratersData);
             
             const processedRaters = safeDataFilter(ratersData).map(rater => {
-              const raterType = getRowField(rater, 'rater_type', RaterType.SELF) as RaterType;
-              const email = getRowField(rater, 'email', '');
-              const name = getRowField(rater, 'name', '');
-              const completed = getRowField(rater, 'completed', false);
-              const responses = safePrepareResponses(getRowField(rater, 'responses', []));
-              
               return {
-                raterType,
-                email: email || '',
-                name: name || '',
-                completed,
-                responses
+                raterType: getRowField(rater, 'rater_type', RaterType.SELF) as RaterType,
+                email: getRowField(rater, 'email', '') || '',
+                name: getRowField(rater, 'name', '') || '',
+                completed: !!getRowField(rater, 'completed', false),
+                responses: safePrepareResponses(getRowField(rater, 'responses', [])) || []
               };
             });
             
@@ -294,18 +290,12 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           console.log(`Found ${responsesData.length} entries in assessment_responses`);
           
           const processedRaters = safeDataFilter(responsesData).map(rater => {
-            const raterType = getRowField(rater, 'rater_type', RaterType.SELF) as RaterType;
-            const email = getRowField(rater, 'email', '');
-            const name = getRowField(rater, 'name', '');
-            const completed = getRowField(rater, 'completed', false);
-            const responses = safePrepareResponses(getRowField(rater, 'responses', []));
-            
             return {
-              raterType,
-              email: email || '',
-              name: name || '',
-              completed,
-              responses
+              raterType: getRowField(rater, 'rater_type', RaterType.SELF) as RaterType,
+              email: getRowField(rater, 'email', '') || '',
+              name: getRowField(rater, 'name', '') || '',
+              completed: !!getRowField(rater, 'completed', false),
+              responses: safePrepareResponses(getRowField(rater, 'responses', [])) || []
             };
           });
           

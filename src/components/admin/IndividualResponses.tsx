@@ -71,20 +71,17 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
         const safeRatersData = safeDataFilter(ratersData);
         
         // Find raters by type using our safe accessor
-        const selfRater = safeRatersData.find(r => {
-          const raterType = getRowField(r, 'rater_type', '');
-          return raterType === 'self';
-        });
+        const selfRater = safeRatersData.find(r => 
+          getRowField(r, 'rater_type', '') === 'self'
+        );
         
-        const rater1 = safeRatersData.find(r => {
-          const raterType = getRowField(r, 'rater_type', '');
-          return raterType === 'rater1';
-        });
+        const rater1 = safeRatersData.find(r => 
+          getRowField(r, 'rater_type', '') === 'rater1'
+        );
         
-        const rater2 = safeRatersData.find(r => {
-          const raterType = getRowField(r, 'rater_type', '');
-          return raterType === 'rater2';
-        });
+        const rater2 = safeRatersData.find(r => 
+          getRowField(r, 'rater_type', '') === 'rater2'
+        );
         
         console.log("Individual responses - raters from assessment_responses:", { selfRater, rater1, rater2 });
         
@@ -109,7 +106,9 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
           
           // Join responses with questions data
           return responses.map((response: any) => {
-            const question = safeQuestionsData.find(q => getRowField(q, 'id', '') === response.questionId);
+            const question = safeQuestionsData.find(q => 
+              getRowField(q, 'id', '') === response.questionId
+            );
             
             return {
               question_id: response.questionId,

@@ -1,17 +1,20 @@
+
 /**
  * Helper functions to handle Supabase query responses more safely
  */
 
-// Utility to check if a Supabase query response contains error
-export const isQueryError = (data: any): boolean => {
+import { PostgrestError } from '@supabase/supabase-js';
+
+// Improved type for checking query errors
+export const isQueryError = (data: any): data is PostgrestError => {
   return data && typeof data === 'object' && 'code' in data && 'message' in data;
 };
 
 // Safely get data from a Supabase query response
-export const safeQueryData = <T>(data: T | { code: string; message: string } | null | undefined): T | null => {
+export const safeQueryData = <T>(data: T | PostgrestError | null | undefined): T | null => {
   if (data === null || data === undefined || isQueryError(data)) {
     if (isQueryError(data)) {
-      console.error("Supabase query error:", (data as any).message);
+      console.error("Supabase query error:", (data as PostgrestError).message);
     }
     return null;
   }
@@ -20,7 +23,7 @@ export const safeQueryData = <T>(data: T | { code: string; message: string } | n
 
 // Safely access properties on Supabase response
 export const safeDataAccess = <T>(
-  obj: T | { code: string; message: string } | null | undefined,
+  obj: T | PostgrestError | null | undefined,
   defaultValue: T
 ): T => {
   if (!obj || isQueryError(obj)) {
@@ -31,14 +34,14 @@ export const safeDataAccess = <T>(
 
 // Cast database object to match required types for insert/update operations 
 export const asDbParam = <T>(obj: any): T => {
-  return obj as unknown as T;
+  return obj as T;
 };
 
 // Type-safe cast for Supabase query parameters to handle string IDs
 export const asParam = (value: string | number): any => value;
 
 // Enhanced filter for safe data access from arrays that might contain error objects
-export const safeDataFilter = <T>(dataArray: (T | { code: string; message: string } | null | undefined)[] | null | undefined): T[] => {
+export const safeDataFilter = <T>(dataArray: (T | PostgrestError | null | undefined)[] | null | undefined): T[] => {
   if (!dataArray || !Array.isArray(dataArray)) {
     return [];
   }
@@ -47,7 +50,7 @@ export const safeDataFilter = <T>(dataArray: (T | { code: string; message: strin
 
 // Safely convert data row to expected type or return default value
 export const safeRowAccess = <T>(
-  row: T | { code: string; message: string } | null | undefined,
+  row: T | PostgrestError | null | undefined,
   defaultRow: T
 ): T => {
   if (!row || isQueryError(row)) {
@@ -56,20 +59,60 @@ export const safeRowAccess = <T>(
   return row as T;
 };
 
-// Helper to get value from database row using key
-export const getRowField = <T, K extends keyof T>(
-  row: T | null | undefined | { code: string; message: string },
+// Safely get form values for database operations with proper type conversion
+export const getDbFormValues = <T>(values: any): any => {
+  // Convert any form values to database-compatible format
+  return values;
+};
+
+// Helper to get value from database row using key - now handles strings properly
+export const getRowField = <T extends Record<string, any>, K extends string>(
+  row: T | PostgrestError | null | undefined,
   key: K,
-  defaultValue: T[K]
-): T[K] => {
+  defaultValue: any
+): any => {
   if (!row || isQueryError(row)) {
     return defaultValue;
   }
-  return (row as T)[key] !== undefined ? (row as T)[key] : defaultValue;
+  
+  if (key in (row as Record<string, any>)) {
+    return (row as Record<string, any>)[key];
+  }
+  
+  return defaultValue;
 };
 
-// Safely serialize JSON data for database operations
+// Safely prepare responses array
+export const safePrepareResponses = (responses: any): any[] => {
+  if (!responses) return [];
+  
+  // If it's already an array, return it
+  if (Array.isArray(responses)) return responses;
+  
+  // If it's a JSON object coming from the database, make sure we handle it correctly
+  try {
+    if (typeof responses === 'string') {
+      return JSON.parse(responses);
+    }
+    
+    // If it's a JSON object, convert it to an array
+    if (responses && typeof responses === 'object') {
+      return Array.isArray(responses) ? responses : [];
+    }
+    
+    return [];
+  } catch (e) {
+    console.error("Error parsing responses:", e);
+    return [];
+  }
+};
+
+// Safe JSON serialization for database operations
 export const safeJsonSerialize = <T>(data: T): any => {
+  if (data === null || data === undefined) {
+    return [];
+  }
+  
   if (Array.isArray(data)) {
     return data;
   }
@@ -83,32 +126,6 @@ export const safeJsonSerialize = <T>(data: T): any => {
     return data;
   } catch (e) {
     console.error("Error serializing JSON data:", e);
-    return [];
-  }
-};
-
-// Safely get form values for database operations
-export const getDbFormValues = <T>(values: any): T => {
-  // Convert any form values to database-compatible format
-  return values as unknown as T;
-};
-
-// Special handler for responses array
-export const safePrepareResponses = (responses: any): any[] => {
-  if (!responses) return [];
-  
-  // If it's already an array, return it
-  if (Array.isArray(responses)) return responses;
-  
-  // If it's a Json object coming from the database, make sure we handle it correctly
-  try {
-    if (typeof responses === 'string') {
-      return JSON.parse(responses);
-    }
-    
-    return [];
-  } catch (e) {
-    console.error("Error parsing responses:", e);
     return [];
   }
 };

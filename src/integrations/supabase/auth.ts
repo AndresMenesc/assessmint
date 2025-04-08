@@ -8,6 +8,7 @@ import {
   getDbFormValues
 } from '@/utils/supabaseHelpers';
 import * as bcrypt from 'bcryptjs';
+import { PostgrestError } from '@supabase/supabase-js';
 
 // Function to authenticate admin user
 export const authenticateUser = async (email: string, password: string): Promise<{
@@ -18,7 +19,7 @@ export const authenticateUser = async (email: string, password: string): Promise
 }> => {
   try {
     // Look up the admin user by email
-    const { data: user, error } = await supabase
+    const { data: userData, error } = await supabase
       .from('admin_users')
       .select('*')
       .eq('email', email.toLowerCase())
@@ -33,9 +34,9 @@ export const authenticateUser = async (email: string, password: string): Promise
         name: null
       };
     }
-      
-    const safeUser = safeQueryData<DbAdminUser>(user as DbAdminUser);
-    if (!safeUser) {
+    
+    // Handle potential error or null response
+    if (!userData) {
       console.error("User not found");
       return {
         authenticated: false,
@@ -44,12 +45,12 @@ export const authenticateUser = async (email: string, password: string): Promise
         name: null
       };
     }
-    
+      
     // For security, always use compare for password checking
-    const userPassword = getRowField(safeUser, 'password', '');
-    const userRole = getRowField(safeUser, 'role', 'rater') as UserRole;
-    const userEmail = getRowField(safeUser, 'email', '');
-    const userName = getRowField(safeUser, 'name', userEmail);
+    const userPassword = getRowField(userData, 'password', '');
+    const userRole = getRowField(userData, 'role', 'rater') as UserRole;
+    const userEmail = getRowField(userData, 'email', '');
+    const userName = getRowField(userData, 'name', userEmail);
     
     // In a real production app, we would use bcrypt or similar
     // For this demo, we'll just compare directly

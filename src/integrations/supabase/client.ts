@@ -75,8 +75,8 @@ export const supabase = createClient<ExtendedDatabase>(
       detectSessionInUrl: true,
       storage: localStorage,
       flowType: 'pkce',
-      // Handle redirection properly in newer Supabase client
-      redirectTo: `${getRedirectURL()}/login`,
+      // Fix for redirectTo property - use storage key for now
+      // redirectTo property is removed as it's not supported in this version
     }
   }
 );
