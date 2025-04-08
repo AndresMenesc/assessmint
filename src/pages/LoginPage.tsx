@@ -236,8 +236,6 @@ const LoginPage = () => {
       if (recoveryToken) {
         const { error } = await supabase.auth.updateUser({ 
           password: values.password 
-        }, {
-          accessToken: recoveryToken
         });
         
         success = !error;

@@ -25,6 +25,7 @@ import RaterStartPage from "./pages/RaterStartPage";
 
 const queryClient = new QueryClient();
 
+// The AppContent component handles the routing and database setup
 const AppContent = () => {
   useEffect(() => {
     // Create the database tables and initialize data
@@ -60,7 +61,7 @@ const AppContent = () => {
       <Route path="/about" element={<AboutPage />} />
       <Route path="*" element={<NotFound />} />
       
-      {/* Assessment related routes - All wrapped in AssessmentProvider */}
+      {/* Assessment related routes */}
       <Route path="/start" element={
         <ProtectedRoute requiredRole={null}>
           <StartPage />
@@ -78,7 +79,7 @@ const AppContent = () => {
       } />
       <Route path="/completion" element={<CompletionPage />} />
       
-      {/* Admin routes with protection - Also in AssessmentProvider */}
+      {/* Admin routes with protection */}
       <Route path="/results" element={
         <ProtectedRoute requiredRole="admin">
           <ResultsPage />
@@ -94,18 +95,19 @@ const AppContent = () => {
 };
 
 // The App component structure ensures that the AssessmentProvider wraps all routes
+// IMPORTANT: The order of providers matters! AuthProvider must wrap AssessmentProvider
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AuthProvider>
-        <BrowserRouter>
+      <BrowserRouter>
+        <AuthProvider>
           <AssessmentProvider>
             <AppContent />
             <Toaster />
             <Sonner />
           </AssessmentProvider>
-        </BrowserRouter>
-      </AuthProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
