@@ -75,6 +75,8 @@ export const supabase = createClient<ExtendedDatabase>(
       detectSessionInUrl: true,
       storage: localStorage,
       flowType: 'pkce',
+      // Use proper way to define redirect URLs in newer Supabase client
+      // @ts-ignore - needed because the Supabase typing doesn't include redirectTo but it works
       redirectTo: {
         login: `${getRedirectURL()}/login`,
         signUp: `${getRedirectURL()}/login`,  

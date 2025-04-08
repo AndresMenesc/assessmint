@@ -1,9 +1,20 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { safeQueryData, isQueryError, safeDataFilter, asParam, safeRowAccess } from "@/utils/supabaseHelpers";
 
 export type UserRole = "super_admin" | "admin" | "rater" | null;
+
+interface AdminUser {
+  id: string;
+  email: string;
+  name: string | null;
+  role: UserRole;
+  password: string;
+  created_at: string;
+  updated_at: string;
+}
 
 interface AuthContextProps {
   isAuthenticated: boolean;
@@ -90,8 +101,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      const safeAdminData = safeQueryData(adminData);
-      if (safeAdminData && !isQueryError(safeAdminData)) {
+      const safeAdminData = safeRowAccess(adminData, {
+        role: 'rater' as UserRole,
+        email: email,
+        name: email.split('@')[0],
+        password: '',
+        id: '',
+        created_at: '',
+        updated_at: ''
+      });
+      
+      if (safeAdminData) {
         setIsAuthenticated(true);
         setUserRole(safeAdminData.role as UserRole);
         setUserEmail(safeAdminData.email);
@@ -138,10 +158,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return false;
         }
 
-        const safeAdminData = safeQueryData(adminData);
+        const safeAdminData = safeRowAccess(adminData, {
+          role: 'rater' as UserRole,
+          email: email,
+          name: email.split('@')[0],
+          password: '',
+          id: '',
+          created_at: '',
+          updated_at: ''
+        });
+        
         if (safeAdminData) {
           setIsAuthenticated(true);
-          setUserRole(safeAdminData.role as UserRole);
+          setUserRole(safeAdminData.role);
           setUserEmail(safeAdminData.email);
           setUserName(safeAdminData.name || safeAdminData.email.split('@')[0]);
           
@@ -167,11 +196,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return false;
         }
 
-        const safeAdminData = safeQueryData(adminData);
+        const safeAdminData = safeRowAccess(adminData, {
+          role: 'rater' as UserRole,
+          email: email,
+          name: email.split('@')[0],
+          password: '',
+          id: '',
+          created_at: '',
+          updated_at: ''
+        });
+        
         if (safeAdminData) {
           if (safeAdminData.password === password) {
             setIsAuthenticated(true);
-            setUserRole(safeAdminData.role as UserRole);
+            setUserRole(safeAdminData.role);
             setUserEmail(safeAdminData.email);
             setUserName(safeAdminData.name || safeAdminData.email.split('@')[0]);
             

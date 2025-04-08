@@ -1,14 +1,15 @@
-import { Assessment, RaterResponses, RaterType } from "@/types/assessment";
+
+import { Assessment, RaterResponses, RaterType, DbAssessment, DbAssessmentResponse } from "@/types/assessment";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { calculateAllResults } from "./calculateAllResults";
 import { Json } from "@/integrations/supabase/types";
-import { safeQueryData, safeDataAccess, isQueryError, asParam, safeDataFilter, safeRowAccess } from "./supabaseHelpers";
+import { safeQueryData, safeDataAccess, isQueryError, asParam, safeDataFilter, safeRowAccess, asDbParam } from "./supabaseHelpers";
 
 /**
  * Converts an Assessment object to the format expected by the database
  */
-export const assessmentToDbFormat = (assessment: Assessment) => {
+export const assessmentToDbFormat = (assessment: Assessment): DbAssessment => {
   return {
     id: assessment.id,
     self_rater_email: assessment.selfRaterEmail,
@@ -43,39 +44,49 @@ export const fetchAssessmentByCode = async (code: string): Promise<Assessment | 
       throw assessmentError;
     }
     
+    const safeData = safeQueryData(assessmentData);
+    if (!safeData) {
+      console.error("Invalid assessment data");
+      return null;
+    }
+    
     // Now fetch all raters and their responses for this assessment
     const { data: responseData, error: responseError } = await supabase
       .from('assessment_responses')
       .select('*')
-      .eq('assessment_id', asParam(safeQueryData(assessmentData)?.id || ''));
+      .eq('assessment_id', asParam(safeData.id));
       
     if (responseError) {
       console.error("Error fetching assessment responses:", responseError);
       throw responseError;
     }
     
-    const safeAssessmentData = safeQueryData(assessmentData);
-    if (!safeAssessmentData) {
-      console.error("Invalid assessment data");
-      return null;
-    }
-    
     // Convert the database response to our Assessment type
     const assessment: Assessment = {
-      id: safeAssessmentData.id,
-      code: safeAssessmentData.code,
-      selfRaterEmail: safeAssessmentData.self_rater_email,
-      selfRaterName: safeAssessmentData.self_rater_name,
-      completed: safeAssessmentData.completed,
-      createdAt: new Date(safeAssessmentData.created_at),
-      updatedAt: new Date(safeAssessmentData.updated_at),
-      raters: safeDataFilter(responseData).map(r => ({
-        raterType: r.rater_type as RaterType,
-        email: r.email || '',
-        name: r.name || '',
-        responses: r.responses || [],
-        completed: r.completed
-      }))
+      id: safeData.id,
+      code: safeData.code,
+      selfRaterEmail: safeData.self_rater_email,
+      selfRaterName: safeData.self_rater_name,
+      completed: safeData.completed,
+      createdAt: new Date(safeData.created_at),
+      updatedAt: new Date(safeData.updated_at),
+      raters: safeDataFilter(responseData).map(r => {
+        const safeR = safeRowAccess(r, {
+          rater_type: RaterType.SELF,
+          email: "",
+          name: "",
+          responses: [],
+          completed: false
+        });
+        
+        return {
+          raterType: safeR.rater_type as RaterType,
+          email: safeR.email || '',
+          name: safeR.name || '',
+          responses: safeR.responses || [],
+          completed: safeR.completed
+        };
+      })
     };
     
     console.log("Assessment found:", assessment);
@@ -111,13 +122,23 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
       console.log("Found responses data in assessment_responses table:", responsesData);
       
       // Map the responses from the new table format
-      raters = safeDataFilter(responsesData).map(r => ({
-        raterType: r.rater_type as RaterType, 
-        responses: r.responses as any[] || [],
-        completed: r.completed,
-        email: r.email || "", 
-        name: r.name || ""
-      }));
+      raters = safeDataFilter(responsesData).map(r => {
+        const safeR = safeRowAccess(r, {
+          rater_type: RaterType.SELF,
+          responses: [],
+          completed: false,
+          email: "",
+          name: ""
+        });
+        
+        return {
+          raterType: safeR.rater_type as RaterType, 
+          responses: safeR.responses as any[] || [],
+          completed: safeR.completed,
+          email: safeR.email || "", 
+          name: safeR.name || ""
+        };
+      });
     }
     
     // If no rater data exists in the new table, try getting from the old raters table
@@ -133,41 +154,64 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
         console.log("Found raters in legacy raters table:", oldRatersData);
         
         for (const rater of safeDataFilter(oldRatersData)) {
+          const safeRater = safeRowAccess(rater, {
+            rater_type: RaterType.SELF,
+            id: '',
+            email: '',
+            name: '',
+            completed: false
+          });
+          
           // For each old rater, check if there's data in the new responses table
           const { data: newResponsesData, error: newResponsesError } = await supabase
             .from('assessment_responses')
             .select('*')
             .eq('assessment_id', asParam(data.id))
-            .eq('rater_type', asParam(rater.rater_type))
+            .eq('rater_type', asParam(safeRater.rater_type))
             .maybeSingle();
           
           if (!newResponsesError && newResponsesData && !isQueryError(newResponsesData)) {
+            const safeData = safeRowAccess(newResponsesData, {
+              rater_type: safeRater.rater_type,
+              completed: safeRater.completed,
+              email: safeRater.email,
+              name: safeRater.name,
+              responses: []
+            });
+            
             // If we found data in the new table, use that
             raters.push({
-              raterType: rater.rater_type as RaterType,
-              responses: newResponsesData.responses as any[] || [],
-              completed: newResponsesData.completed,
-              email: rater.email,
-              name: rater.name
+              raterType: safeData.rater_type as RaterType,
+              responses: safeData.responses as any[] || [],
+              completed: safeData.completed,
+              email: safeData.email || '',
+              name: safeData.name || ''
             });
           } else {
             // Otherwise, get responses from the old responses table
             const { data: oldResponsesData } = await supabase
               .from('responses')
               .select('*')
-              .eq('rater_id', asParam(rater.id));
+              .eq('rater_id', asParam(safeRater.id));
               
-            const responses = safeDataFilter(oldResponsesData).map(r => ({
-              questionId: r.question_id,
-              score: r.score
-            }));
+            const responses = safeDataFilter(oldResponsesData).map(r => {
+              const safeR = safeRowAccess(r, {
+                question_id: '',
+                score: 0
+              });
+              
+              return {
+                questionId: safeR.question_id,
+                score: safeR.score
+              };
+            });
             
             raters.push({
-              raterType: rater.rater_type as RaterType,
+              raterType: safeRater.rater_type as RaterType,
               responses,
-              completed: rater.completed,
-              email: rater.email,
-              name: rater.name
+              completed: safeRater.completed,
+              email: safeRater.email,
+              name: safeRater.name
             });
           }
         }
@@ -193,7 +237,7 @@ export const dbToAssessmentFormat = async (data: any): Promise<Assessment | null
 /**
  * Synchronizes an assessment with the database
  */
-export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
+export const syncAssessmentWithDb = async (assessmentData: Assessment): Promise<boolean> => {
   try {
     console.log("Syncing assessment with DB:", assessmentData.id);
     console.log("Assessment data:", JSON.stringify(assessmentData));
@@ -202,7 +246,7 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
     // First update the assessment
     const { error } = await supabase
       .from('assessments')
-      .upsert(dbAssessment);
+      .upsert(asDbParam(dbAssessment));
       
     if (error) {
       console.error("Error syncing assessment with database:", error);
@@ -236,8 +280,8 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
       if (existingResponse && !isQueryError(existingResponse)) {
         console.log(`Updating existing responses for rater ${rater.raterType}, ID: ${existingResponse.id}`);
         
-        // Update existing responses - safely convert responses to Json type
-        const updateData = {
+        // Update existing responses
+        const updateData: Partial<DbAssessmentResponse> = {
           responses: safeResponses as unknown as Json,
           completed: rater.completed,
           email: safeEmail,
@@ -247,8 +291,8 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
         
         const { data, error: updateError } = await supabase
           .from('assessment_responses')
-          .update(updateData)
-          .eq('id', safeRowAccess(existingResponse, { id: '' }).id)
+          .update(asDbParam(updateData))
+          .eq('id', existingResponse.id)
           .select();
           
         if (updateError) {
@@ -261,19 +305,21 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
       } else {
         console.log(`Creating new responses for rater ${rater.raterType}`);
         
-        // Create new responses - safely convert responses to Json type
-        const insertData = {
+        // Create new responses
+        const insertData: DbAssessmentResponse = {
           assessment_id: assessmentData.id,
           rater_type: rater.raterType,
           responses: safeResponses as unknown as Json,
           completed: rater.completed,
           email: safeEmail,
-          name: safeName
-        } as any; // Use type assertion as any to avoid TS errors
+          name: safeName,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
         
         const { data, error: createError } = await supabase
           .from('assessment_responses')
-          .insert(insertData)
+          .insert(asDbParam(insertData))
           .select();
           
         if (createError) {
@@ -296,7 +342,7 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment) => {
 /**
  * Creates a new assessment in the database
  */
-export const createAssessmentInDb = async (assessment: Assessment) => {
+export const createAssessmentInDb = async (assessment: Assessment): Promise<boolean> => {
   try {
     console.log("Creating new assessment in DB:", assessment.id);
     console.log("Assessment data:", JSON.stringify(assessment));
@@ -306,7 +352,7 @@ export const createAssessmentInDb = async (assessment: Assessment) => {
     // First create the assessment
     const { error } = await supabase
       .from('assessments')
-      .insert(dbAssessment);
+      .insert(asDbParam(dbAssessment));
       
     if (error) {
       console.error("Error saving new assessment to database:", error);
@@ -323,18 +369,20 @@ export const createAssessmentInDb = async (assessment: Assessment) => {
       const safeEmail = selfRater.email || null;
       const safeName = selfRater.name || null;
       
-      const insertData = {
+      const insertData: DbAssessmentResponse = {
         assessment_id: assessment.id,
         rater_type: selfRater.raterType,
         responses: safeResponses as unknown as Json,
         completed: selfRater.completed,
         email: safeEmail,
-        name: safeName
-      } as any; // Use type assertion to avoid TS errors
+        name: safeName,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
       
       const { data, error: raterError } = await supabase
         .from('assessment_responses')
-        .insert(insertData)
+        .insert(asDbParam(insertData))
         .select();
         
       if (raterError) {
@@ -356,7 +404,7 @@ export const createAssessmentInDb = async (assessment: Assessment) => {
 /**
  * Updates an assessment in the database
  */
-export const updateAssessmentInDb = async (assessmentId: string, updates: Partial<Assessment>) => {
+export const updateAssessmentInDb = async (assessmentId: string, updates: Partial<Assessment>): Promise<boolean> => {
   try {
     // Convert dates to ISO strings and property names to snake_case for database
     const dbUpdates: Record<string, any> = {};
@@ -370,7 +418,7 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
     
     const { error } = await supabase
       .from('assessments')
-      .update(dbUpdates)
+      .update(asDbParam(dbUpdates))
       .eq('id', asParam(assessmentId));
       
     if (error) {
@@ -398,38 +446,40 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
         const safeName = rater.name || null;
         
         if (existingResponse && !isQueryError(existingResponse)) {
-          // Update existing responses - convert responses to Json type
-          const updateData = {
+          // Update existing responses
+          const updateData: Partial<DbAssessmentResponse> = {
             responses: JSON.parse(JSON.stringify(safeResponses)) as Json,
             completed: rater.completed,
             email: safeEmail,
             name: safeName,
             updated_at: new Date().toISOString()
-          } as any; // Use type assertion to avoid TS errors
+          };
           
           const { error: updateError } = await supabase
             .from('assessment_responses')
-            .update(updateData)
-            .eq('id', safeRowAccess(existingResponse, { id: '' }).id);
+            .update(asDbParam(updateData))
+            .eq('id', existingResponse.id);
             
           if (updateError) {
             console.error("Error updating assessment responses:", updateError);
             continue;
           }
         } else {
-          // Create new responses - convert responses to Json type
-          const insertData = {
+          // Create new responses
+          const insertData: DbAssessmentResponse = {
             assessment_id: assessmentId,
             rater_type: rater.raterType,
             responses: JSON.parse(JSON.stringify(safeResponses)) as Json,
             completed: rater.completed,
             email: safeEmail,
-            name: safeName
-          } as any; // Use type assertion to avoid TS errors
+            name: safeName,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
           
           const { error: createError } = await supabase
             .from('assessment_responses')
-            .insert(insertData);
+            .insert(asDbParam(insertData));
             
           if (createError) {
             console.error("Error creating assessment responses:", createError);
@@ -449,7 +499,7 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
 /**
  * Saves assessment results to the database
  */
-export const saveAssessmentResults = async (assessment: Assessment) => {
+export const saveAssessmentResults = async (assessment: Assessment): Promise<boolean> => {
   try {
     const results = calculateAllResults(assessment.raters);
     
@@ -465,11 +515,11 @@ export const saveAssessmentResults = async (assessment: Assessment) => {
       self_awareness: results.selfAwareness,
       coachability_awareness: results.coachabilityAwareness,
       profile_type: results.profileType
-    } as any; // Use type assertion to avoid TS errors
+    };
 
     const { data, error } = await supabase
       .from('results')
-      .upsert(resultsData, {
+      .upsert(asDbParam(resultsData), {
         onConflict: 'assessment_id'
       });
 

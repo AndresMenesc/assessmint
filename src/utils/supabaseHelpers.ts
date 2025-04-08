@@ -9,9 +9,11 @@ export const isQueryError = (data: any): boolean => {
 };
 
 // Safely get data from a Supabase query response
-export const safeQueryData = <T>(data: T | { code: string; message: string }): T | null => {
-  if (isQueryError(data)) {
-    console.error("Supabase query error:", (data as any).message);
+export const safeQueryData = <T>(data: T | { code: string; message: string } | null | undefined): T | null => {
+  if (data === null || data === undefined || isQueryError(data)) {
+    if (isQueryError(data)) {
+      console.error("Supabase query error:", (data as any).message);
+    }
     return null;
   }
   return data as T;
@@ -32,11 +34,11 @@ export const safeDataAccess = <T>(
 export const asParam = (value: string | number): any => value as any;
 
 // Enhanced filter for safe data access from arrays that might contain error objects
-export const safeDataFilter = <T>(dataArray: (T | { code: string; message: string })[] | null | undefined): T[] => {
+export const safeDataFilter = <T>(dataArray: (T | { code: string; message: string } | null | undefined)[] | null | undefined): T[] => {
   if (!dataArray || !Array.isArray(dataArray)) {
     return [];
   }
-  return dataArray.filter(item => !isQueryError(item)) as T[];
+  return dataArray.filter(item => item !== null && item !== undefined && !isQueryError(item)) as T[];
 };
 
 // Safely convert data row to expected type or return default value
@@ -48,4 +50,9 @@ export const safeRowAccess = <T>(
     return defaultRow;
   }
   return row as T;
+};
+
+// Cast database object to the required type for insert/update operations
+export const asDbParam = <T>(obj: any): T => {
+  return obj as unknown as T;
 };

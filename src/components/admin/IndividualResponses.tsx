@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { safeQueryData, safeDataFilter, asParam, safeDataAccess } from "@/utils/supabaseHelpers";
+import { safeQueryData, safeDataFilter, asParam, safeDataAccess, safeRowAccess, isQueryError } from "@/utils/supabaseHelpers";
 
 interface IndividualResponsesProps {
   assessment: Assessment;
@@ -61,9 +61,10 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
         
         const safeRatersData = safeDataFilter(ratersData);
         
-        const selfRater = safeRatersData.find(r => r.rater_type === 'self');
-        const rater1 = safeRatersData.find(r => r.rater_type === 'rater1');
-        const rater2 = safeRatersData.find(r => r.rater_type === 'rater2');
+        // Use safeRowAccess to handle data safely
+        const selfRater = safeRatersData.find(r => safeRowAccess(r, { rater_type: '' }).rater_type === 'self');
+        const rater1 = safeRatersData.find(r => safeRowAccess(r, { rater_type: '' }).rater_type === 'rater1');
+        const rater2 = safeRatersData.find(r => safeRowAccess(r, { rater_type: '' }).rater_type === 'rater2');
         
         console.log("Individual responses - raters from assessment_responses:", { selfRater, rater1, rater2 });
         
@@ -83,21 +84,28 @@ const IndividualResponses: React.FC<IndividualResponsesProps> = ({ assessment })
         const formatResponses = (rater: any): ResponseData[] => {
           if (!rater || !rater.responses || !Array.isArray(rater.responses)) return [];
           
-          const responses = rater.responses;
-          console.log(`Found ${responses.length} responses for rater ${rater.rater_type}`);
+          const responses = safeRowAccess(rater, { responses: [] }).responses;
+          console.log(`Found ${responses.length} responses for rater ${safeRowAccess(rater, { rater_type: '' }).rater_type}`);
           
           // Join responses with questions data
           return responses.map((response: any) => {
-            const question = safeQuestionsData.find(q => q.id === response.questionId);
+            const question = safeQuestionsData.find(q => safeRowAccess(q, { id: '' }).id === response.questionId);
+            const safeQuestion = safeRowAccess(question, { 
+              text: 'Question text not found', 
+              section: 'Unknown section', 
+              sub_section: 'Unknown subsection', 
+              is_reversed: false, 
+              negative_score: false 
+            });
             
             return {
               question_id: response.questionId,
-              text: question?.text || 'Question text not found',
-              section: question?.section || 'Unknown section',
-              sub_section: question?.sub_section || 'Unknown subsection',
+              text: safeQuestion.text,
+              section: safeQuestion.section,
+              sub_section: safeQuestion.sub_section,
               score: response.score,
-              is_reversed: question?.is_reversed || false,
-              negative_score: question?.negative_score || false
+              is_reversed: safeQuestion.is_reversed,
+              negative_score: safeQuestion.negative_score
             };
           });
         };

@@ -1,8 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Question, Section, SubSection } from "@/types/assessment";
-
-import { safeQueryData, isQueryError, asParam, safeDataFilter } from "./supabaseHelpers";
+import { Question, Section, SubSection, DbQuestion } from "@/types/assessment";
+import { safeQueryData, isQueryError, asParam, safeDataFilter, asDbParam } from "./supabaseHelpers";
 
 export const fetchAllQuestions = async (): Promise<Question[]> => {
   try {
@@ -17,7 +16,7 @@ export const fetchAllQuestions = async (): Promise<Question[]> => {
 
     // Convert database format to our Question type format
     return safeDataFilter(questions).map(q => {
-      const question = q as any;
+      const question = q as DbQuestion;
       return {
         id: question.id,
         text: question.text,
@@ -49,10 +48,12 @@ export const importQuestionsToDb = async (questions: Question[] = []) => {
       sub_section: q.subSection,
       is_reversed: q.isReversed,
       negative_score: q.negativeScore,
-    })) as any; // Use type assertion to bypass TypeScript errors
+    }));
 
     // Insert questions into the database
-    const { data, error } = await supabase.from("questions").upsert(dbQuestions);
+    const { data, error } = await supabase
+      .from("questions")
+      .upsert(asDbParam(dbQuestions));
 
     if (error) {
       console.error("Error importing questions:", error);

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Assessment, RaterType, Question, AssessmentResponse } from "@/types/assessment";
 import { v4 as uuidv4 } from "uuid";
@@ -18,7 +19,7 @@ import {
   fetchQuestions
 } from "@/utils/assessmentOperations";
 import { calculateAllResults as calculateResults } from "@/utils/calculateAllResults";
-import { safeQueryData, safeDataFilter, asParam, safeDataAccess, isQueryError } from "@/utils/supabaseHelpers";
+import { safeQueryData, safeDataFilter, asParam, safeDataAccess, isQueryError, safeRowAccess } from "@/utils/supabaseHelpers";
 
 interface AssessmentContextProps {
   assessment: Assessment | null;
@@ -218,12 +219,20 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             console.log("Found data in assessment_responses table:", ratersData);
             
             const processedRaters = safeDataFilter(ratersData).map(rater => {
+              const safeRater = safeRowAccess(rater, {
+                rater_type: RaterType.SELF,
+                email: "",
+                name: "",
+                completed: false,
+                responses: []
+              });
+              
               return {
-                raterType: rater.rater_type as RaterType,
-                email: rater.email || "",
-                name: rater.name || "",
-                completed: rater.completed,
-                responses: rater.responses || []
+                raterType: safeRater.rater_type as RaterType,
+                email: safeRater.email || "",
+                name: safeRater.name || "",
+                completed: safeRater.completed,
+                responses: safeRater.responses || []
               };
             });
             
@@ -277,13 +286,21 @@ export const AssessmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           
           console.log(`Found ${responsesData.length} entries in assessment_responses`);
           
-          const processedRaters = responsesData.map(rater => {
+          const processedRaters = safeDataFilter(responsesData).map(rater => {
+            const safeRater = safeRowAccess(rater, {
+              rater_type: RaterType.SELF,
+              email: "",
+              name: "",
+              completed: false,
+              responses: []
+            });
+            
             return {
-              raterType: rater.rater_type as RaterType,
-              email: rater.email || "",
-              name: rater.name || "",
-              completed: rater.completed,
-              responses: rater.responses || []
+              raterType: safeRater.rater_type as RaterType,
+              email: safeRater.email || "",
+              name: safeRater.name || "",
+              completed: safeRater.completed,
+              responses: safeRater.responses || []
             };
           });
           
