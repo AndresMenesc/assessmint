@@ -13,12 +13,22 @@ import { useAssessment } from "@/contexts/AssessmentContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { RaterType, Assessment, AssessmentResponse, DimensionScore } from "@/types/assessment";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, LogOut, Mail, Search, User, CalendarDays, FileBarChart } from "lucide-react";
+import { AlertTriangle, ArrowLeft, LogOut, Mail, Search, User, CalendarDays, FileBarChart, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { calculateAllResults } from "@/utils/calculateAllResults";
 import IndividualResponses from "@/components/admin/IndividualResponses";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const ResultsPage = () => {
   const { assessment, getResults } = useAssessment();
@@ -34,6 +44,9 @@ const ResultsPage = () => {
   const [selfResults, setSelfResults] = useState<DimensionScore[] | null>(null);
   const [rater1Results, setRater1Results] = useState<DimensionScore[] | null>(null);
   const [rater2Results, setRater2Results] = useState<DimensionScore[] | null>(null);
+  
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [assessmentToDelete, setAssessmentToDelete] = useState<Assessment | null>(null);
   
   useEffect(() => {
     const fetchAssessments = async () => {
@@ -236,6 +249,59 @@ const ResultsPage = () => {
     navigate("/");
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!assessmentToDelete) return;
+    
+    try {
+      setLoading(true);
+      
+      const { error: responsesError } = await supabase
+        .from('assessment_responses')
+        .delete()
+        .eq('assessment_id', assessmentToDelete.id);
+        
+      if (responsesError) {
+        throw responsesError;
+      }
+      
+      await supabase
+        .from('results')
+        .delete()
+        .eq('assessment_id', assessmentToDelete.id);
+      
+      const { error: assessmentError } = await supabase
+        .from('assessments')
+        .delete()
+        .eq('id', assessmentToDelete.id);
+        
+      if (assessmentError) {
+        throw assessmentError;
+      }
+      
+      setAssessments(assessments.filter(a => a.id !== assessmentToDelete.id));
+      
+      if (selectedAssessment?.id === assessmentToDelete.id) {
+        const remainingAssessments = assessments.filter(a => a.id !== assessmentToDelete.id);
+        setSelectedAssessment(remainingAssessments.length > 0 ? remainingAssessments[0] : null);
+      }
+      
+      toast.success("Assessment deleted successfully");
+      
+    } catch (error) {
+      console.error("Error deleting assessment:", error);
+      toast.error("Failed to delete assessment");
+    } finally {
+      setDeleteDialogOpen(false);
+      setAssessmentToDelete(null);
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (assessment: Assessment) => {
+    setAssessmentToDelete(assessment);
+    setDeleteDialogOpen(true);
+  };
+
   const renderRaterDetails = (assessment: Assessment, raterType: RaterType) => {
     const rater = assessment.raters.find(r => r.raterType === raterType);
     if (!rater) return null;
@@ -436,14 +502,26 @@ const ResultsPage = () => {
                                     </div>
                                   </TableCell>
                                   <TableCell>
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      onClick={() => setSelectedAssessment(a)}
-                                    >
-                                      <FileBarChart className="h-4 w-4 mr-2" />
-                                      View Results
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => setSelectedAssessment(a)}
+                                      >
+                                        <FileBarChart className="h-4 w-4 mr-2" />
+                                        View
+                                      </Button>
+                                      {userRole === "super_admin" && (
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm"
+                                          className="text-destructive hover:bg-destructive/10"
+                                          onClick={() => handleDeleteClick(a)}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               );
@@ -468,9 +546,22 @@ const ResultsPage = () => {
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle>
-                  <div className="flex items-center">
-                    <User className="h-5 w-5 mr-2" />
-                    {selectedAssessment.selfRaterName}'s Assessment
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <User className="h-5 w-5 mr-2" />
+                      {selectedAssessment.selfRaterName}'s Assessment
+                    </div>
+                    {userRole === "super_admin" && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteClick(selectedAssessment)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    )}
                   </div>
                 </CardTitle>
                 <CardDescription>
@@ -614,6 +705,34 @@ const ResultsPage = () => {
           )}
         </div>
       </div>
+      
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Assessment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this assessment?
+              {assessmentToDelete && (
+                <div className="mt-2 font-medium">
+                  {assessmentToDelete.selfRaterName} ({assessmentToDelete.selfRaterEmail})
+                </div>
+              )}
+              <div className="mt-1 text-sm text-destructive">
+                This action cannot be undone. All associated data will be permanently deleted.
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteConfirm}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
