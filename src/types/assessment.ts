@@ -53,6 +53,14 @@ export interface AssessmentResponse extends Response {
   assessment_id: string; // Added for compatibility
 }
 
+// Helper function to convert Response to AssessmentResponse
+export function toAssessmentResponse(response: Response, assessmentId: string): AssessmentResponse {
+  return {
+    ...response,
+    assessment_id: assessmentId
+  };
+}
+
 // Type for assessment result scores
 export interface DimensionScore {
   dimension: string;
@@ -83,7 +91,7 @@ export interface Assessment {
 }
 
 // Type for the assessment response in database format
-export interface AssessmentResponse {
+export interface AssessmentResponseDb {
   id?: string;
   assessment_id: string;
   questionId: string;

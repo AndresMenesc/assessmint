@@ -74,3 +74,10 @@ export function prepareDbResponse(data: any, raterId: string): any {
     id: data.id || undefined
   });
 }
+
+/**
+ * Helper function to prepare database parameters
+ */
+export function asDbParam(data: any): any {
+  return prepareDbObject(data);
+}

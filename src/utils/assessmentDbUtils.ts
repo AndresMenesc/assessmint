@@ -1,23 +1,48 @@
-import { Assessment, RaterResponses, RaterType } from "@/types/assessment";
-import { DbAssessment, DbAssessmentResponse, DbAdminUser } from "@/types/db-types";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { calculateAllResults } from "./calculateAllResults";
+import { RaterType } from "@/types/assessment";
+import { prepareDbObject, prepareResponsesForDb, raterTypeToString } from "./dbTypeHelpers";
 import { Json } from "@/integrations/supabase/types";
-import { 
-  safeQueryData, 
-  safeDataAccess, 
-  isQueryError, 
-  asParam, 
-  safeDataFilter, 
-  safeRowAccess, 
-  asDbParam, 
-  getRowField,
-  getDbFormValues,
-  safePrepareResponses,
-  safeJsonSerialize
-} from "./supabaseHelpers";
-import { prepareDbObject, prepareAssessmentResponse, prepareResponsesForDb, raterTypeToString } from "./dbTypeHelpers";
+
+export function prepareAssessmentResponseData(data: any, assessmentId: string) {
+  return prepareDbObject({
+    assessment_id: assessmentId,
+    rater_type: data.rater_type || data.raterType,
+    email: data.email,
+    name: data.name,
+    completed: data.completed || false,
+    responses: prepareResponsesForDb(data.responses || []),
+  }, {
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    id: undefined
+  });
+}
+
+export function prepareRaterData(data: any, assessmentId: string) {
+  return prepareDbObject({
+    assessment_id: assessmentId,
+    rater_type: data.rater_type || data.raterType,
+    email: data.email,
+    name: data.name,
+    completed: data.completed || false,
+  }, {
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    id: undefined
+  });
+}
+
+export function prepareResponseData(data: any, raterId: string) {
+  return prepareDbObject({
+    rater_id: raterId,
+    question_id: data.questionId,
+    score: data.score,
+  }, {
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    id: undefined
+  });
+}
 
 /**
  * Converts an Assessment object to the format expected by the database
@@ -314,16 +339,7 @@ export const syncAssessmentWithDb = async (assessmentData: Assessment): Promise<
         console.log(`Creating new responses for rater ${rater.raterType}`);
         
         // Create new responses
-        const insertData = prepareDbObject({
-          assessment_id: assessmentData.id,
-          rater_type: raterTypeToString(rater.raterType),
-          responses: safeResponses,
-          completed: rater.completed,
-          email: rater.email || null,
-          name: rater.name || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
+        const insertData = prepareAssessmentResponseData(rater, assessmentData.id);
         
         const { data, error: createError } = await supabase
           .from('assessment_responses')
@@ -373,15 +389,7 @@ export const createAssessmentInDb = async (assessment: Assessment): Promise<bool
       console.log("Adding self-rater responses to DB");
       
       // Create proper DB object with all required fields
-      const insertData = prepareAssessmentResponse({
-        rater_type: raterTypeToString(selfRater.raterType),
-        responses: selfRater.responses || [],
-        completed: selfRater.completed,
-        email: selfRater.email || null,
-        name: selfRater.name || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }, assessment.id);
+      const insertData = prepareAssessmentResponseData(selfRater, assessment.id);
       
       const { data, error: raterError } = await supabase
         .from('assessment_responses')
@@ -470,15 +478,7 @@ export const updateAssessmentInDb = async (assessmentId: string, updates: Partia
           }
         } else {
           // Create new responses
-          const insertData = prepareAssessmentResponse({
-            rater_type: raterTypeToString(rater.raterType),
-            responses: prepareResponsesForDb(safeResponses),
-            completed: rater.completed,
-            email: safeEmail,
-            name: safeName,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }, assessmentId);
+          const insertData = prepareAssessmentResponseData(rater, assessmentId);
           
           const { error: createError } = await supabase
             .from('assessment_responses')

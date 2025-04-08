@@ -211,7 +211,7 @@ const questionsList: Question[] = [
 export const questions = questionsList;
 
 // Function to get all questions
-export function getQuestions(): Question[] {
+export function getQuestions() {
   return questions;
 }
 

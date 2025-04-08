@@ -1,7 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { defaultQuestions } from "@/data/questions";
-import { Question, Section, SubSection } from "@/types/assessment";
+import { Question } from "@/types/assessment";
+import { getQuestions } from "@/data/questions";
 import { toast } from "sonner";
 import { DbQuestion } from "@/types/db-types";
 import { 
@@ -11,8 +10,11 @@ import {
   getDbFormValues 
 } from "./supabaseHelpers";
 
-export const importQuestionsToDb = async (customQuestions: Question[] = []): Promise<void> => {
+export async function importQuestionsToDb(customQuestions: Question[] = []) {
   try {
+    const existingQuestions = await getExistingQuestions();
+    const defaultQuestionsToUse = getQuestions();
+    
     console.log("Importing questions to database...");
     
     // Check if questions already exist in the database
@@ -35,7 +37,7 @@ export const importQuestionsToDb = async (customQuestions: Question[] = []): Pro
       return;
     }
     
-    const questionsToImport = customQuestions.length > 0 ? customQuestions : defaultQuestions;
+    const questionsToImport = customQuestions.length > 0 ? customQuestions : defaultQuestionsToUse;
     
     console.log(`Importing ${questionsToImport.length} questions to the database...`);
     
@@ -68,7 +70,22 @@ export const importQuestionsToDb = async (customQuestions: Question[] = []): Pro
     console.log("Questions imported successfully.");
     
   } catch (error) {
-    console.error("Unexpected error during question import:", error);
+    console.error("Error importing questions to DB:", error);
     toast.error("Error importing questions");
   }
-};
+}
+
+async function getExistingQuestions() {
+  const { data: existingQuestionsData, error: fetchError } = await supabase
+    .from('questions')
+    .select('*')
+    .limit(1);
+    
+  if (fetchError) {
+    console.error("Error checking for existing questions:", fetchError);
+    toast.error("Error importing questions");
+    return [];
+  }
+  
+  return safeDataFilter<DbQuestion>(existingQuestionsData);
+}

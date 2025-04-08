@@ -116,17 +116,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // Set user state and role based on database
-      const userRole = safeDataAccess(safeUserData, 'role') as UserRole;
+      const userRoleValue = safeDataAccess(safeUserData, 'role') as string;
       
       setIsAuthenticated(true);
       setUser({
         id: safeDataAccess(safeUserData, 'id'),
-        role: userRole,
+        role: userRoleValue as UserRole,
         email: safeDataAccess(safeUserData, 'email'),
         name: safeDataAccess(safeUserData, 'name') || safeDataAccess(safeUserData, 'email')
       });
+      
       // Use the as UserRole type assertion
-      setRole(userRole as UserRole);
+      setRole(userRoleValue as UserRole);
       
       return true;
     } catch (error) {
@@ -184,17 +185,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // Set user state and role
-      const userRole = safeDataAccess(safeUserData, 'role') as UserRole;
+      const userRoleValue = safeDataAccess(safeUserData, 'role') as string;
       
       setIsAuthenticated(true);
       setUser({
         id: safeDataAccess(safeUserData, 'id'),
-        role: userRole,
+        role: userRoleValue as UserRole,
         email: safeDataAccess(safeUserData, 'email'),
         name: safeDataAccess(safeUserData, 'name') || safeDataAccess(safeUserData, 'email')
       });
       // Use the as UserRole type assertion
-      setRole(userRole);
+      setRole(userRoleValue as UserRole);
       
       toast.success('Signed in successfully');
     } catch (error) {
@@ -202,6 +203,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       toast.error('An error occurred during sign in');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Login function (alias for backward compatibility)
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      await signIn(email, password);
+      return true;
+    } catch (error) {
+      return false;
     }
   };
 
@@ -226,6 +237,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setLoading(false);
     }
+  };
+
+  // Logout function (alias for backward compatibility)
+  const logout = async (): Promise<void> => {
+    await signOut();
   };
 
   // For assessment login with code
@@ -298,10 +314,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         userCode,
         loading,
         signIn,
-        login: signIn, // Alias for backward compatibility
+        login,
         codeLogin,
         signOut,
-        logout: signOut, // Alias for backward compatibility
+        logout,
         verifySession,
         resetPassword,
         updatePassword
