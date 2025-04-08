@@ -73,7 +73,9 @@ export const supabase = createClient<ExtendedDatabase>(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storage: localStorage
+      storage: localStorage,
+      flowType: 'pkce',
+      redirectTo: getRedirectURL()
     }
   }
 );

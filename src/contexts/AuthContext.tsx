@@ -230,17 +230,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  // Reset password function - Updated to use dynamic redirect URL
+  // Reset password function - Using dynamic redirect URL from client config
   const resetPassword = async (email: string): Promise<boolean> => {
     try {
-      // Get the dynamic redirect URL for the current environment
-      const redirectTo = `${window.location.origin}/login`;
-      
-      console.log("Using redirect URL for password reset:", redirectTo);
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectTo,
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
       
       if (error) {
         console.error("Password reset error:", error);

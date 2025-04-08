@@ -72,12 +72,14 @@ const LoginPage = () => {
     const checkForRecoveryToken = () => {
       const url = new URL(window.location.href);
       const type = url.searchParams.get('type');
+      const token = url.searchParams.get('token');
       
-      if (type === 'recovery') {
-        console.log('Recovery type detected in URL params');
+      if (type === 'recovery' && token) {
+        console.log('Recovery token detected in URL params:', token);
+        setRecoveryToken(token);
         setIsNewPasswordDialogOpen(true);
         toast.success('You can now set your new password');
-        return;
+        return true;
       }
       
       if (window.location.hash) {
@@ -233,25 +235,22 @@ const LoginPage = () => {
     try {
       let success;
       
-      if (recoveryToken) {
-        const { error } = await supabase.auth.updateUser({ 
-          password: values.password 
-        });
-        
-        success = !error;
-        
-        if (error) {
-          console.error("Update password error with token:", error);
-          toast.error(error.message || "Failed to update password");
-        }
-      } else {
-        success = await updatePassword(values.password);
+      const { error } = await supabase.auth.updateUser({ 
+        password: values.password 
+      });
+      
+      success = !error;
+      
+      if (error) {
+        console.error("Update password error:", error);
+        toast.error(error.message || "Failed to update password");
       }
       
       if (success) {
         setIsNewPasswordDialogOpen(false);
         toast.success("Your password has been updated successfully. Please log in.");
         newPasswordForm.reset();
+        setRecoveryToken(null);
         setActiveTab("admin");
       }
     } catch (error) {
