@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Assessment, AssessmentResponse } from "@/types/assessment";
 
@@ -246,3 +247,113 @@ export const syncAssessmentWithDb = async (assessment: Assessment): Promise<Asse
     throw error;
   }
 };
+
+//
+// Export additional assessment operations functions
+//
+
+// Initialize a new assessment
+export const initializeAssessment = async (email: string, name: string, code: string): Promise<Assessment> => {
+  const assessment: Assessment = {
+    id: '', // will be set by the database
+    selfRaterEmail: email,
+    selfRaterName: name,
+    code: code,
+    raters: [],
+    completed: false,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+  
+  return await syncAssessmentWithDb(assessment);
+};
+
+// Initialize a rater assessment
+export const initializeRaterAssessment = async (email: string, name: string, code: string) => {
+  const assessment = await fetchAssessmentByCode(code);
+  if (!assessment) {
+    throw new Error("Assessment not found");
+  }
+  return { assessment };
+};
+
+// Add a new rater to an assessment
+export const addRater = (assessment: Assessment, email: string, name: string, raterType: string) => {
+  const updatedAssessment = {
+    ...assessment,
+    raters: [
+      ...assessment.raters,
+      {
+        raterType,
+        email,
+        name,
+        responses: [],
+        completed: false
+      }
+    ]
+  };
+  
+  return updatedAssessment;
+};
+
+// Update a response in the assessment
+export const updateResponse = (assessment: Assessment, raterType: string, questionId: string, score: number) => {
+  const updatedAssessment = {
+    ...assessment,
+    raters: assessment.raters.map(r => {
+      if (r.raterType === raterType) {
+        const existingResponseIndex = r.responses.findIndex(resp => resp.questionId === questionId);
+        if (existingResponseIndex >= 0) {
+          r.responses[existingResponseIndex].score = score;
+        } else {
+          r.responses.push({ questionId, score });
+        }
+      }
+      return r;
+    })
+  };
+  
+  return { updatedAssessment };
+};
+
+// Complete an assessment for a rater
+export const completeAssessment = (assessment: Assessment, raterType: string) => {
+  const updatedAssessment = {
+    ...assessment,
+    raters: assessment.raters.map(r => {
+      if (r.raterType === raterType) {
+        return { ...r, completed: true };
+      }
+      return r;
+    })
+  };
+  
+  return updatedAssessment;
+};
+
+// Fetch questions from the database
+export const fetchQuestions = async (): Promise<Question[]> => {
+  try {
+    const { data: questionsData, error } = await supabase
+      .from('questions')
+      .select('*');
+      
+    if (error) {
+      console.error("Error fetching questions:", error);
+      return [];
+    }
+    
+    return safeDataFilter(questionsData).map(q => ({
+      id: q.id,
+      text: q.text,
+      section: q.section as Section,
+      subSection: q.sub_section as SubSection,
+      isReversed: q.is_reversed,
+      negativeScore: q.negative_score
+    }));
+  } catch (error) {
+    console.error("Error fetching questions:", error);
+    return [];
+  }
+};
+

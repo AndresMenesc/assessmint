@@ -1,4 +1,3 @@
-
 export enum RaterType {
   SELF = "self",
   RATER1 = "rater1",
@@ -29,8 +28,12 @@ export enum SubSection {
 }
 
 export interface AssessmentResponse {
+  id?: string;
+  assessment_id?: string;
   questionId: string;
   score: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface RaterResponses {
