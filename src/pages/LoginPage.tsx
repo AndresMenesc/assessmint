@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -52,6 +52,15 @@ const LoginPage = () => {
   const [activeTab, setActiveTab] = useState<"user" | "admin">("user");
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isResetEmailSent, setIsResetEmailSent] = useState(false);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const type = url.searchParams.get('type');
+    
+    if (type === 'recovery') {
+      toast.success('You can now set your new password');
+    }
+  }, []);
 
   const userForm = useForm<z.infer<typeof userFormSchema>>({
     resolver: zodResolver(userFormSchema),
@@ -409,7 +418,6 @@ const LoginPage = () => {
         </Card>
       </div>
 
-      {/* Password Reset Dialog */}
       <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
