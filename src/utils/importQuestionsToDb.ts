@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Question, Section, SubSection } from "@/types/assessment";
 
-import { safeQueryData, isQueryError, asParam } from "./supabaseHelpers";
+import { safeQueryData, isQueryError, asParam, safeDataFilter } from "./supabaseHelpers";
 
 export const fetchAllQuestions = async (): Promise<Question[]> => {
   try {
@@ -16,7 +16,7 @@ export const fetchAllQuestions = async (): Promise<Question[]> => {
     }
 
     // Convert database format to our Question type format
-    return questions.map(q => ({
+    return safeDataFilter(questions).map(q => ({
       id: q.id,
       text: q.text,
       section: q.section as Section,
@@ -30,9 +30,9 @@ export const fetchAllQuestions = async (): Promise<Question[]> => {
   }
 };
 
-export const importQuestionsToDb = async (questions: Question[]) => {
+export const importQuestionsToDb = async (questions: Question[] = []) => {
   try {
-    if (!questions || questions.length === 0) {
+    if (questions.length === 0) {
       // If no questions provided, use the ones from the data file
       const { questions: defaultQuestions } = await import("../data/questions");
       questions = defaultQuestions;
