@@ -3,29 +3,15 @@ import * as React from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { cn } from "@/lib/utils";
 
-// Create a DirectionProvider component to wrap the Tabs
-const TabsDirectionContext = React.createContext({ dir: "ltr" });
-
-const TabsDirectionProvider = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <TabsDirectionContext.Provider value={{ dir: "ltr" }}>
-      {children}
-    </TabsDirectionContext.Provider>
-  );
-};
-
-// Use a forwardRef to ensure the ref is properly passed down
 const Tabs = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root>
 >(({ className, ...props }, ref) => (
-  <TabsDirectionProvider>
-    <TabsPrimitive.Root
-      ref={ref}
-      className={cn(className)}
-      {...props}
-    />
-  </TabsDirectionProvider>
+  <TabsPrimitive.Root
+    ref={ref}
+    className={cn(className)}
+    {...props}
+  />
 ));
 Tabs.displayName = "Tabs";
 
