@@ -374,7 +374,10 @@ const ResultsPage = () => {
             </CardHeader>
             <CardContent>
               {rater1Results ? (
-                <DimensionChart scores={rater1Results} />
+                <>
+                  <DimensionChart scores={rater1Results} />
+                  <CoachabilityChart scores={rater1Results} />
+                </>
               ) : (
                 <div className="text-center py-8">Loading rater 1 assessment results...</div>
               )}
@@ -396,7 +399,10 @@ const ResultsPage = () => {
             </CardHeader>
             <CardContent>
               {rater2Results ? (
-                <DimensionChart scores={rater2Results} />
+                <>
+                  <DimensionChart scores={rater2Results} />
+                  <CoachabilityChart scores={rater2Results} />
+                </>
               ) : (
                 <div className="text-center py-8">Loading rater 2 assessment results...</div>
               )}

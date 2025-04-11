@@ -100,24 +100,24 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         }
       ];
       
-      // If this is the self rater, add coachability score
+      // Calculate coachability score for all rater types, not just self
+      const coachabilityScore = calculateCoachabilityScore(rater.responses);
+      dimensionScores.push({
+        name: "Coachability", 
+        score: coachabilityScore, 
+        min: 10, 
+        max: 50,
+        color: getCoachabilityColor(coachabilityScore)
+      });
+      
+      // Store coachability in raw scores
+      rawScores = {
+        ...rawScores,
+        coachabilityScore
+      };
+      
+      // Determine profile type
       if (rater.raterType === 'self') {
-        const coachabilityScore = calculateCoachabilityScore(rater.responses);
-        dimensionScores.push({
-          name: "Coachability", 
-          score: coachabilityScore, 
-          min: 10, 
-          max: 50,
-          color: getCoachabilityColor(coachabilityScore)
-        });
-        
-        // Store coachability in raw scores
-        rawScores = {
-          ...rawScores,
-          coachabilityScore
-        };
-        
-        // Determine profile type
         profileType = determineProfileType(
           esteemScore,
           trustScore,

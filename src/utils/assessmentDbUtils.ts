@@ -1,4 +1,3 @@
-
 import { Assessment, RaterResponses, RaterType } from "@/types/assessment";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -442,7 +441,7 @@ export const saveAssessmentResults = async (assessment: Assessment) => {
       .from('results')
       .upsert({
         assessment_id: assessment.id,
-        dimension_scores: results.dimensionScores,
+        dimension_scores: JSON.parse(JSON.stringify(results.dimensionScores)),
         self_awareness: results.selfAwareness,
         coachability_awareness: results.coachabilityAwareness,
         profile_type: results.profileType
