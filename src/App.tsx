@@ -25,8 +25,8 @@ import RaterStartPage from "./pages/RaterStartPage";
 
 const queryClient = new QueryClient();
 
-// The AppContent component handles the routing and database setup
-const AppContent = () => {
+// The DatabaseInitializer component handles database setup
+const DatabaseInitializer = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Create the database tables and initialize data
     const setupDatabase = async () => {
@@ -54,6 +54,11 @@ const AppContent = () => {
     setupDatabase();
   }, []);
 
+  return <>{children}</>;
+};
+
+// The AppRoutes component handles the routing
+const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
@@ -94,17 +99,19 @@ const AppContent = () => {
   );
 };
 
-// The App component structure ensures that the AssessmentProvider wraps all routes
-// IMPORTANT: The order of providers matters! AuthProvider must wrap AssessmentProvider
+// The App component structure ensures that the providers are properly ordered
+// IMPORTANT: All providers are now at the same level to avoid nesting issues
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <BrowserRouter>
         <AuthProvider>
           <AssessmentProvider>
-            <AppContent />
-            <Toaster />
-            <Sonner />
+            <DatabaseInitializer>
+              <AppRoutes />
+              <Toaster />
+              <Sonner />
+            </DatabaseInitializer>
           </AssessmentProvider>
         </AuthProvider>
       </BrowserRouter>
