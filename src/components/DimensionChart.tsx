@@ -185,7 +185,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
 
         {/* Dimension name (shifted further left) */}
         <text
-          x={-40}
+          x={-35}
           y={0}
           dy={3}
           textAnchor="end"
