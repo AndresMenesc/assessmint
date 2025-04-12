@@ -1,3 +1,4 @@
+
 export enum RaterType {
   SELF = "self",
   RATER1 = "rater1",
@@ -61,8 +62,13 @@ export interface Question {
 }
 
 export interface DimensionScore {
-  dimension: string;
-  score: number;
+  dimension?: string;
+  name?: string;
+  score?: number;
+  selfScore?: number;
+  othersScore?: number;
+  rater1Score?: number;
+  rater2Score?: number;
   min: number;
   max: number;
   color: string;

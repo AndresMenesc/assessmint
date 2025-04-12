@@ -17,9 +17,13 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
     // Find self rater and other raters
     const selfRater = raters.find(r => r.raterType === 'self');
     const otherRaters = raters.filter(r => r.raterType !== 'self' && r.completed);
+    const rater1 = raters.find(r => r.raterType === 'rater1' && r.completed);
+    const rater2 = raters.find(r => r.raterType === 'rater2' && r.completed);
     
     console.log("Self rater:", selfRater);
     console.log("Other raters:", otherRaters);
+    console.log("Rater 1:", rater1);
+    console.log("Rater 2:", rater2);
     
     // For individual results, we might be calculating for a single rater
     const isSingleRaterMode = raters.length === 1;
@@ -156,6 +160,21 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         problemResolutionScore
       };
       
+      // Calculate coachability score for self
+      const selfCoachabilityScore = calculateCoachabilityScore(selfRater.responses);
+      
+      // Calculate coachability scores for rater1 and rater2 if available
+      let rater1CoachabilityScore = 0;
+      let rater2CoachabilityScore = 0;
+      
+      if (rater1 && rater1.responses && rater1.responses.length > 0) {
+        rater1CoachabilityScore = calculateCoachabilityScore(rater1.responses);
+      }
+      
+      if (rater2 && rater2.responses && rater2.responses.length > 0) {
+        rater2CoachabilityScore = calculateCoachabilityScore(rater2.responses);
+      }
+      
       // Calculate average scores from other raters
       let otherEsteemTotal = 0;
       let otherTrustTotal = 0;
@@ -257,14 +276,16 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         coachabilityScore
       };
       
-      // Add coachability score to dimension scores
+      // Add coachability score to dimension scores - now with individual rater scores
       dimensionScores.push({
         name: "Coachability", 
-        selfScore: coachabilityScore, 
-        othersScore: 0, // Others don't rate coachability
+        selfScore: selfCoachabilityScore,
+        rater1Score: rater1CoachabilityScore, 
+        rater2Score: rater2CoachabilityScore,
+        othersScore: 0, // This is no longer used, but kept for backwards compatibility
         min: 10, 
         max: 50,
-        color: getCoachabilityColor(coachabilityScore)
+        color: getCoachabilityColor(selfCoachabilityScore)
       });
       
       // Determine profile type based on actual scores

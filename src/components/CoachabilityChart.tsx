@@ -10,7 +10,8 @@ import {
   Cell,
   ReferenceLine,
   Tooltip,
-  LabelList
+  LabelList,
+  Legend
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -29,8 +30,9 @@ const CustomTooltip = ({ active, payload }: any) => {
           <p>Score: {data.score}</p>
         ) : (
           <>
-            <p>Self Score: {data.selfScore}</p>
-            <p>Others Score: {data.othersScore}</p>
+            {data.selfScore !== undefined && <p>Self Score: {data.selfScore}</p>}
+            {data.rater1Score !== undefined && <p>Rater 1 Score: {data.rater1Score}</p>}
+            {data.rater2Score !== undefined && <p>Rater 2 Score: {data.rater2Score}</p>}
           </>
         )}
         <p className="text-xs text-gray-500">
@@ -74,26 +76,28 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
       highLabel: "receptive",
     });
   } else {
-    // aggregator with self + others
+    // aggregated view with self, rater1, and rater2 scores
     const c = coachabilityScore as any;
     const selfRawScore = Math.round(c.selfScore);
-    const othersRawScore = Math.round(c.othersScore);
+    
+    // Instead of aggregating all others, get individual rater scores
+    // Extract rater scores from assessmentContext results if available
+    // Default to 0 if not available
+    const rater1RawScore = c.rater1Score ? Math.round(c.rater1Score) : 0;
+    const rater2RawScore = c.rater2Score ? Math.round(c.rater2Score) : 0;
     
     chartData.push({
       dimension: "Coachability",
       selfScore: selfRawScore,
-      othersScore: othersRawScore,
+      rater1Score: rater1RawScore,
+      rater2Score: rater2RawScore,
       // color logic for each
-      selfColor:
-        selfRawScore <= 30 ? "#ef4444" : selfRawScore <= 40 ? "#eab308" : "#22c55e",
-      othersColor:
-        othersRawScore <= 30
-          ? "#ef4444"
-          : othersRawScore <= 40
-            ? "#eab308"
-            : "#22c55e",
+      selfColor: selfRawScore <= 30 ? "#ef4444" : selfRawScore <= 40 ? "#eab308" : "#22c55e",
+      rater1Color: rater1RawScore <= 30 ? "#ef4444" : rater1RawScore <= 40 ? "#eab308" : "#22c55e",
+      rater2Color: rater2RawScore <= 30 ? "#ef4444" : rater2RawScore <= 40 ? "#eab308" : "#22c55e",
       normalizedSelfScore: ((selfRawScore - 10) / 40) * 100,
-      normalizedOthersScore: ((othersRawScore - 10) / 40) * 100,
+      normalizedRater1Score: ((rater1RawScore - 10) / 40) * 100,
+      normalizedRater2Score: ((rater2RawScore - 10) / 40) * 100,
       min: 10,
       max: 50,
       lowLabel: "resistant",
@@ -165,7 +169,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
         <CardTitle>Coachability Score</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={150}>
+        <ResponsiveContainer width="100%" height={180}>
           <BarChart data={chartData} layout="vertical" margin={chartMargins}>
             <XAxis
               type="number"
@@ -206,12 +210,12 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                 />
               </Bar>
             ) : (
-              // Aggregated (self + others) stacked
+              // Three separate bars for self, rater1, and rater2
               <>
                 <Bar
+                  name="Self"
                   dataKey="normalizedSelfScore"
                   barSize={20}
-                  stackId="coachStack"
                 >
                   {chartData.map((entry, idx) => (
                     <Cell key={idx} fill={entry.selfColor} />
@@ -224,22 +228,43 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                     offset={5}
                   />
                 </Bar>
-                <Bar
-                  dataKey="normalizedOthersScore"
-                  barSize={20}
-                  stackId="coachStack"
-                >
-                  {chartData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.othersColor} opacity={0.7} />
-                  ))}
-                  <LabelList
-                    dataKey="othersScore"
-                    position="right"
-                    formatter={(val: number) => Math.round(val)}
-                    style={labelStyle}
-                    offset={25}
-                  />
-                </Bar>
+                {chartData[0].rater1Score > 0 && (
+                  <Bar
+                    name="Rater 1"
+                    dataKey="normalizedRater1Score"
+                    barSize={20}
+                  >
+                    {chartData.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.rater1Color} opacity={0.8} />
+                    ))}
+                    <LabelList
+                      dataKey="rater1Score"
+                      position="right"
+                      formatter={(val: number) => Math.round(val)}
+                      style={labelStyle}
+                      offset={25}
+                    />
+                  </Bar>
+                )}
+                {chartData[0].rater2Score > 0 && (
+                  <Bar
+                    name="Rater 2"
+                    dataKey="normalizedRater2Score"
+                    barSize={20}
+                  >
+                    {chartData.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.rater2Color} opacity={0.6} />
+                    ))}
+                    <LabelList
+                      dataKey="rater2Score"
+                      position="right"
+                      formatter={(val: number) => Math.round(val)}
+                      style={labelStyle}
+                      offset={45}
+                    />
+                  </Bar>
+                )}
+                <Legend verticalAlign="bottom" height={36} />
               </>
             )}
           </BarChart>
