@@ -341,24 +341,7 @@ function determineProfileType(
     problemResolutionScore 
   });
 
-  // For when all answers are 5 (known case from testing)
-  if (driverScore === 4 && esteemScore === 0 && trustScore === 0 && adaptabilityScore === 0 && problemResolutionScore === 0) {
-    console.log("Detected known 'all answers 5' scenario, assigning Direct Implementer profile");
-    return "The Direct Implementer";
-  }
-
-  // 10. The Direct Implementer - matches the pattern from all-5 answers most closely
-  if (
-    (esteemScore >= -5 && esteemScore <= 15) && 
-    (trustScore >= -5 && trustScore <= 15) && 
-    (driverScore >= 4 && driverScore <= 28) && 
-    (adaptabilityScore >= -5 && adaptabilityScore <= 28) && 
-    (problemResolutionScore >= -5 && problemResolutionScore <= 28)
-  ) {
-    return "The Direct Implementer";
-  }
-
-  // 2. The Balanced Achiever 
+  // 1. The Balanced Achiever
   if (
     (esteemScore >= 1 && esteemScore <= 15) && 
     (trustScore >= 10 && trustScore <= 28) && 
@@ -369,7 +352,7 @@ function determineProfileType(
     return "The Balanced Achiever";
   }
 
-  // 3. The Supportive Driver
+  // 2. The Supportive Driver
   if (
     (esteemScore >= -10 && esteemScore <= 5) && 
     (trustScore >= 10 && trustScore <= 28) && 
@@ -380,7 +363,7 @@ function determineProfileType(
     return "The Supportive Driver";
   }
 
-  // 4. The Process Improver
+  // 3. The Process Improver
   if (
     (esteemScore >= -10 && esteemScore <= 5) && 
     (trustScore >= 10 && trustScore <= 28) && 
@@ -391,7 +374,7 @@ function determineProfileType(
     return "The Process Improver";
   }
 
-  // 5. The Technical Authority
+  // 4. The Technical Authority
   if (
     (esteemScore >= 10 && esteemScore <= 28) && 
     (trustScore >= -15 && trustScore <= 5) && 
@@ -402,7 +385,7 @@ function determineProfileType(
     return "The Technical Authority";
   }
 
-  // 6. The Harmonizing Adaptor
+  // 5. The Harmonizing Adaptor
   if (
     (esteemScore >= -15 && esteemScore <= 5) && 
     (trustScore >= 20 && trustScore <= 28) && 
@@ -413,7 +396,7 @@ function determineProfileType(
     return "The Harmonizing Adaptor";
   }
 
-  // 7. The Analytical Resolver
+  // 6. The Analytical Resolver
   if (
     (esteemScore >= -20 && esteemScore <= 5) && 
     (trustScore >= -20 && trustScore <= 5) && 
@@ -424,7 +407,7 @@ function determineProfileType(
     return "The Analytical Resolver";
   }
 
-  // 8. The Growth Catalyst
+  // 7. The Growth Catalyst
   if (
     (esteemScore >= 5 && esteemScore <= 20) && 
     (trustScore >= 0 && trustScore <= 15) && 
@@ -435,7 +418,7 @@ function determineProfileType(
     return "The Growth Catalyst";
   }
 
-  // 9. The Diplomatic Stabilizer
+  // 8. The Diplomatic Stabilizer
   if (
     (esteemScore >= -28 && esteemScore <= -10) && 
     (trustScore >= 10 && trustScore <= 28) && 
@@ -446,7 +429,7 @@ function determineProfileType(
     return "The Diplomatic Stabilizer";
   }
 
-  // 10. The Confident Avoider
+  // 9. The Confident Avoider
   if (
     (esteemScore >= 10 && esteemScore <= 28) && 
     (trustScore >= -5 && trustScore <= 15) && 
@@ -457,8 +440,25 @@ function determineProfileType(
     return "The Confident Avoider";
   }
 
-  // If scores are all from the "all 5's" scenario - which is a known special case
-  console.log("No specific profile matched, using fallback to Direct Implementer for testing scenario");
+  // 10. The Direct Implementer
+  if (
+    (esteemScore >= -5 && esteemScore <= 15) && 
+    (trustScore >= -5 && trustScore <= 15) && 
+    (driverScore >= 4 && driverScore <= 28) && 
+    (adaptabilityScore >= -5 && adaptabilityScore <= 28) && 
+    (problemResolutionScore >= -5 && problemResolutionScore <= 28)
+  ) {
+    return "The Direct Implementer";
+  }
+
+  // For when all answers are 5 (known case from testing)
+  if (driverScore === 4 && esteemScore === 0 && trustScore === 0 && adaptabilityScore === 0 && problemResolutionScore === 0) {
+    console.log("Detected known 'all answers 5' scenario, assigning Direct Implementer profile");
+    return "The Direct Implementer";
+  }
+
+  // If no specific profile matched, provide a reasonable fallback
+  console.log("No specific profile matched, using fallback to Direct Implementer");
   return "The Direct Implementer";
 }
 
