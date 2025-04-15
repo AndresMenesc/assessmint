@@ -277,12 +277,12 @@ export function determineProfileType(
   }
 
   if (esteem === 'Low' && trust === 'Neutral' && drive === 'High' && 
-      adaptability === 'Neutral' && problemResolution === 'Direct') {
+      adaptability === 'Balanced' && problemResolution === 'Direct') {
     return 'The Modest Driven Direct';
   }
 
   if (esteem === 'High' && trust === 'Neutral' && drive === 'Low' && 
-      adaptability === 'High Precision' && problemResolution === 'Neutral') {
+      adaptability === 'High Precision' && problemResolution === 'Balanced') {
     return 'The Confident Reserved Precise';
   }
 
@@ -292,7 +292,7 @@ export function determineProfileType(
   }
 
   if (esteem === 'Neutral' && trust === 'Neutral' && drive === 'Low' && 
-      adaptability === 'High Flexibility' && problemResolution === 'Neutral') {
+      adaptability === 'High Flexibility' && problemResolution === 'Balanced') {
     return 'The Highly Flexible Reserved';
   }
 
