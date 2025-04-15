@@ -1,4 +1,3 @@
-
 import { AssessmentResponse, Question, RaterResponses, RaterType, Section } from "../types/assessment";
 import { questions } from "../data/questions";
 
@@ -194,122 +193,126 @@ export function determineProfileType(
   adaptabilityScore: number,
   problemResolutionScore: number
 ): string {
-  console.log("Determining profile with scores:", {
-    esteem: esteemScore,
-    trust: trustScore,
-    drive: driverScore,
-    adaptability: adaptabilityScore,
-    problemResolution: problemResolutionScore
+  // Helper function to categorize scores into ranges
+  const categorizeScore = (score: number): 'Low' | 'Neutral' | 'High' => {
+    if (score <= -10) return 'Low';
+    if (score >= 10) return 'High';
+    return 'Neutral';
+  };
+
+  // Helper function to categorize adaptability specifically
+  const categorizeAdaptability = (score: number): 'High Flexibility' | 'Balanced' | 'High Precision' => {
+    if (score <= -10) return 'High Flexibility';
+    if (score >= 10) return 'High Precision';
+    return 'Balanced';
+  };
+
+  // Helper function to categorize problem resolution
+  const categorizeProblemResolution = (score: number): 'Avoidant' | 'Balanced' | 'Direct' => {
+    if (score <= -10) return 'Avoidant';
+    if (score >= 10) return 'Direct';
+    return 'Balanced';
+  };
+
+  // Get categories for each dimension
+  const esteem = categorizeScore(esteemScore);
+  const trust = categorizeScore(trustScore);
+  const drive = categorizeScore(driverScore);
+  const adaptability = categorizeAdaptability(adaptabilityScore);
+  const problemResolution = categorizeProblemResolution(problemResolutionScore);
+
+  // Log the categorizations for debugging
+  console.log('Profile Categories:', {
+    esteem,
+    trust,
+    drive,
+    adaptability,
+    problemResolution
   });
-  
-  // Each profile has specific ranges defined in the documentation
-  
-  // 1. The Balanced Achiever
-  if (esteemScore >= 1 && esteemScore <= 15 && 
-      trustScore >= 10 && trustScore <= 28 && 
-      driverScore >= 10 && driverScore <= 28 && 
-      adaptabilityScore >= -28 && adaptabilityScore <= -5 && // High Flexibility
-      problemResolutionScore >= 15 && problemResolutionScore <= 28) {
-    return "The Balanced Achiever";
+
+  // Match profile patterns
+  if (esteem === 'Neutral' && trust === 'High' && drive === 'High' && 
+      adaptability === 'High Flexibility' && problemResolution === 'Direct') {
+    return 'The Trusting Driven Flexible';
   }
-  
-  // 2. The Supportive Driver
-  if (esteemScore >= -10 && esteemScore <= 5 && 
-      trustScore >= 10 && trustScore <= 28 && 
-      driverScore >= 10 && driverScore <= 28 && 
-      adaptabilityScore >= -15 && adaptabilityScore <= -5 && // Moderate Flexibility
-      problemResolutionScore >= 5 && problemResolutionScore <= 20) {
-    return "The Supportive Driver";
+
+  if (esteem === 'High' && trust === 'Low' && drive === 'Neutral' && 
+      adaptability === 'High Precision' && problemResolution === 'Direct') {
+    return 'The Confident Cautious Precise';
   }
-  
-  // 3. The Process Improver
-  if (esteemScore >= -10 && esteemScore <= 5 && 
-      trustScore >= 10 && trustScore <= 28 && 
-      driverScore >= 0 && driverScore <= 15 && 
-      adaptabilityScore >= 10 && adaptabilityScore <= 28 && // High Precision
-      problemResolutionScore >= 5 && problemResolutionScore <= 15) {
-    return "The Process Improver";
+
+  if (esteem === 'Low' && trust === 'High' && drive === 'Low' && 
+      adaptability === 'Balanced' && problemResolution === 'Avoidant') {
+    return 'The Modest Trusting Reserved';
   }
-  
-  // 4. The Technical Authority
-  if (esteemScore >= 10 && esteemScore <= 28 && 
-      trustScore >= -15 && trustScore <= 5 && 
-      driverScore >= 0 && driverScore <= 15 && 
-      adaptabilityScore >= 10 && adaptabilityScore <= 28 && // High Precision
-      problemResolutionScore >= 15 && problemResolutionScore <= 28) {
-    return "The Technical Authority";
+
+  if (esteem === 'Neutral' && trust === 'Neutral' && drive === 'Neutral' && 
+      adaptability === 'Balanced' && problemResolution === 'Balanced') {
+    return 'The Complete Neutral';
   }
-  
-  // 5. The Harmonizing Adaptor
-  if (esteemScore >= -15 && esteemScore <= 5 && 
-      trustScore >= 20 && trustScore <= 28 && 
-      driverScore >= 0 && driverScore <= 15 && 
-      adaptabilityScore >= -28 && adaptabilityScore <= -10 && // High Flexibility
-      problemResolutionScore >= -5 && problemResolutionScore <= 5) {
-    return "The Harmonizing Adaptor";
+
+  if (esteem === 'Low' && trust === 'Low' && drive === 'Neutral' && 
+      adaptability === 'High Precision' && problemResolution === 'Direct') {
+    return 'The Modest Cautious Precise';
   }
-  
-  // 6. The Analytical Resolver
-  if (esteemScore >= -20 && esteemScore <= 5 && 
-      trustScore >= -20 && trustScore <= 5 && 
-      driverScore >= -28 && driverScore <= -10 && // Low Drive
-      adaptabilityScore >= 20 && adaptabilityScore <= 28 && // Very High Precision
-      problemResolutionScore >= 5 && problemResolutionScore <= 20) {
-    return "The Analytical Resolver";
+
+  if (esteem === 'High' && trust === 'High' && drive === 'Low' && 
+      adaptability === 'High Flexibility' && problemResolution === 'Balanced') {
+    return 'The Confident Trusting Reserved';
   }
-  
-  // 7. The Growth Catalyst
-  if (esteemScore >= 5 && esteemScore <= 20 && 
-      trustScore >= 0 && trustScore <= 15 && 
-      driverScore >= 20 && driverScore <= 28 && // Very High Drive
-      adaptabilityScore >= -28 && adaptabilityScore <= -10 && // High Flexibility
-      problemResolutionScore >= 15 && problemResolutionScore <= 28) {
-    return "The Growth Catalyst";
+
+  if (esteem === 'High' && trust === 'High' && drive === 'High' && 
+      adaptability === 'Balanced' && problemResolution === 'Direct') {
+    return 'The Confident Trusting Direct';
   }
-  
-  // 8. The Diplomatic Stabilizer
-  if (esteemScore >= -28 && esteemScore <= -10 && // Low Esteem
-      trustScore >= 10 && trustScore <= 28 && 
-      driverScore >= -20 && driverScore <= 5 && 
-      adaptabilityScore >= 5 && adaptabilityScore <= 15 && // Moderate Precision
-      problemResolutionScore >= -15 && problemResolutionScore <= 5) {
-    return "The Diplomatic Stabilizer";
+
+  if (esteem === 'Low' && trust === 'Neutral' && drive === 'Neutral' && 
+      adaptability === 'High Precision' && problemResolution === 'Balanced') {
+    return 'The Modest Precise Balanced';
   }
-  
-  // 9. The Confident Avoider
-  if (esteemScore >= 10 && esteemScore <= 28 && 
-      trustScore >= -5 && trustScore <= 15 && 
-      driverScore >= 5 && driverScore <= 20 && 
-      adaptabilityScore >= -10 && adaptabilityScore <= 10 && // Moderate Flexibility/Precision
-      problemResolutionScore >= -28 && problemResolutionScore <= -15) { // Low Direct Problem Resolution
-    return "The Confident Avoider";
+
+  if (esteem === 'Neutral' && trust === 'Low' && drive === 'Neutral' && 
+      adaptability === 'High Flexibility' && problemResolution === 'Avoidant') {
+    return 'The Cautious Flexible Avoider';
   }
-  
-  // 10. The Direct Implementer
-  if (esteemScore >= -5 && esteemScore <= 15 && 
-      trustScore >= -5 && trustScore <= 15 && 
-      driverScore >= 10 && driverScore <= 28 && 
-      adaptabilityScore >= 10 && adaptabilityScore <= 28 && // High Precision
-      problemResolutionScore >= 20 && problemResolutionScore <= 28) { // Very High Direct Problem Resolution
-    return "The Direct Implementer";
+
+  if (esteem === 'Low' && trust === 'Neutral' && drive === 'High' && 
+      adaptability === 'Neutral' && problemResolution === 'Direct') {
+    return 'The Modest Driven Direct';
   }
-  
-  // If scores are all maximum (which happens when all answers are 5)
-  // This is a special case for testing - all 5's would likely result in:
-  // High esteem, high trust, high drive, high precision, high problem resolution
-  if (esteemScore > 20 || trustScore > 20 || driverScore > 20 || 
-      adaptabilityScore > 20 || problemResolutionScore > 20) {
-    console.log("Detected very high scores, likely from all 5s test data");
-    if (adaptabilityScore > 0) { // High precision
-      return "The Direct Implementer";
-    } else { // High flexibility
-      return "The Growth Catalyst";
-    }
+
+  if (esteem === 'High' && trust === 'Neutral' && drive === 'Low' && 
+      adaptability === 'High Precision' && problemResolution === 'Neutral') {
+    return 'The Confident Reserved Precise';
   }
-  
-  // Default profile if no specific match is found
-  console.log("No specific profile matched, returning default");
-  return "The Balanced Achiever";
+
+  if (esteem === 'Neutral' && trust === 'Low' && drive === 'Neutral' && 
+      adaptability === 'Balanced' && problemResolution === 'Balanced') {
+    return 'The Low Trust Balanced Profile';
+  }
+
+  if (esteem === 'Neutral' && trust === 'Neutral' && drive === 'Low' && 
+      adaptability === 'High Flexibility' && problemResolution === 'Neutral') {
+    return 'The Highly Flexible Reserved';
+  }
+
+  if (esteem === 'High' && trust === 'High' && drive === 'High' && 
+      adaptability === 'High Precision' && problemResolution === 'Direct') {
+    return 'The Triply High Direct';
+  }
+
+  if (esteem === 'Low' && trust === 'Low' && drive === 'Low' && 
+      adaptability === 'High Flexibility' && problemResolution === 'Avoidant') {
+    return 'The Triply Low Avoider';
+  }
+
+  if (esteem === 'High' && trust === 'Low' && drive === 'High' && 
+      adaptability === 'High Flexibility' && problemResolution === 'Avoidant') {
+    return 'The Mixed Extreme';
+  }
+
+  // If no match is found
+  return 'No Profile Defined';
 }
 
 export function calculateAllResults(assessment: RaterResponses[]): {

@@ -18,104 +18,174 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
   const [showDebug, setShowDebug] = useState(false);
   
   const profiles: Record<string, { summary: string; traits: string[] }> = {
-    "The Balanced Achiever": {
-      summary: "Balanced, Proactive, Transparent",
+    "The Trusting Driven Flexible": {
+      summary: "Balanced, Growth-Oriented, Adaptable",
       traits: [
-        "Balances confidence with appropriate humility",
-        "Actively pursues practice growth with collaborative approach", 
-        "Adapts to changes while maintaining core standards",
-        "Directly addresses issues as they arise without delay",
-        "Takes ownership of mistakes and works toward solutions"
+        "Shows balanced self-confidence without excessive pride",
+        "Highly trusting of others and values diverse input",
+        "Actively pursues growth opportunities",
+        "Adapts quickly to change with big-picture focus",
+        "Addresses problems immediately and takes ownership"
       ]
     },
-    "The Supportive Driver": {
-      summary: "Diligent, Collaborative, Forthright",
+    "The Confident Cautious Precise": {
+      summary: "Confident, Precise, Direct",
       traits: [
-        "Pursues results without seeking personal recognition",
-        "Builds strong team relationships based on trust",
-        "Addresses problems directly but with team consideration", 
-        "Drives business development with collaborative approach",
-        "Handles difficult conversations with tact but directness"
+        "Confident in abilities and expertise",
+        "Skeptical and independently verifies information",
+        "Balances promotion with quality focus",
+        "Values structure and methodical approaches",
+        "Takes ownership of difficult situations"
       ]
     },
-    "The Process Improver": {
-      summary: "Methodical, Inclusive, Systematic",
+    "The Modest Trusting Reserved": {
+      summary: "Modest, Trusting, Cautious",
       traits: [
-        "Creates reliable systems with collaborative input",
-        "Addresses systemic issues rather than symptoms",
-        "Methodically analyzes problems before implementing solutions",
-        "Builds consensus while maintaining progress momentum", 
-        "Documents issues and solutions thoroughly for future reference"
+        "Tends to downplay achievements",
+        "Highly trusting and values diverse input",
+        "Prefers organic growth approaches",
+        "Balances flexibility with attention to detail",
+        "May delay addressing difficult situations"
       ]
     },
-    "The Technical Authority": {
-      summary: "Expert, Precise, Straightforward",
+    "The Complete Neutral": {
+      summary: "Balanced, Measured, Adaptable",
       traits: [
-        "Confidently addresses technical and medical problems",
-        "Maintains high standards with direct feedback",
-        "Confronts issues promptly with evidence-based approaches",
-        "Independently verifies information before acting",
-        "Communicates difficult information clearly and directly"
+        "Shows balanced self-confidence",
+        "Maintains healthy skepticism while being open",
+        "Balances promotion with quality focus",
+        "Flexible while maintaining attention to detail",
+        "Balances problem-solving with relationships"
       ]
     },
-    "The Harmonizing Adaptor": {
-      summary: "Flexible, Diplomatic, Accommodating",
+    "The Modest Cautious Precise": {
+      summary: "Detail-Oriented, Cautious, Direct",
       traits: [
-        "Adapts readily to changing practice needs",
-        "Addresses problems with diplomacy and tact", 
-        "Balances direct resolution with relationship preservation",
-        "Collaborates to find consensus-based solutions",
-        "Adjusts approach based on situation and stakeholders"
+        "May second-guess decisions",
+        "Skeptical and independently verifies",
+        "Focuses on quality work",
+        "Values structure and methodology",
+        "Addresses problems immediately"
       ]
     },
-    "The Analytical Resolver": {
-      summary: "Thorough, Cautious, Deliberate",
+    "The Confident Trusting Reserved": {
+      summary: "Confident, Collaborative, Flexible",
       traits: [
-        "Methodically analyzes problems before addressing them",
-        "Directly confronts issues but only after thorough research",
-        "Maintains detailed documentation of issues and resolutions", 
-        "Prefers evidence-based approaches to problem-solving",
-        "Communicates findings and concerns with precision"
+        "Confident and comfortable with expertise",
+        "Highly trusting and delegates readily",
+        "Prefers organic growth approaches",
+        "Adapts quickly to change",
+        "Balances directness with relationships"
       ]
     },
-    "The Growth Catalyst": {
-      summary: "Ambitious, Action-Oriented, Straightforward",
+    "The Confident Trusting Direct": {
+      summary: "Confident, Social, Direct",
       traits: [
-        "Aggressively pursues growth opportunities",
-        "Addresses problems immediately without hesitation", 
-        "Initiates difficult conversations when necessary for progress",
-        "Adapts quickly to changing circumstances",
-        "Takes ownership of challenges and drives toward solutions"
+        "Highly confident in abilities",
+        "Trusting and builds strong connections",
+        "Actively pursues growth",
+        "Balances structure with flexibility",
+        "Addresses problems while maintaining relationships"
       ]
     },
-    "The Diplomatic Stabilizer": {
-      summary: "Cautious, Harmonious, Gradual",
+    "The Modest Precise Balanced": {
+      summary: "Detail-Oriented, Measured, Balanced",
       traits: [
-        "Builds strong relationships with team and clients",
-        "Addresses issues gradually with focus on maintaining harmony", 
-        "May temporarily minimize problems to preserve relationships",
-        "Takes time to consider all perspectives before addressing issues",
-        "Prefers private conversations to public confrontation"
+        "Downplays personal achievements",
+        "Maintains balanced trust approach",
+        "Values systems and procedures",
+        "Detail-oriented and precise",
+        "Considers both urgency and relationships"
       ]
     },
-    "The Confident Avoider": {
-      summary: "Confident, Optimistic, Deflecting",
+    "The Cautious Flexible Avoider": {
+      summary: "Adaptable, Skeptical, Indirect",
       traits: [
-        "Projects confidence while minimizing problems",
-        "Reframes challenges as temporary inconveniences",
-        "Focuses on positive aspects rather than addressing difficulties",
-        "Redirects attention from sensitive or problematic issues", 
-        "May delay addressing personnel or performance problems"
+        "Balanced self-view with skepticism",
+        "Adapts quickly to change",
+        "Works around rather than through problems",
+        "Maintains operational flexibility",
+        "Independently verifies information"
       ]
     },
-    "The Direct Implementer": {
-      summary: "Efficient, Practical, Confrontational",
+    "The Modest Driven Direct": {
+      summary: "Determined, Direct, Growth-Oriented",
       traits: [
-        "Addresses problems immediately and directly",
-        "Implements solutions systematically and thoroughly", 
-        "Confronts difficult situations without hesitation",
-        "Communicates directly with minimal concern for feelings",
-        "Prioritizes resolution over relationship preservation"
+        "Shows determination despite self-doubt",
+        "Pursues business growth actively",
+        "Confronts problems immediately",
+        "Balanced in adaptability",
+        "Engages in difficult conversations"
+      ]
+    },
+    "The Confident Reserved Precise": {
+      summary: "Self-Assured, Systematic, Quality-Focused",
+      traits: [
+        "Self-assured in abilities",
+        "Prefers organic growth",
+        "Focuses on exceptional quality",
+        "Values systematic approaches",
+        "Lets work quality speak for itself"
+      ]
+    },
+    "The Low Trust Balanced Profile": {
+      summary: "Skeptical, Measured, Balanced",
+      traits: [
+        "Maintains healthy skepticism",
+        "Verifies information thoroughly",
+        "Balanced in most approaches",
+        "Flexible when needed",
+        "Measured response to problems"
+      ]
+    },
+    "The Highly Flexible Reserved": {
+      summary: "Adaptable, Conservative, Balanced",
+      traits: [
+        "Adapts readily to change",
+        "Comfortable with ambiguity",
+        "Conservative in growth approach",
+        "Embraces new directions",
+        "Balanced in problem resolution"
+      ]
+    },
+    "The Triply High Direct": {
+      summary: "Confident, Ambitious, Structured",
+      traits: [
+        "Ultimate confident achiever",
+        "Strong trust in others",
+        "Ambitious business drive",
+        "Highly structured approach",
+        "Direct problem-solver"
+      ]
+    },
+    "The Triply Low Avoider": {
+      summary: "Cautious, Adaptive, Indirect",
+      traits: [
+        "Downplays abilities",
+        "Skeptical of others",
+        "Cautious in growth",
+        "Highly adaptable",
+        "Avoids direct confrontation"
+      ]
+    },
+    "The Mixed Extreme": {
+      summary: "Complex, Dynamic, Growth-Focused",
+      traits: [
+        "High self-confidence",
+        "Low trust in others",
+        "Strong business drive",
+        "Highly adaptable",
+        "Avoids confrontation"
+      ]
+    },
+    "No Profile Defined": {
+      summary: "Profile analysis inconclusive",
+      traits: [
+        "Unique combination of characteristics",
+        "May represent an emerging pattern",
+        "Consider reviewing individual dimension scores",
+        "May benefit from additional assessment",
+        "Consult with assessment administrator"
       ]
     }
   };
