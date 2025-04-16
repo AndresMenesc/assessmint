@@ -4,6 +4,7 @@ import { DimensionScore } from "@/types/assessment";
 import {
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   ResponsiveContainer,
