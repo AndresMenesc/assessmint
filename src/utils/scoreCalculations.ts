@@ -439,7 +439,7 @@ export function calculateAllResults(assessment: RaterResponses[]): {
     },
     { 
       dimension: "Problem Resolution", 
-      score: finalScores.problemResolutionScore,
+      score: finalScores.problemResolution,
       min: -28, 
       max: 28, 
       color: "#FF7F50" 
@@ -459,12 +459,22 @@ export function calculateAllResults(assessment: RaterResponses[]): {
   const coachabilityAwareness = selfRater && otherRaters.length > 0 ? 
     calculateCoachabilityAwareness(selfRater.responses, otherRaters.map(r => r.responses)) : 0;
 
+  // Map the finalScores object to match the expected rawScores structure
+  const rawScores = {
+    esteemScore: finalScores.esteem,
+    trustScore: finalScores.trust,
+    driverScore: finalScores.driver,
+    adaptabilityScore: finalScores.adaptability,
+    problemResolutionScore: finalScores.problemResolution,
+    coachabilityScore: finalScores.coachability
+  };
+
   return {
     dimensionScores,
     selfAwareness,
     coachabilityAwareness,
     profileType,
     completed: allCompleted,
-    rawScores: finalScores
+    rawScores
   };
 }
