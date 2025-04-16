@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DimensionScore } from "@/types/assessment";
 import {
@@ -59,58 +58,39 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
   );
   if (!coachabilityScore) return null;
 
-  // Determine if it's aggregate or individual view
-  const isAggregateView = "selfScore" in coachabilityScore || 
-    (coachabilityScore as any).rater1Score !== undefined;
+  // Always use aggregate view to show all scores
+  const isAggregateView = true;
 
   // Build data for exactly one row
   const chartData: any[] = [];
-  if (!isAggregateView) {
-    // single user
-    const c = coachabilityScore as any;
-    const rawScore = Math.round(c.score);
-    
-    chartData.push({
-      dimension: "Coachability",
-      score: rawScore,
-      // color logic: red if ≤30, yellow if ≤40, else green
-      color: rawScore <= 30 ? "#ef4444" : rawScore <= 40 ? "#eab308" : "#22c55e",
-      normalizedScore: ((rawScore - 10) / 40) * 100, // Normalize 10-50 to 0-100% for visualization
-      min: 10,
-      max: 50,
-      lowLabel: "resistant",
-      highLabel: "receptive",
-    });
-  } else {
-    // aggregate view with average, self, rater1, and rater2 scores
-    const c = coachabilityScore as any;
-    const selfRawScore = Math.round(c.selfScore || 0);
-    const rater1RawScore = Math.round(c.rater1Score || 0);
-    const rater2RawScore = Math.round(c.rater2Score || 0);
-    const avgRawScore = Math.round(c.score || 0); // This should be the average
-    
-    chartData.push({
-      dimension: "Coachability",
-      avgScore: avgRawScore,
-      selfScore: selfRawScore,
-      rater1Score: rater1RawScore,
-      rater2Score: rater2RawScore,
-      // colors for each score
-      avgColor: "#9370DB", // Purple for average
-      selfColor: selfRawScore <= 30 ? "#ef4444" : selfRawScore <= 40 ? "#eab308" : "#22c55e",
-      rater1Color: rater1RawScore <= 30 ? "#ef4444" : rater1RawScore <= 40 ? "#eab308" : "#22c55e",
-      rater2Color: rater2RawScore <= 30 ? "#ef4444" : rater2RawScore <= 40 ? "#eab308" : "#22c55e",
-      // normalized scores for positioning
-      normalizedAvgScore: ((avgRawScore - 10) / 40) * 100,
-      normalizedSelfScore: ((selfRawScore - 10) / 40) * 100,
-      normalizedRater1Score: ((rater1RawScore - 10) / 40) * 100,
-      normalizedRater2Score: ((rater2RawScore - 10) / 40) * 100,
-      min: 10,
-      max: 50,
-      lowLabel: "resistant",
-      highLabel: "receptive",
-    });
-  }
+  
+  // Get all scores (they should be available in the aggregate view)
+  const selfRawScore = Math.round((coachabilityScore as any).selfScore || 0);
+  const rater1RawScore = Math.round((coachabilityScore as any).rater1Score || 0);
+  const rater2RawScore = Math.round((coachabilityScore as any).rater2Score || 0);
+  const avgRawScore = Math.round((coachabilityScore as any).score || 0);
+  
+  chartData.push({
+    dimension: "Coachability",
+    avgScore: avgRawScore,
+    selfScore: selfRawScore,
+    rater1Score: rater1RawScore,
+    rater2Score: rater2RawScore,
+    // colors for each score
+    avgColor: "#9370DB", // Purple for average
+    selfColor: selfRawScore <= 30 ? "#ef4444" : selfRawScore <= 40 ? "#eab308" : "#22c55e",
+    rater1Color: rater1RawScore <= 30 ? "#ef4444" : rater1RawScore <= 40 ? "#eab308" : "#22c55e",
+    rater2Color: rater2RawScore <= 30 ? "#ef4444" : rater2RawScore <= 40 ? "#eab308" : "#22c55e",
+    // normalized scores for positioning
+    normalizedAvgScore: ((avgRawScore - 10) / 40) * 100,
+    normalizedSelfScore: ((selfRawScore - 10) / 40) * 100,
+    normalizedRater1Score: ((rater1RawScore - 10) / 40) * 100,
+    normalizedRater2Score: ((rater2RawScore - 10) / 40) * 100,
+    min: 10,
+    max: 50,
+    lowLabel: "resistant",
+    highLabel: "receptive",
+  });
 
   // Render custom Y-axis to show "Coachability", "resistant", "receptive"
   const renderYAxisTick = (props: any) => {
@@ -210,89 +190,70 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
             <ReferenceLine x={(30 - 10) / 40 * 100} stroke="#ef4444" strokeWidth={2} />
             <ReferenceLine x={(40 - 10) / 40 * 100} stroke="#eab308" strokeWidth={2} />
 
-            {/* Main bar(s) on top */}
-            {!isAggregateView ? (
-              // Single bar
-              <Bar dataKey="normalizedScore" barSize={20}>
-                {chartData.map((entry, idx) => (
-                  <Cell key={idx} fill={entry.color} />
-                ))}
-                <LabelList
-                  dataKey="score"
-                  position="right"
-                  formatter={formatLabel}
-                  style={labelStyle}
-                  offset={5}
-                />
-              </Bar>
-            ) : (
-              // Multiple bars for aggregate view
-              <>
-                <Bar
-                  name="Average"
-                  dataKey="normalizedAvgScore"
-                  barSize={20}
-                  fill="#9370DB"
-                >
-                  <LabelList
-                    dataKey="avgScore"
-                    position="right"
-                    formatter={formatAvgLabel}
-                    style={labelStyle}
-                    offset={5}
-                  />
-                </Bar>
-                <Bar
-                  name="Self"
-                  dataKey="normalizedSelfScore"
-                  barSize={20}
-                >
-                  {chartData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.selfColor} />
-                  ))}
-                  <LabelList
-                    dataKey="selfScore"
-                    position="right"
-                    formatter={formatSelfLabel}
-                    style={labelStyle}
-                    offset={25}
-                  />
-                </Bar>
-                <Bar
-                  name="Rater 1"
-                  dataKey="normalizedRater1Score"
-                  barSize={20}
-                >
-                  {chartData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.rater1Color} />
-                  ))}
-                  <LabelList
-                    dataKey="rater1Score"
-                    position="right"
-                    formatter={formatRater1Label}
-                    style={labelStyle}
-                    offset={45}
-                  />
-                </Bar>
-                <Bar
-                  name="Rater 2"
-                  dataKey="normalizedRater2Score"
-                  barSize={20}
-                >
-                  {chartData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.rater2Color} />
-                  ))}
-                  <LabelList
-                    dataKey="rater2Score"
-                    position="right"
-                    formatter={formatRater2Label}
-                    style={labelStyle}
-                    offset={65}
-                  />
-                </Bar>
-                <Legend verticalAlign="bottom" height={36} />
-              </>
-            )}
+            {/* Always show all bars in aggregate view */}
+            <Bar
+              name="Average"
+              dataKey="normalizedAvgScore"
+              barSize={20}
+              fill="#9370DB"
+            >
+              <LabelList
+                dataKey="avgScore"
+                position="right"
+                formatter={formatAvgLabel}
+                style={labelStyle}
+                offset={5}
+              />
+            </Bar>
+            <Bar
+              name="Self"
+              dataKey="normalizedSelfScore"
+              barSize={20}
+            >
+              {chartData.map((entry, idx) => (
+                <Cell key={idx} fill={entry.selfColor} />
+              ))}
+              <LabelList
+                dataKey="selfScore"
+                position="right"
+                formatter={formatSelfLabel}
+                style={labelStyle}
+                offset={25}
+              />
+            </Bar>
+            <Bar
+              name="Rater 1"
+              dataKey="normalizedRater1Score"
+              barSize={20}
+            >
+              {chartData.map((entry, idx) => (
+                <Cell key={idx} fill={entry.rater1Color} />
+              ))}
+              <LabelList
+                dataKey="rater1Score"
+                position="right"
+                formatter={formatRater1Label}
+                style={labelStyle}
+                offset={45}
+              />
+            </Bar>
+            <Bar
+              name="Rater 2"
+              dataKey="normalizedRater2Score"
+              barSize={20}
+            >
+              {chartData.map((entry, idx) => (
+                <Cell key={idx} fill={entry.rater2Color} />
+              ))}
+              <LabelList
+                dataKey="rater2Score"
+                position="right"
+                formatter={formatRater2Label}
+                style={labelStyle}
+                offset={65}
+              />
+            </Bar>
+            <Legend verticalAlign="bottom" height={36} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
