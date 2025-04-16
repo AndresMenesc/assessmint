@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DimensionScore } from "@/types/assessment";
 import {
@@ -82,29 +81,39 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
       highLabel: "receptive",
     });
   } else {
-    // aggregate view with average, self, rater1, and rater2 scores
+    // aggregate view - use stacked bars
     const c = coachabilityScore as any;
-    const selfRawScore = Math.round(c.selfScore || 0);
+    
+    // Raw scores
+    const avgRawScore = Math.round(c.score || 0);
+    const selfRawScore = Math.round(c.selfScore || 0); 
     const rater1RawScore = Math.round(c.rater1Score || 0);
     const rater2RawScore = Math.round(c.rater2Score || 0);
-    const avgRawScore = Math.round(c.score || 0); // This should be the average
     
+    // Colors based on score values
+    const avgColor = "#9370DB"; // Purple for average
+    const selfColor = selfRawScore <= 30 ? "#ef4444" : selfRawScore <= 40 ? "#eab308" : "#22c55e";
+    const rater1Color = rater1RawScore <= 30 ? "#ef4444" : rater1RawScore <= 40 ? "#eab308" : "#22c55e";
+    const rater2Color = rater2RawScore <= 30 ? "#ef4444" : rater2RawScore <= 40 ? "#eab308" : "#22c55e";
+    
+    // For stacked view, we use actual score values (10-50 range)
     chartData.push({
       dimension: "Coachability",
-      avgScore: avgRawScore,
-      selfScore: selfRawScore,
-      rater1Score: rater1RawScore,
-      rater2Score: rater2RawScore,
-      // colors for each score
-      avgColor: "#9370DB", // Purple for average
-      selfColor: selfRawScore <= 30 ? "#ef4444" : selfRawScore <= 40 ? "#eab308" : "#22c55e",
-      rater1Color: rater1RawScore <= 30 ? "#ef4444" : rater1RawScore <= 40 ? "#eab308" : "#22c55e",
-      rater2Color: rater2RawScore <= 30 ? "#ef4444" : rater2RawScore <= 40 ? "#eab308" : "#22c55e",
-      // normalized scores for positioning
+      avg: avgRawScore,
+      self: selfRawScore,
+      rater1: rater1RawScore > 0 ? rater1RawScore : 0,
+      rater2: rater2RawScore > 0 ? rater2RawScore : 0,
+      // Keep normalized values for positioning of other elements
       normalizedAvgScore: ((avgRawScore - 10) / 40) * 100,
       normalizedSelfScore: ((selfRawScore - 10) / 40) * 100,
       normalizedRater1Score: ((rater1RawScore - 10) / 40) * 100,
       normalizedRater2Score: ((rater2RawScore - 10) / 40) * 100,
+      // Store colors for the bars
+      avgColor,
+      selfColor,
+      rater1Color,
+      rater2Color,
+      // Range data
       min: 10,
       max: 50,
       lowLabel: "resistant",
@@ -170,14 +179,22 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
     fill: "#000",
   };
 
-  // Formatters for score labels
-  const formatAvgLabel = (val: number) => `Avg: ${Math.round(val)}`;
-  const formatSelfLabel = (val: number) => `Self: ${Math.round(val)}`;
-  const formatRater1Label = (val: number) => `R1: ${Math.round(val)}`;
-  const formatRater2Label = (val: number) => `R2: ${Math.round(val)}`;
-  
-  // Generic formatter with error handling
-  const formatLabel = (val: number) => `${Math.round(val)}`;
+  // Helper for determining domain
+  const getBarDomain = () => {
+    if (!isAggregateView) return [0, 100]; // Normalized 0-100% for single bar
+    return [0, 50]; // Raw score range 0-50 for stacked bars
+  };
+
+  // Helper formatter for tick values - different depending on view type
+  const formatTickValue = (val: number) => {
+    if (!isAggregateView) {
+      return Math.round((val / 100 * 40) + 10).toString(); // For normalized scale
+    }
+    return val.toString(); // For raw scale
+  };
+
+  // Formatter for score labels
+  const formatScoreLabel = (value: number) => `${Math.round(value)}`;
 
   return (
     <Card className="w-full mt-6">
@@ -189,10 +206,10 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
           <BarChart data={chartData} layout="vertical" margin={chartMargins}>
             <XAxis
               type="number"
-              domain={[0, 100]}
+              domain={getBarDomain()}
               axisLine={true}
-              tickFormatter={(val) => Math.round((val / 100 * 40) + 10).toString()}
-              ticks={[0, 25, 50, 75, 100]}
+              tickFormatter={formatTickValue}
+              ticks={!isAggregateView ? [0, 25, 50, 75, 100] : [10, 20, 30, 40, 50]}
               fontSize={isMobile ? 9 : 12}
               tick={{ fill: "#666" }}
             />
@@ -206,88 +223,98 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
             />
             <Tooltip content={<CustomTooltip />} />
 
-            {/* Reference lines (draw them first) */}
-            <ReferenceLine x={(30 - 10) / 40 * 100} stroke="#ef4444" strokeWidth={2} />
-            <ReferenceLine x={(40 - 10) / 40 * 100} stroke="#eab308" strokeWidth={2} />
-
-            {/* Main bar(s) on top */}
             {!isAggregateView ? (
-              // Single bar
-              <Bar dataKey="normalizedScore" barSize={20}>
-                {chartData.map((entry, idx) => (
-                  <Cell key={idx} fill={entry.color} />
-                ))}
-                <LabelList
-                  dataKey="score"
-                  position="right"
-                  formatter={formatLabel}
-                  style={labelStyle}
-                  offset={5}
-                />
-              </Bar>
-            ) : (
-              // Multiple bars for aggregate view
+              // Individual view - reference lines and single bar
               <>
-                <Bar
-                  name="Average"
-                  dataKey="normalizedAvgScore"
-                  barSize={20}
-                  fill="#9370DB"
-                >
+                {/* Reference lines (draw them first) */}
+                <ReferenceLine x={(30 - 10) / 40 * 100} stroke="#ef4444" strokeWidth={2} />
+                <ReferenceLine x={(40 - 10) / 40 * 100} stroke="#eab308" strokeWidth={2} />
+                
+                {/* Single bar */}
+                <Bar dataKey="normalizedScore" barSize={20}>
+                  {chartData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.color} />
+                  ))}
                   <LabelList
-                    dataKey="avgScore"
+                    dataKey="score"
                     position="right"
-                    formatter={formatAvgLabel}
+                    formatter={formatScoreLabel}
                     style={labelStyle}
                     offset={5}
                   />
                 </Bar>
-                <Bar
-                  name="Self"
-                  dataKey="normalizedSelfScore"
-                  barSize={20}
+              </>
+            ) : (
+              // Aggregate view - stacked bars showing actual score values
+              <>
+                {/* Reference lines at 30 and 40 (thresholds) */}
+                <ReferenceLine x={30} stroke="#ef4444" strokeWidth={2} />
+                <ReferenceLine x={40} stroke="#eab308" strokeWidth={2} />
+                
+                {/* Stacked bars for each rater type */}
+                <Bar 
+                  name="Average" 
+                  dataKey="avg" 
+                  stackId="coachability" 
+                  barSize={30}
+                  fill="#9370DB" // Purple
+                >
+                  <LabelList
+                    dataKey="avg"
+                    position="right"
+                    formatter={(val) => `Avg: ${val}`}
+                    style={labelStyle}
+                  />
+                </Bar>
+                <Bar 
+                  name="Self" 
+                  dataKey="self" 
+                  stackId="coachability" 
+                  barSize={30}
                 >
                   {chartData.map((entry, idx) => (
                     <Cell key={idx} fill={entry.selfColor} />
                   ))}
                   <LabelList
-                    dataKey="selfScore"
+                    dataKey="self"
                     position="right"
-                    formatter={formatSelfLabel}
+                    formatter={(val) => `Self: ${val}`}
                     style={labelStyle}
-                    offset={25}
+                    offset={40}
                   />
                 </Bar>
-                <Bar
-                  name="Rater 1"
-                  dataKey="normalizedRater1Score"
-                  barSize={20}
+                <Bar 
+                  name="Rater 1" 
+                  dataKey="rater1" 
+                  stackId="coachability" 
+                  barSize={30}
                 >
                   {chartData.map((entry, idx) => (
                     <Cell key={idx} fill={entry.rater1Color} />
                   ))}
                   <LabelList
-                    dataKey="rater1Score"
+                    dataKey="rater1"
                     position="right"
-                    formatter={formatRater1Label}
+                    formatter={(val) => val > 0 ? `R1: ${val}` : ""}
                     style={labelStyle}
-                    offset={45}
+                    offset={80}
                   />
                 </Bar>
-                <Bar
-                  name="Rater 2"
-                  dataKey="normalizedRater2Score"
-                  barSize={20}
+                <Bar 
+                  name="Rater 2" 
+                  dataKey="rater2" 
+                  stackId="coachability" 
+                  barSize={30}
                 >
                   {chartData.map((entry, idx) => (
                     <Cell key={idx} fill={entry.rater2Color} />
                   ))}
                   <LabelList
-                    dataKey="rater2Score"
+                    dataKey="rater2"
                     position="right"
-                    formatter={formatRater2Label}
+                    formatter={(val) => val > 0 ? `R2: ${val}` : ""}
                     style={labelStyle}
-                    offset={65}
+                    offset={120}
                   />
                 </Bar>
                 <Legend verticalAlign="bottom" height={36} />
