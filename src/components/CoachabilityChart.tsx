@@ -258,42 +258,39 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                     offset={25}
                   />
                 </Bar>
-                {chartData[0].rater1Score > 0 && (
-                  <Bar
-                    name="Rater 1"
-                    dataKey="normalizedRater1Score"
-                    barSize={20}
-                  >
-                    {chartData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.rater1Color} />
-                    ))}
-                    <LabelList
-                      dataKey="rater1Score"
-                      position="right"
-                      formatter={formatRater1Label}
-                      style={labelStyle}
-                      offset={45}
-                    />
-                  </Bar>
-                )}
-                {chartData[0].rater2Score > 0 && (
-                  <Bar
-                    name="Rater 2"
-                    dataKey="normalizedRater2Score"
-                    barSize={20}
-                  >
-                    {chartData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.rater2Color} />
-                    ))}
-                    <LabelList
-                      dataKey="rater2Score"
-                      position="right"
-                      formatter={formatRater2Label}
-                      style={labelStyle}
-                      offset={65}
-                    />
-                  </Bar>
-                )}
+                {/* Always show Rater 1 and Rater 2 in aggregate view */}
+                <Bar
+                  name="Rater 1"
+                  dataKey="normalizedRater1Score"
+                  barSize={20}
+                >
+                  {chartData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.rater1Color} />
+                  ))}
+                  <LabelList
+                    dataKey="rater1Score"
+                    position="right"
+                    formatter={formatRater1Label}
+                    style={labelStyle}
+                    offset={45}
+                  />
+                </Bar>
+                <Bar
+                  name="Rater 2"
+                  dataKey="normalizedRater2Score"
+                  barSize={20}
+                >
+                  {chartData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.rater2Color} />
+                  ))}
+                  <LabelList
+                    dataKey="rater2Score"
+                    position="right"
+                    formatter={formatRater2Label}
+                    style={labelStyle}
+                    offset={65}
+                  />
+                </Bar>
                 <Legend verticalAlign="bottom" height={36} />
               </>
             )}
