@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DimensionScore } from "@/types/assessment";
 import {
@@ -81,7 +82,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
       highLabel: "receptive",
     });
   } else {
-    // aggregate view - use stacked bars
+    // aggregate view - use side-by-side bars
     const c = coachabilityScore as any;
     
     // Raw scores
@@ -96,18 +97,13 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
     const rater1Color = rater1RawScore <= 30 ? "#ef4444" : rater1RawScore <= 40 ? "#eab308" : "#22c55e";
     const rater2Color = rater2RawScore <= 30 ? "#ef4444" : rater2RawScore <= 40 ? "#eab308" : "#22c55e";
     
-    // For stacked view, we use actual score values (10-50 range)
+    // For side-by-side view, we use actual score values (10-50 range)
     chartData.push({
       dimension: "Coachability",
-      avg: avgRawScore,
-      self: selfRawScore,
-      rater1: rater1RawScore > 0 ? rater1RawScore : 0,
-      rater2: rater2RawScore > 0 ? rater2RawScore : 0,
-      // Keep normalized values for positioning of other elements
-      normalizedAvgScore: ((avgRawScore - 10) / 40) * 100,
-      normalizedSelfScore: ((selfRawScore - 10) / 40) * 100,
-      normalizedRater1Score: ((rater1RawScore - 10) / 40) * 100,
-      normalizedRater2Score: ((rater2RawScore - 10) / 40) * 100,
+      avgScore: avgRawScore,
+      selfScore: selfRawScore,
+      rater1Score: rater1RawScore > 0 ? rater1RawScore : 0,
+      rater2Score: rater2RawScore > 0 ? rater2RawScore : 0,
       // Store colors for the bars
       avgColor,
       selfColor,
@@ -181,20 +177,17 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
 
   // Helper for determining domain
   const getBarDomain = () => {
-    if (!isAggregateView) return [0, 100]; // Normalized 0-100% for single bar
-    return [0, 50]; // Raw score range 0-50 for stacked bars
-  };
-
-  // Helper formatter for tick values - different depending on view type
-  const formatTickValue = (val: number) => {
-    if (!isAggregateView) {
-      return Math.round((val / 100 * 40) + 10).toString(); // For normalized scale
-    }
-    return val.toString(); // For raw scale
+    return [0, 50]; // Raw score range 0-50 for all views
   };
 
   // Formatter for score labels
   const formatScoreLabel = (value: number) => `${Math.round(value)}`;
+
+  // Calculate bar size based on view type
+  const getBarSize = () => {
+    if (!isAggregateView) return 20;
+    return isMobile ? 12 : 14; // Smaller bars when showing multiple in aggregate view
+  };
 
   return (
     <Card className="w-full mt-6">
@@ -208,8 +201,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
               type="number"
               domain={getBarDomain()}
               axisLine={true}
-              tickFormatter={formatTickValue}
-              ticks={!isAggregateView ? [0, 25, 50, 75, 100] : [10, 20, 30, 40, 50]}
+              ticks={[10, 20, 30, 40, 50]}
               fontSize={isMobile ? 9 : 12}
               tick={{ fill: "#666" }}
             />
@@ -223,98 +215,83 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
             />
             <Tooltip content={<CustomTooltip />} />
 
+            {/* Reference lines for score thresholds */}
+            <ReferenceLine x={30} stroke="#ef4444" strokeWidth={2} />
+            <ReferenceLine x={40} stroke="#eab308" strokeWidth={2} />
+            
             {!isAggregateView ? (
-              // Individual view - reference lines and single bar
-              <>
-                {/* Reference lines (draw them first) */}
-                <ReferenceLine x={(30 - 10) / 40 * 100} stroke="#ef4444" strokeWidth={2} />
-                <ReferenceLine x={(40 - 10) / 40 * 100} stroke="#eab308" strokeWidth={2} />
-                
-                {/* Single bar */}
-                <Bar dataKey="normalizedScore" barSize={20}>
-                  {chartData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.color} />
-                  ))}
-                  <LabelList
-                    dataKey="score"
-                    position="right"
-                    formatter={formatScoreLabel}
-                    style={labelStyle}
-                    offset={5}
-                  />
-                </Bar>
-              </>
+              // Individual view - single bar
+              <Bar dataKey="score" barSize={getBarSize()}>
+                {chartData.map((entry, idx) => (
+                  <Cell key={idx} fill={entry.color} />
+                ))}
+                <LabelList
+                  dataKey="score"
+                  position="right"
+                  formatter={formatScoreLabel}
+                  style={labelStyle}
+                  offset={5}
+                />
+              </Bar>
             ) : (
-              // Aggregate view - stacked bars showing actual score values
+              // Aggregate view - side by side bars
               <>
-                {/* Reference lines at 30 and 40 (thresholds) */}
-                <ReferenceLine x={30} stroke="#ef4444" strokeWidth={2} />
-                <ReferenceLine x={40} stroke="#eab308" strokeWidth={2} />
-                
-                {/* Stacked bars for each rater type */}
                 <Bar 
                   name="Average" 
-                  dataKey="avg" 
-                  stackId="coachability" 
-                  barSize={30}
+                  dataKey="avgScore" 
+                  barSize={getBarSize()}
                   fill="#9370DB" // Purple
                 >
                   <LabelList
-                    dataKey="avg"
-                    position="right"
-                    formatter={(val) => `Avg: ${val}`}
+                    dataKey="avgScore"
+                    position="top"
+                    formatter={formatScoreLabel}
                     style={labelStyle}
                   />
                 </Bar>
                 <Bar 
                   name="Self" 
-                  dataKey="self" 
-                  stackId="coachability" 
-                  barSize={30}
+                  dataKey="selfScore" 
+                  barSize={getBarSize()}
                 >
                   {chartData.map((entry, idx) => (
                     <Cell key={idx} fill={entry.selfColor} />
                   ))}
                   <LabelList
-                    dataKey="self"
-                    position="right"
-                    formatter={(val) => `Self: ${val}`}
+                    dataKey="selfScore"
+                    position="top"
+                    formatter={formatScoreLabel}
                     style={labelStyle}
-                    offset={40}
                   />
                 </Bar>
                 <Bar 
                   name="Rater 1" 
-                  dataKey="rater1" 
-                  stackId="coachability" 
-                  barSize={30}
+                  dataKey="rater1Score" 
+                  barSize={getBarSize()}
                 >
                   {chartData.map((entry, idx) => (
                     <Cell key={idx} fill={entry.rater1Color} />
                   ))}
                   <LabelList
-                    dataKey="rater1"
-                    position="right"
-                    formatter={(val) => val > 0 ? `R1: ${val}` : ""}
+                    dataKey="rater1Score"
+                    position="top"
+                    formatter={(val) => val > 0 ? formatScoreLabel(val) : ""}
                     style={labelStyle}
-                    offset={80}
                   />
                 </Bar>
                 <Bar 
                   name="Rater 2" 
-                  dataKey="rater2" 
-                  stackId="coachability" 
-                  barSize={30}
+                  dataKey="rater2Score" 
+                  barSize={getBarSize()}
                 >
                   {chartData.map((entry, idx) => (
                     <Cell key={idx} fill={entry.rater2Color} />
                   ))}
                   <LabelList
-                    dataKey="rater2"
-                    position="right"
-                    formatter={(val) => val > 0 ? `R2: ${val}` : ""}
+                    dataKey="rater2Score"
+                    position="top"
+                    formatter={(val) => val > 0 ? formatScoreLabel(val) : ""}
                     style={labelStyle}
-                    offset={120}
                   />
                 </Bar>
                 <Legend verticalAlign="bottom" height={36} />
