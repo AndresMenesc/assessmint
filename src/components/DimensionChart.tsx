@@ -13,6 +13,7 @@ import {
   LabelList
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { categorizeAdaptability, categorizeScore, categorizeProblemResolution } from "@/utils/scoreCalculations";
 
 // A custom bar shape that draws a vertical line at the end of each bar instead of a typical rectangle
 function EndTickShape(props: any) {
@@ -40,7 +41,7 @@ const DIMENSION_DESCRIPTIONS = {
   Esteem: { low: "low", high: "prideful" },
   Trust: { low: "low", high: "high" },
   "Business Drive": { low: "low", high: "high" },
-  Adaptability: { low: "low", high: "high" },
+  Adaptability: { low: "flexibility", high: "precision" },
   "Problem Resolution": { low: "avoid", high: "engage" },
   Coachability: { low: "resistant", high: "receptive" }
 };
@@ -55,23 +56,33 @@ const DIMENSION_COLORS = {
   Coachability: "#22c55e"
 };
 
+// Helper to get category label
+const getCategoryLabel = (dimension: string, score: number): string => {
+  if (dimension === "Adaptability") {
+    return categorizeAdaptability(score);
+  } else if (dimension === "Problem Resolution") {
+    return categorizeProblemResolution(score);
+  } else if (dimension === "Coachability") {
+    if (score <= 30) return "Low";
+    if (score <= 40) return "Medium";
+    return "High";
+  } else {
+    return categorizeScore(score);
+  }
+};
+
 // Tooltip for bar hover
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    // Distinguish between single "score" vs. aggregator "selfScore" / "othersScore"
-    const isIndividual = data.score !== undefined;
+    const dimensionName = data.dimension || data.name;
+    const category = getCategoryLabel(dimensionName, data.score);
 
     return (
       <div className="bg-white p-2 border shadow-sm rounded-md">
-        <p className="font-semibold">{data.dimension || data.name}</p>
-        {isIndividual ? (
-          <p>Score: {data.score}</p>
-        ) : (
-          <>
-            <p>Average Score: {data.score}</p>
-          </>
-        )}
+        <p className="font-semibold">{dimensionName}</p>
+        <p>Score: {Math.round(data.score * 10) / 10}</p>
+        <p>Category: {category}</p>
         <p className="text-xs text-gray-500">
           Range: {data.min} to {data.max}
         </p>
@@ -127,6 +138,9 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
       const normalizedScore =
         ((s.score - MIN_DIM) / RANGE_DIM) * 100 || 0; // map -28..+28 => 0..100 for display purposes only
 
+      // Get category label
+      const categoryLabel = getCategoryLabel(dimensionName, s.score);
+
       return {
         dimension: dimensionName,
         score: s.score, // Keep raw score unchanged for display
@@ -135,7 +149,8 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
         color: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
         normalizedScore, // Used for positioning the bar only
         lowLabel: descriptions.low,
-        highLabel: descriptions.high
+        highLabel: descriptions.high,
+        category: categoryLabel
       };
     } else {
       // We now treat all scores as individual scores with a single value
@@ -147,6 +162,9 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
       // Calculate normalized score for positioning the bar (0-100)
       const normalizedScore = ((score - MIN_DIM) / RANGE_DIM) * 100 || 0;
 
+      // Get category label
+      const categoryLabel = getCategoryLabel(dimensionName, score);
+
       return {
         dimension: dimensionName,
         score: score, // Use the average score
@@ -155,7 +173,8 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
         color: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
         normalizedScore, // Used for positioning the bar only
         lowLabel: descriptions.low,
-        highLabel: descriptions.high
+        highLabel: descriptions.high,
+        category: categoryLabel
       };
     }
   });
@@ -208,6 +227,11 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
     );
   };
 
+  // Custom formatter for the label to include category
+  const formatLabel = (value: any, entry: any) => {
+    return `${Math.round(entry.payload.score)} (${entry.payload.category})`;
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -221,7 +245,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
             <BarChart
               data={chartData}
               layout="vertical"
-              margin={{ top: 30, right: 50, left: 80, bottom: 30 }}
+              margin={{ top: 30, right: 80, left: 80, bottom: 30 }}
             >
               {/* X-axis using normalized values for positioning (0-100), 
                   but showing the actual -28 to 28 scale on ticks */}
@@ -266,7 +290,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                 <LabelList
                   dataKey="score"
                   position="right"
-                  formatter={(v: number) => Math.round(v)}
+                  formatter={formatLabel}
                   style={{
                     fontSize: isMobile ? "9px" : "11px",
                     fill: "#000"
