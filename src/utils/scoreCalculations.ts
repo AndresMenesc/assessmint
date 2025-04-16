@@ -324,14 +324,15 @@ export function calculateAllResults(assessment: RaterResponses[]): {
 } {
   // Filter responses by rater type
   const selfRater = assessment.find(rater => rater.raterType === RaterType.SELF);
-  const otherRaters = assessment.filter(rater => 
-    rater.raterType !== RaterType.SELF && rater.completed
-  );
+  const rater1 = assessment.find(rater => rater.raterType === RaterType.RATER1);
+  const rater2 = assessment.find(rater => rater.raterType === RaterType.RATER2);
   
   // Check if we have all required responses
-  const allCompleted = selfRater?.completed && otherRaters.length >= 2;
+  const allCompleted = selfRater?.completed && 
+    (rater1?.completed || false) && 
+    (rater2?.completed || false);
   
-  if (!selfRater || otherRaters.length < 2) {
+  if (!selfRater) {
     return {
       dimensionScores: [],
       selfAwareness: 0,
@@ -340,92 +341,114 @@ export function calculateAllResults(assessment: RaterResponses[]): {
       completed: false
     };
   }
-  
-  // Calculate dimension scores for self-rater
-  const esteemScore = calculateDimensionScore(selfRater.responses, Section.ESTEEM);
-  const trustScore = calculateDimensionScore(selfRater.responses, Section.TRUST);
-  const driverScore = calculateDimensionScore(selfRater.responses, Section.DRIVER);
-  const adaptabilityScore = calculateDimensionScore(selfRater.responses, Section.ADAPTABILITY);
-  const problemResolutionScore = calculateDimensionScore(selfRater.responses, Section.PROBLEM_RESOLUTION);
-  const coachabilityScore = calculateCoachabilityScore(selfRater.responses);
-  
-  console.log("Self rater dimension scores:", {
-    esteemScore,
-    trustScore,
-    driverScore,
-    adaptabilityScore,
-    problemResolutionScore,
-    coachabilityScore
+
+  // Calculate scores for each rater
+  const calculateScoresForRater = (rater: RaterResponses) => ({
+    esteem: calculateDimensionScore(rater.responses, Section.ESTEEM),
+    trust: calculateDimensionScore(rater.responses, Section.TRUST),
+    driver: calculateDimensionScore(rater.responses, Section.DRIVER),
+    adaptability: calculateDimensionScore(rater.responses, Section.ADAPTABILITY),
+    problemResolution: calculateDimensionScore(rater.responses, Section.PROBLEM_RESOLUTION),
+    coachability: calculateCoachabilityScore(rater.responses)
   });
-  
-  // Calculate self-awareness
-  const selfAwareness = calculateSelfAwareness(
-    selfRater.responses,
-    otherRaters.map(rater => rater.responses)
-  );
-  
-  // Calculate coachability awareness
-  const coachabilityAwareness = calculateCoachabilityAwareness(
-    selfRater.responses,
-    otherRaters.map(rater => rater.responses)
-  );
-  
-  // Determine profile type
+
+  // Get scores for each completed rater
+  const completedRaters = [selfRater];
+  if (rater1?.completed) completedRaters.push(rater1);
+  if (rater2?.completed) completedRaters.push(rater2);
+
+  // Calculate average scores across all completed raters
+  const averageScores = completedRaters.reduce((acc, rater) => {
+    const scores = calculateScoresForRater(rater);
+    return {
+      esteem: acc.esteem + scores.esteem,
+      trust: acc.trust + scores.trust,
+      driver: acc.driver + scores.driver,
+      adaptability: acc.adaptability + scores.adaptability,
+      problemResolution: acc.problemResolution + scores.problemResolution,
+      coachability: acc.coachability + scores.coachability
+    };
+  }, {
+    esteem: 0,
+    trust: 0,
+    driver: 0,
+    adaptability: 0,
+    problemResolution: 0,
+    coachability: 0
+  });
+
+  const raterCount = completedRaters.length;
+  const finalScores = {
+    esteem: averageScores.esteem / raterCount,
+    trust: averageScores.trust / raterCount,
+    driver: averageScores.driver / raterCount,
+    adaptability: averageScores.adaptability / raterCount,
+    problemResolution: averageScores.problemResolution / raterCount,
+    coachability: averageScores.coachability / raterCount
+  };
+
+  // Calculate profile type based on averaged scores
   const profileType = determineProfileType(
-    esteemScore,
-    trustScore,
-    driverScore,
-    adaptabilityScore,
-    problemResolutionScore
+    finalScores.esteem,
+    finalScores.trust,
+    finalScores.driver,
+    finalScores.adaptability,
+    finalScores.problemResolution
   );
-  
-  // Format dimension scores for display - each dimension uses the -28 to 28 range
-  // except for coachability which uses 10-50
+
+  // Format dimension scores for display
   const dimensionScores = [
     { 
       dimension: "Esteem", 
-      score: esteemScore, 
+      score: finalScores.esteem,
       min: -28, 
       max: 28, 
       color: "#4169E1" 
     },
     { 
       dimension: "Trust", 
-      score: trustScore, 
+      score: finalScores.trust,
       min: -28, 
       max: 28, 
       color: "#20B2AA" 
     },
     { 
       dimension: "Business Drive", 
-      score: driverScore, 
+      score: finalScores.driver,
       min: -28, 
       max: 28, 
       color: "#9370DB" 
     },
     { 
       dimension: "Adaptability", 
-      score: adaptabilityScore, 
+      score: finalScores.adaptability,
       min: -28, 
       max: 28, 
       color: "#3CB371" 
     },
     { 
       dimension: "Problem Resolution", 
-      score: problemResolutionScore, 
+      score: finalScores.problemResolution,
       min: -28, 
       max: 28, 
       color: "#FF7F50" 
     },
     { 
       dimension: "Coachability", 
-      score: coachabilityScore, 
+      score: finalScores.coachability,
       min: 10, 
       max: 50, 
-      color: coachabilityScore <= 30 ? "#ef4444" : coachabilityScore <= 40 ? "#eab308" : "#22c55e" 
+      color: finalScores.coachability <= 30 ? "#ef4444" : finalScores.coachability <= 40 ? "#eab308" : "#22c55e"
     }
   ];
-  
+
+  // Calculate awareness metrics
+  const otherRaters = assessment.filter(r => r.raterType !== RaterType.SELF && r.completed);
+  const selfAwareness = selfRater && otherRaters.length > 0 ? 
+    calculateSelfAwareness(selfRater.responses, otherRaters.map(r => r.responses)) : 0;
+  const coachabilityAwareness = selfRater && otherRaters.length > 0 ? 
+    calculateCoachabilityAwareness(selfRater.responses, otherRaters.map(r => r.responses)) : 0;
+
   return {
     dimensionScores,
     selfAwareness,
