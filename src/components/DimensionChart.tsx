@@ -398,42 +398,38 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                       offset={25}
                     />
                   </Bar>
-                  {chartData.some(d => d.rater1Score > 0) && (
-                    <Bar
-                      name="Rater 1"
-                      dataKey="normalizedRater1Score"
-                      barSize={20}
-                      fill="#3CB371"
-                      shape={<EndTickShape />}
-                      minPointSize={2}
-                    >
-                      <LabelList
-                        dataKey="rater1Score"
-                        position="right"
-                        formatter={formatRater1Label}
-                        style={{ fontSize: isMobile ? "9px" : "11px", fill: "#666" }}
-                        offset={45}
-                      />
-                    </Bar>
-                  )}
-                  {chartData.some(d => d.rater2Score > 0) && (
-                    <Bar
-                      name="Rater 2"
-                      dataKey="normalizedRater2Score"
-                      barSize={20}
-                      fill="#FF7F50"
-                      shape={<EndTickShape />}
-                      minPointSize={2}
-                    >
-                      <LabelList
-                        dataKey="rater2Score"
-                        position="right"
-                        formatter={formatRater2Label}
-                        style={{ fontSize: isMobile ? "9px" : "11px", fill: "#666" }}
-                        offset={65}
-                      />
-                    </Bar>
-                  )}
+                  <Bar
+                    name="Rater 1"
+                    dataKey="normalizedRater1Score"
+                    barSize={20}
+                    fill="#3CB371"
+                    shape={<EndTickShape />}
+                    minPointSize={2}
+                  >
+                    <LabelList
+                      dataKey="rater1Score"
+                      position="right"
+                      formatter={formatRater1Label}
+                      style={{ fontSize: isMobile ? "9px" : "11px", fill: "#666" }}
+                      offset={45}
+                    />
+                  </Bar>
+                  <Bar
+                    name="Rater 2"
+                    dataKey="normalizedRater2Score"
+                    barSize={20}
+                    fill="#FF7F50"
+                    shape={<EndTickShape />}
+                    minPointSize={2}
+                  >
+                    <LabelList
+                      dataKey="rater2Score"
+                      position="right"
+                      formatter={formatRater2Label}
+                      style={{ fontSize: isMobile ? "9px" : "11px", fill: "#666" }}
+                      offset={65}
+                    />
+                  </Bar>
                   <Legend verticalAlign="bottom" height={36} />
                 </>
               ) : (
