@@ -228,8 +228,18 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
   };
 
   // Custom formatter for the label to include category
+  // Fixed function to safely handle entry that might not have payload property
   const formatLabel = (value: any, entry: any) => {
-    return `${Math.round(entry.payload.score)} (${entry.payload.category})`;
+    // Check if entry exists and has a payload property
+    if (!entry || !entry.payload) {
+      return `${value ? Math.round(value) : 0}`; // Provide a safe fallback
+    }
+    
+    const score = entry.payload.score;
+    const category = entry.payload.category;
+    
+    // Return formatted score with category
+    return `${Math.round(score)} (${category})`;
   };
 
   return (
