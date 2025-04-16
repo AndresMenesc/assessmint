@@ -7,10 +7,9 @@ import {
   XAxis,
   YAxis,
   ResponsiveContainer,
-  Cell,
   ReferenceLine,
   Tooltip,
-  LabelList,
+  ReferenceDot,
   Legend
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -26,9 +25,6 @@ const CustomTooltip = ({ active, payload }: any) => {
     return (
       <div className="bg-white p-2 border shadow-sm rounded-md">
         <p className="font-semibold">Coachability</p>
-        {data.score !== undefined && (
-          <p>Score: {Math.round(data.score * 10) / 10}</p>
-        )}
         {data.avgScore !== undefined && (
           <p>Average: {Math.round(data.avgScore * 10) / 10}</p>
         )}
@@ -50,6 +46,21 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
+// Helper function to get color for each score type
+const getColorForKey = (key: string): string => {
+  switch (key) {
+    case "selfScore":
+      return "#4169E1"; // Blue for self
+    case "rater1Score":
+      return "#3CB371"; // Green for rater 1
+    case "rater2Score":
+      return "#FF7F50"; // Coral for rater 2
+    case "avgScore":
+    default:
+      return "#9370DB"; // Purple for average
+  }
+};
+
 export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
   const isMobile = useIsMobile();
 
@@ -65,6 +76,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
 
   // Build data for exactly one row
   const chartData: any[] = [];
+  
   if (!isAggregateView) {
     // single user
     const c = coachabilityScore as any;
@@ -75,14 +87,13 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
       score: rawScore,
       // color logic: red if ≤30, yellow if ≤40, else green
       color: rawScore <= 30 ? "#ef4444" : rawScore <= 40 ? "#eab308" : "#22c55e",
-      normalizedScore: ((rawScore - 10) / 40) * 100, // Normalize 10-50 to 0-100% for visualization
       min: 10,
       max: 50,
       lowLabel: "resistant",
       highLabel: "receptive",
     });
   } else {
-    // aggregate view - use side-by-side bars
+    // aggregate view with reference dots
     const c = coachabilityScore as any;
     
     // Raw scores
@@ -91,25 +102,13 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
     const rater1RawScore = Math.round(c.rater1Score || 0);
     const rater2RawScore = Math.round(c.rater2Score || 0);
     
-    // Colors based on score values
-    const avgColor = "#9370DB"; // Purple for average
-    const selfColor = selfRawScore <= 30 ? "#ef4444" : selfRawScore <= 40 ? "#eab308" : "#22c55e";
-    const rater1Color = rater1RawScore <= 30 ? "#ef4444" : rater1RawScore <= 40 ? "#eab308" : "#22c55e";
-    const rater2Color = rater2RawScore <= 30 ? "#ef4444" : rater2RawScore <= 40 ? "#eab308" : "#22c55e";
-    
-    // For side-by-side view, we use actual score values (10-50 range)
     chartData.push({
       dimension: "Coachability",
       avgScore: avgRawScore,
       selfScore: selfRawScore,
-      rater1Score: rater1RawScore > 0 ? rater1RawScore : 0,
-      rater2Score: rater2RawScore > 0 ? rater2RawScore : 0,
-      // Store colors for the bars
-      avgColor,
-      selfColor,
-      rater1Color,
-      rater2Color,
-      // Range data
+      rater1Score: rater1RawScore > 0 ? rater1RawScore : null,
+      rater2Score: rater2RawScore > 0 ? rater2RawScore : null,
+      // Data for chart display
       min: 10,
       max: 50,
       lowLabel: "resistant",
@@ -151,7 +150,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
         </text>
         {/* High label on far right */}
         <text
-          x={550}
+          x={isMobile ? 250 : 350}
           y={0}
           dy={3}
           textAnchor="end"
@@ -165,29 +164,67 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
     );
   };
 
-  // Chart margins & label style
+  // Custom dot with label
+  const CustomizedDot = (props: any) => {
+    const { cx, cy, value, key, fill } = props;
+
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={6} fill={fill} stroke="#fff" strokeWidth={1.5} />
+        <text 
+          x={cx} 
+          y={cy - 12} 
+          textAnchor="middle" 
+          fill="#333" 
+          fontSize={11}
+          fontWeight="500"
+        >
+          {value}
+        </text>
+        <text 
+          x={cx} 
+          y={cy + 16} 
+          textAnchor="middle" 
+          fill="#666" 
+          fontSize={9}
+        >
+          {key === "avgScore" ? "Avg" : 
+            key === "selfScore" ? "Self" : 
+            key === "rater1Score" ? "R1" : "R2"}
+        </text>
+      </g>
+    );
+  };
+
+  // Legend items
+  const legendItems = [
+    { value: 'Average', color: getColorForKey("avgScore"), type: 'circle' },
+    { value: 'Self', color: getColorForKey("selfScore"), type: 'circle' },
+    { value: 'Rater 1', color: getColorForKey("rater1Score"), type: 'circle' },
+    { value: 'Rater 2', color: getColorForKey("rater2Score"), type: 'circle' },
+  ];
+
+  // Custom legend for reference dots
+  const CustomLegend = () => {
+    return (
+      <div className="flex justify-center gap-4 pt-4 text-xs">
+        {legendItems.map((item, index) => (
+          <div key={index} className="flex items-center">
+            <div 
+              className="w-3 h-3 rounded-full mr-1" 
+              style={{ backgroundColor: item.color }}
+            />
+            <span>{item.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Chart margins & sizes
   const chartMargins = isMobile
-    ? { top: 30, right: 70, left: 100, bottom: 20 }
-    : { top: 30, right: 120, left: 150, bottom: 20 };
-
-  const labelStyle = {
-    fontSize: isMobile ? "9px" : "11px",
-    fill: "#000",
-  };
-
-  // Helper for determining domain
-  const getBarDomain = () => {
-    return [0, 50]; // Raw score range 0-50 for all views
-  };
-
-  // Formatter for score labels
-  const formatScoreLabel = (value: number) => `${Math.round(value)}`;
-
-  // Calculate bar size based on view type
-  const getBarSize = () => {
-    if (!isAggregateView) return 20;
-    return isMobile ? 12 : 14; // Smaller bars when showing multiple in aggregate view
-  };
+    ? { top: 30, right: 30, left: 100, bottom: 20 }
+    : { top: 30, right: 50, left: 150, bottom: 20 };
 
   return (
     <Card className="w-full mt-6">
@@ -195,110 +232,126 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
         <CardTitle>Coachability Score</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={isAggregateView ? 240 : 180}>
-          <BarChart data={chartData} layout="vertical" margin={chartMargins}>
-            <XAxis
-              type="number"
-              domain={getBarDomain()}
-              axisLine={true}
-              ticks={[10, 20, 30, 40, 50]}
-              fontSize={isMobile ? 9 : 12}
-              tick={{ fill: "#666" }}
-            />
-            <YAxis
-              type="category"
-              dataKey="dimension"
-              width={isMobile ? 100 : 150}
-              tick={renderYAxisTick}
-              tickLine={false}
-              axisLine={false}
-            />
-            <Tooltip content={<CustomTooltip />} />
-
-            {/* Reference lines for score thresholds */}
-            <ReferenceLine x={30} stroke="#ef4444" strokeWidth={2} />
-            <ReferenceLine x={40} stroke="#eab308" strokeWidth={2} />
-            
-            {!isAggregateView ? (
-              // Individual view - single bar
-              <Bar dataKey="score" barSize={getBarSize()}>
+        {!isAggregateView ? (
+          // Individual view - traditional bar chart
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={chartData} layout="vertical" margin={chartMargins}>
+              <XAxis
+                type="number"
+                domain={[10, 50]}
+                axisLine={true}
+                ticks={[10, 20, 30, 40, 50]}
+                fontSize={isMobile ? 9 : 12}
+                tick={{ fill: "#666" }}
+              />
+              <YAxis
+                type="category"
+                dataKey="dimension"
+                width={isMobile ? 100 : 150}
+                tick={renderYAxisTick}
+                tickLine={false}
+                axisLine={false}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <ReferenceLine x={30} stroke="#ef4444" strokeWidth={2} />
+              <ReferenceLine x={40} stroke="#eab308" strokeWidth={2} />
+              <Bar dataKey="score" barSize={20}>
                 {chartData.map((entry, idx) => (
                   <Cell key={idx} fill={entry.color} />
                 ))}
-                <LabelList
-                  dataKey="score"
-                  position="right"
-                  formatter={formatScoreLabel}
-                  style={labelStyle}
-                  offset={5}
-                />
               </Bar>
-            ) : (
-              // Aggregate view - side by side bars
-              <>
-                <Bar 
-                  name="Average" 
-                  dataKey="avgScore" 
-                  barSize={getBarSize()}
-                  fill="#9370DB" // Purple
-                >
-                  <LabelList
-                    dataKey="avgScore"
-                    position="top"
-                    formatter={formatScoreLabel}
-                    style={labelStyle}
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          // Aggregate view - background bar with reference dots
+          <div className="pt-4">
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={chartData}
+                layout="vertical"
+                margin={{ top: 40, right: 50, left: 100, bottom: 40 }}
+              >
+                <XAxis 
+                  type="number" 
+                  domain={[10, 50]} 
+                  ticks={[10, 20, 30, 40, 50]}
+                  fontSize={12}
+                />
+                <YAxis 
+                  dataKey="dimension" 
+                  type="category" 
+                  tick={renderYAxisTick}
+                  tickLine={false}
+                  axisLine={false}
+                  width={isMobile ? 100 : 150}
+                />
+                <Tooltip content={<CustomTooltip />} />
+
+                {/* Reference lines for score thresholds */}
+                <ReferenceLine x={30} stroke="#ef4444" strokeWidth={2} strokeDasharray="3 3" />
+                <ReferenceLine x={40} stroke="#eab308" strokeWidth={2} strokeDasharray="3 3" />
+
+                {/* Full range background bar */}
+                <Bar
+                  dataKey={() => 40} // Width of background bar (50-10=40)
+                  fill="#f3f4f6" // Light gray
+                  background={{ fill: "#e5e7eb" }}
+                  barSize={40}
+                  radius={[0, 4, 4, 0]}
+                  isAnimationActive={false}
+                />
+
+                {/* Individual score reference dots */}
+                {chartData[0] && chartData[0].avgScore !== undefined && (
+                  <ReferenceDot
+                    key="avgScore"
+                    x={chartData[0].avgScore}
+                    y={chartData[0].dimension}
+                    r={0} // No visible dot, using CustomizedDot
+                    shape={<CustomizedDot key="avgScore" fill={getColorForKey("avgScore")} />}
+                    ifOverflow="visible"
                   />
-                </Bar>
-                <Bar 
-                  name="Self" 
-                  dataKey="selfScore" 
-                  barSize={getBarSize()}
-                >
-                  {chartData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.selfColor} />
-                  ))}
-                  <LabelList
-                    dataKey="selfScore"
-                    position="top"
-                    formatter={formatScoreLabel}
-                    style={labelStyle}
+                )}
+
+                {chartData[0] && chartData[0].selfScore !== undefined && (
+                  <ReferenceDot
+                    key="selfScore"
+                    x={chartData[0].selfScore}
+                    y={chartData[0].dimension}
+                    r={0}
+                    shape={<CustomizedDot key="selfScore" fill={getColorForKey("selfScore")} />}
+                    ifOverflow="visible"
                   />
-                </Bar>
-                <Bar 
-                  name="Rater 1" 
-                  dataKey="rater1Score" 
-                  barSize={getBarSize()}
-                >
-                  {chartData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.rater1Color} />
-                  ))}
-                  <LabelList
-                    dataKey="rater1Score"
-                    position="top"
-                    formatter={(val) => val > 0 ? formatScoreLabel(val) : ""}
-                    style={labelStyle}
+                )}
+
+                {chartData[0] && chartData[0].rater1Score !== null && chartData[0].rater1Score !== undefined && (
+                  <ReferenceDot
+                    key="rater1Score"
+                    x={chartData[0].rater1Score}
+                    y={chartData[0].dimension}
+                    r={0}
+                    shape={<CustomizedDot key="rater1Score" fill={getColorForKey("rater1Score")} />}
+                    ifOverflow="visible"
                   />
-                </Bar>
-                <Bar 
-                  name="Rater 2" 
-                  dataKey="rater2Score" 
-                  barSize={getBarSize()}
-                >
-                  {chartData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.rater2Color} />
-                  ))}
-                  <LabelList
-                    dataKey="rater2Score"
-                    position="top"
-                    formatter={(val) => val > 0 ? formatScoreLabel(val) : ""}
-                    style={labelStyle}
+                )}
+
+                {chartData[0] && chartData[0].rater2Score !== null && chartData[0].rater2Score !== undefined && (
+                  <ReferenceDot
+                    key="rater2Score"
+                    x={chartData[0].rater2Score}
+                    y={chartData[0].dimension}
+                    r={0}
+                    shape={<CustomizedDot key="rater2Score" fill={getColorForKey("rater2Score")} />}
+                    ifOverflow="visible"
                   />
-                </Bar>
-                <Legend verticalAlign="bottom" height={36} />
-              </>
-            )}
-          </BarChart>
-        </ResponsiveContainer>
+                )}
+              </BarChart>
+            </ResponsiveContainer>
+            
+            {/* Custom legend */}
+            <CustomLegend />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
