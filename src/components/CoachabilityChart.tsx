@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DimensionScore } from "@/types/assessment";
 import {
@@ -59,7 +60,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
   if (!coachabilityScore) return null;
 
   // Determine if it's aggregate or individual view
-  const isAggregateView = "selfScore" in coachabilityScore && 
+  const isAggregateView = "selfScore" in coachabilityScore || 
     (coachabilityScore as any).rater1Score !== undefined;
 
   // Build data for exactly one row
@@ -257,7 +258,6 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                     offset={25}
                   />
                 </Bar>
-                {/* Always show Rater 1 and Rater 2 in aggregate view */}
                 <Bar
                   name="Rater 1"
                   dataKey="normalizedRater1Score"

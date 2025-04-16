@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DimensionScore } from "@/types/assessment";
 import {
@@ -147,7 +148,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
   }
 
   // Check if it's an aggregate view with self, rater1, rater2
-  const isAggregateView = "selfScore" in filteredScores[0] && 
+  const isAggregateView = "selfScore" in filteredScores[0] || 
     (filteredScores[0] as any).rater1Score !== undefined;
 
   // Transform the raw data into chart data
