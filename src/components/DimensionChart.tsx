@@ -10,7 +10,8 @@ import {
   Cell,
   ReferenceLine,
   Tooltip,
-  LabelList
+  LabelList,
+  Legend
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { categorizeAdaptability, categorizeScore, categorizeProblemResolution } from "@/utils/scoreCalculations";
@@ -76,18 +77,43 @@ const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const dimensionName = data.dimension || data.name;
-    const category = getCategoryLabel(dimensionName, data.score);
 
-    return (
-      <div className="bg-white p-2 border shadow-sm rounded-md">
-        <p className="font-semibold">{dimensionName}</p>
-        <p>Score: {Math.round(data.score * 10) / 10}</p>
-        <p>Category: {category}</p>
-        <p className="text-xs text-gray-500">
-          Range: {data.min} to {data.max}
-        </p>
-      </div>
-    );
+    // Check if we have individual rater scores or just one score
+    if (data.score !== undefined) {
+      const category = getCategoryLabel(dimensionName, data.score);
+      return (
+        <div className="bg-white p-2 border shadow-sm rounded-md">
+          <p className="font-semibold">{dimensionName}</p>
+          <p>Score: {Math.round(data.score * 10) / 10}</p>
+          <p>Category: {category}</p>
+          <p className="text-xs text-gray-500">
+            Range: {data.min} to {data.max}
+          </p>
+        </div>
+      );
+    } else {
+      // For aggregate view with multiple scores
+      return (
+        <div className="bg-white p-2 border shadow-sm rounded-md">
+          <p className="font-semibold">{dimensionName}</p>
+          {data.avgScore !== undefined && (
+            <p>Average: {Math.round(data.avgScore * 10) / 10}</p>
+          )}
+          {data.selfScore !== undefined && (
+            <p>Self: {Math.round(data.selfScore * 10) / 10}</p>
+          )}
+          {data.rater1Score !== undefined && data.rater1Score > 0 && (
+            <p>Rater 1: {Math.round(data.rater1Score * 10) / 10}</p>
+          )}
+          {data.rater2Score !== undefined && data.rater2Score > 0 && (
+            <p>Rater 2: {Math.round(data.rater2Score * 10) / 10}</p>
+          )}
+          <p className="text-xs text-gray-500">
+            Range: {data.min} to {data.max}
+          </p>
+        </div>
+      );
+    }
   }
   return null;
 };
@@ -121,8 +147,9 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
     );
   }
 
-  // Check if it's single "score" format
-  const isIndividualScores = "score" in filteredScores[0] || !("selfScore" in filteredScores[0]);
+  // Check if it's an aggregate view with self, rater1, rater2
+  const isAggregateView = "selfScore" in filteredScores[0] && 
+    (filteredScores[0] as any).rater1Score !== undefined;
 
   // Transform the raw data into chart data
   const chartData = filteredScores.map(original => {
@@ -130,7 +157,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
     const descriptions =
       DIMENSION_DESCRIPTIONS[dimensionName] || { low: "low", high: "high" };
 
-    if (isIndividualScores) {
+    if (!isAggregateView) {
       // Single dimension score - Use raw score directly
       const s = original as any;
       
@@ -153,28 +180,50 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
         category: categoryLabel
       };
     } else {
-      // We now treat all scores as individual scores with a single value
+      // Aggregate view with self, rater1, and rater2 scores
       const s = original as any;
       
-      // Use the average score for display
-      const score = s.score || 0;
+      // Extract all scores
+      const selfScore = s.selfScore || 0;
+      const rater1Score = s.rater1Score || 0;
+      const rater2Score = s.rater2Score || 0;
+      const avgScore = s.score || 0; // This is the average score
       
-      // Calculate normalized score for positioning the bar (0-100)
-      const normalizedScore = ((score - MIN_DIM) / RANGE_DIM) * 100 || 0;
+      // Calculate normalized scores for positioning the bars (0-100)
+      const normalizedSelfScore = ((selfScore - MIN_DIM) / RANGE_DIM) * 100 || 0;
+      const normalizedRater1Score = ((rater1Score - MIN_DIM) / RANGE_DIM) * 100 || 0;
+      const normalizedRater2Score = ((rater2Score - MIN_DIM) / RANGE_DIM) * 100 || 0;
+      const normalizedAvgScore = ((avgScore - MIN_DIM) / RANGE_DIM) * 100 || 0;
 
-      // Get category label
-      const categoryLabel = getCategoryLabel(dimensionName, score);
+      // Get category labels
+      const selfCategoryLabel = getCategoryLabel(dimensionName, selfScore);
+      const rater1CategoryLabel = getCategoryLabel(dimensionName, rater1Score);
+      const rater2CategoryLabel = getCategoryLabel(dimensionName, rater2Score);
+      const avgCategoryLabel = getCategoryLabel(dimensionName, avgScore);
 
       return {
         dimension: dimensionName,
-        score: score, // Use the average score
+        avgScore: avgScore,
+        selfScore: selfScore,
+        rater1Score: rater1Score,
+        rater2Score: rater2Score,
+        normalizedAvgScore: normalizedAvgScore,
+        normalizedSelfScore: normalizedSelfScore,
+        normalizedRater1Score: normalizedRater1Score,
+        normalizedRater2Score: normalizedRater2Score,
         min: MIN_DIM,
         max: MAX_DIM,
         color: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
-        normalizedScore, // Used for positioning the bar only
+        selfColor: "#4169E1", // Blue for self
+        rater1Color: "#3CB371", // Green for rater 1
+        rater2Color: "#FF7F50", // Coral for rater 2
+        avgColor: "#9370DB", // Purple for average
         lowLabel: descriptions.low,
         highLabel: descriptions.high,
-        category: categoryLabel
+        avgCategory: avgCategoryLabel,
+        selfCategory: selfCategoryLabel,
+        rater1Category: rater1CategoryLabel,
+        rater2Category: rater2CategoryLabel
       };
     }
   });
@@ -242,6 +291,35 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
     return `${Math.round(score)} (${category})`;
   };
 
+  // New formatters for aggregate scores
+  const formatAvgLabel = (value: any, entry: any) => {
+    if (!entry || !entry.payload) {
+      return `Avg: ${value ? Math.round(value) : 0}`;
+    }
+    return `Avg: ${Math.round(entry.payload.avgScore)}`;
+  };
+
+  const formatSelfLabel = (value: any, entry: any) => {
+    if (!entry || !entry.payload) {
+      return `Self: ${value ? Math.round(value) : 0}`;
+    }
+    return `Self: ${Math.round(entry.payload.selfScore)}`;
+  };
+
+  const formatRater1Label = (value: any, entry: any) => {
+    if (!entry || !entry.payload) {
+      return `R1: ${value ? Math.round(value) : 0}`;
+    }
+    return `R1: ${Math.round(entry.payload.rater1Score)}`;
+  };
+
+  const formatRater2Label = (value: any, entry: any) => {
+    if (!entry || !entry.payload) {
+      return `R2: ${value ? Math.round(value) : 0}`;
+    }
+    return `R2: ${Math.round(entry.payload.rater2Score)}`;
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -250,12 +328,12 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
 
       <CardContent>
         {/* Center the chart with a fixed 600x400 container */}
-        <div className="mx-auto" style={{ width: 600, height: 400 }}>
+        <div className="mx-auto" style={{ width: 600, height: isAggregateView ? 600 : 400 }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               layout="vertical"
-              margin={{ top: 30, right: 80, left: 80, bottom: 30 }}
+              margin={{ top: 30, right: 120, left: 80, bottom: isAggregateView ? 50 : 30 }}
             >
               {/* X-axis using normalized values for positioning (0-100), 
                   but showing the actual -28 to 28 scale on ticks */}
@@ -287,27 +365,101 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
               <ReferenceLine x={50} stroke="#aaa" />
               <ReferenceLine x={75} stroke="#ddd" strokeDasharray="3 3" />
 
-              {/* Single dimension score bar */}
-              <Bar
-                dataKey="normalizedScore"
-                barSize={20}
-                shape={<EndTickShape />}
-                background={{ fill: "#f1f1f1" }}
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-                <LabelList
-                  dataKey="score"
-                  position="right"
-                  formatter={formatLabel}
-                  style={{
-                    fontSize: isMobile ? "9px" : "11px",
-                    fill: "#000"
-                  }}
-                  offset={5}
-                />
-              </Bar>
+              {isAggregateView ? (
+                // Multiple bars for aggregate view
+                <>
+                  <Bar
+                    name="Average"
+                    dataKey="normalizedAvgScore"
+                    barSize={20}
+                    fill="#9370DB"
+                    shape={<EndTickShape />}
+                  >
+                    <LabelList
+                      dataKey="avgScore"
+                      position="right"
+                      formatter={formatAvgLabel}
+                      style={{ fontSize: isMobile ? "9px" : "11px", fill: "#666" }}
+                      offset={5}
+                    />
+                  </Bar>
+                  <Bar
+                    name="Self"
+                    dataKey="normalizedSelfScore"
+                    barSize={20}
+                    fill="#4169E1"
+                    shape={<EndTickShape />}
+                    minPointSize={2}
+                  >
+                    <LabelList
+                      dataKey="selfScore"
+                      position="right"
+                      formatter={formatSelfLabel}
+                      style={{ fontSize: isMobile ? "9px" : "11px", fill: "#666" }}
+                      offset={25}
+                    />
+                  </Bar>
+                  {chartData.some(d => d.rater1Score > 0) && (
+                    <Bar
+                      name="Rater 1"
+                      dataKey="normalizedRater1Score"
+                      barSize={20}
+                      fill="#3CB371"
+                      shape={<EndTickShape />}
+                      minPointSize={2}
+                    >
+                      <LabelList
+                        dataKey="rater1Score"
+                        position="right"
+                        formatter={formatRater1Label}
+                        style={{ fontSize: isMobile ? "9px" : "11px", fill: "#666" }}
+                        offset={45}
+                      />
+                    </Bar>
+                  )}
+                  {chartData.some(d => d.rater2Score > 0) && (
+                    <Bar
+                      name="Rater 2"
+                      dataKey="normalizedRater2Score"
+                      barSize={20}
+                      fill="#FF7F50"
+                      shape={<EndTickShape />}
+                      minPointSize={2}
+                    >
+                      <LabelList
+                        dataKey="rater2Score"
+                        position="right"
+                        formatter={formatRater2Label}
+                        style={{ fontSize: isMobile ? "9px" : "11px", fill: "#666" }}
+                        offset={65}
+                      />
+                    </Bar>
+                  )}
+                  <Legend verticalAlign="bottom" height={36} />
+                </>
+              ) : (
+                // Single dimension score bar
+                <Bar
+                  dataKey="normalizedScore"
+                  barSize={20}
+                  shape={<EndTickShape />}
+                  background={{ fill: "#f1f1f1" }}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                  <LabelList
+                    dataKey="score"
+                    position="right"
+                    formatter={formatLabel}
+                    style={{
+                      fontSize: isMobile ? "9px" : "11px",
+                      fill: "#000"
+                    }}
+                    offset={5}
+                  />
+                </Bar>
+              )}
             </BarChart>
           </ResponsiveContainer>
         </div>
