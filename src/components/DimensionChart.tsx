@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DimensionScore } from "@/types/assessment";
 import {
@@ -68,8 +69,7 @@ const CustomTooltip = ({ active, payload }: any) => {
           <p>Score: {data.score}</p>
         ) : (
           <>
-            <p>Self Score: {data.selfScore}</p>
-            <p>Others Score: {data.othersScore}</p>
+            <p>Average Score: {data.score}</p>
           </>
         )}
         <p className="text-xs text-gray-500">
@@ -110,9 +110,8 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
     );
   }
 
-  // Check if it's single "score" or aggregator with "selfScore"/"othersScore"
-  const isIndividualScores =
-    "score" in filteredScores[0] || !("selfScore" in filteredScores[0]);
+  // Check if it's single "score" format
+  const isIndividualScores = "score" in filteredScores[0] || !("selfScore" in filteredScores[0]);
 
   // Transform the raw data into chart data
   const chartData = filteredScores.map(original => {
@@ -139,24 +138,22 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
         highLabel: descriptions.high
       };
     } else {
-      // aggregator scenario: selfScore + othersScore - Use raw scores directly
+      // We now treat all scores as individual scores with a single value
       const s = original as any;
       
-      // Calculate normalized scores for positioning the bars (0-100)
-      const normalizedSelfScore =
-        ((s.selfScore - MIN_DIM) / RANGE_DIM) * 100 || 0;
-      const normalizedOthersScore =
-        ((s.othersScore - MIN_DIM) / RANGE_DIM) * 100 || 0;
+      // Use the average score for display
+      const score = s.score || 0;
+      
+      // Calculate normalized score for positioning the bar (0-100)
+      const normalizedScore = ((score - MIN_DIM) / RANGE_DIM) * 100 || 0;
 
       return {
         dimension: dimensionName,
-        selfScore: s.selfScore, // Keep raw score unchanged for display
-        othersScore: s.othersScore, // Keep raw score unchanged for display
+        score: score, // Use the average score
         min: MIN_DIM,
         max: MAX_DIM,
         color: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
-        normalizedSelfScore, // Used for positioning the bar only
-        normalizedOthersScore, // Used for positioning the bar only
+        normalizedScore, // Used for positioning the bar only
         lowLabel: descriptions.low,
         highLabel: descriptions.high
       };
@@ -256,81 +253,27 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
               <ReferenceLine x={50} stroke="#aaa" />
               <ReferenceLine x={75} stroke="#ddd" strokeDasharray="3 3" />
 
-              {isIndividualScores ? (
-                // Single dimension score bar
-                <Bar
-                  dataKey="normalizedScore"
-                  barSize={20}
-                  shape={<EndTickShape />}
-                  background={{ fill: "#f1f1f1" }}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                  <LabelList
-                    dataKey="score"
-                    position="right"
-                    formatter={(v: number) => Math.round(v)}
-                    style={{
-                      fontSize: isMobile ? "9px" : "11px",
-                      fill: "#000"
-                    }}
-                    offset={5}
-                  />
-                </Bar>
-              ) : (
-                <>
-                  {/* Self Score */}
-                  <Bar
-                    name="Self Score"
-                    dataKey="normalizedSelfScore"
-                    barSize={20}
-                    shape={<EndTickShape />}
-                    background={{ fill: "#f1f1f1" }}
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-self-${index}`} fill={entry.color} />
-                    ))}
-                    <LabelList
-                      dataKey="selfScore"
-                      position="right"
-                      formatter={(v: number) => Math.round(v)}
-                      style={{
-                        fontSize: isMobile ? "9px" : "11px",
-                        fill: "#000"
-                      }}
-                      offset={5}
-                    />
-                  </Bar>
-
-                  {/* Others Score */}
-                  <Bar
-                    name="Others Score"
-                    dataKey="normalizedOthersScore"
-                    barSize={20}
-                    shape={<EndTickShape />}
-                    background={{ fill: "#f1f1f1" }}
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-others-${index}`}
-                        fill={entry.color}
-                        opacity={0.7}
-                      />
-                    ))}
-                    <LabelList
-                      dataKey="othersScore"
-                      position="right"
-                      formatter={(v: number) => Math.round(v)}
-                      style={{
-                        fontSize: isMobile ? "9px" : "11px",
-                        fill: "#000"
-                      }}
-                      offset={25}
-                    />
-                  </Bar>
-                </>
-              )}
+              {/* Single dimension score bar */}
+              <Bar
+                dataKey="normalizedScore"
+                barSize={20}
+                shape={<EndTickShape />}
+                background={{ fill: "#f1f1f1" }}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+                <LabelList
+                  dataKey="score"
+                  position="right"
+                  formatter={(v: number) => Math.round(v)}
+                  style={{
+                    fontSize: isMobile ? "9px" : "11px",
+                    fill: "#000"
+                  }}
+                  offset={5}
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
