@@ -371,11 +371,6 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
     }
   };
 
-  const fallbackProfile = {
-    summary: "Profile information not available",
-    traits: ["Detailed information not available for this profile"]
-  };
-
   const profile = profiles[profileBasedOnAverages] || {
     summary: "",
     traits: []
