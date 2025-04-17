@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 
@@ -414,6 +413,12 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
   // Use the profile determined by the average scores
   const profile = profiles[profileBasedOnAverages] || fallbackProfile;
 
+  // Format number for display or return N/A
+  const formatScore = (score: number | undefined): string => {
+    if (score === undefined || score === null) return 'N/A';
+    return score.toFixed(1);
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -459,15 +464,9 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
                         ({categorizeScore(averageScores?.esteem || 0, 'Esteem')})
                       </span>
                     </td>
-                    <td className="text-center py-1">
-                      {debugInfo.esteemScore?.toFixed(1) || 'N/A'}
-                    </td>
-                    <td className="text-center py-1">
-                      {debugInfo.rater1?.esteemScore?.toFixed(1) || 'N/A'}
-                    </td>
-                    <td className="text-center py-1">
-                      {debugInfo.rater2?.esteemScore?.toFixed(1) || 'N/A'}
-                    </td>
+                    <td className="text-center py-1">{formatScore(debugInfo.esteemScore)}</td>
+                    <td className="text-center py-1">{formatScore(debugInfo.rater1?.esteemScore)}</td>
+                    <td className="text-center py-1">{formatScore(debugInfo.rater2?.esteemScore)}</td>
                   </tr>
                   <tr className="border-b">
                     <td className="py-1">Trust</td>
@@ -477,15 +476,9 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
                         ({categorizeScore(averageScores?.trust || 0, 'Trust')})
                       </span>
                     </td>
-                    <td className="text-center py-1">
-                      {debugInfo.trustScore?.toFixed(1) || 'N/A'}
-                    </td>
-                    <td className="text-center py-1">
-                      {debugInfo.rater1?.trustScore?.toFixed(1) || 'N/A'}
-                    </td>
-                    <td className="text-center py-1">
-                      {debugInfo.rater2?.trustScore?.toFixed(1) || 'N/A'}
-                    </td>
+                    <td className="text-center py-1">{formatScore(debugInfo.trustScore)}</td>
+                    <td className="text-center py-1">{formatScore(debugInfo.rater1?.trustScore)}</td>
+                    <td className="text-center py-1">{formatScore(debugInfo.rater2?.trustScore)}</td>
                   </tr>
                   <tr className="border-b">
                     <td className="py-1">Business Drive</td>
@@ -495,15 +488,9 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
                         ({categorizeScore(averageScores?.driver || 0, 'Drive')})
                       </span>
                     </td>
-                    <td className="text-center py-1">
-                      {debugInfo.driverScore?.toFixed(1) || 'N/A'}
-                    </td>
-                    <td className="text-center py-1">
-                      {debugInfo.rater1?.driverScore?.toFixed(1) || 'N/A'}
-                    </td>
-                    <td className="text-center py-1">
-                      {debugInfo.rater2?.driverScore?.toFixed(1) || 'N/A'}
-                    </td>
+                    <td className="text-center py-1">{formatScore(debugInfo.driverScore)}</td>
+                    <td className="text-center py-1">{formatScore(debugInfo.rater1?.driverScore)}</td>
+                    <td className="text-center py-1">{formatScore(debugInfo.rater2?.driverScore)}</td>
                   </tr>
                   <tr className="border-b">
                     <td className="py-1">Adaptability</td>
@@ -513,15 +500,9 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
                         ({categorizeScore(averageScores?.adaptability || 0, 'Adaptability')})
                       </span>
                     </td>
-                    <td className="text-center py-1">
-                      {debugInfo.adaptabilityScore?.toFixed(1) || 'N/A'}
-                    </td>
-                    <td className="text-center py-1">
-                      {debugInfo.rater1?.adaptabilityScore?.toFixed(1) || 'N/A'}
-                    </td>
-                    <td className="text-center py-1">
-                      {debugInfo.rater2?.adaptabilityScore?.toFixed(1) || 'N/A'}
-                    </td>
+                    <td className="text-center py-1">{formatScore(debugInfo.adaptabilityScore)}</td>
+                    <td className="text-center py-1">{formatScore(debugInfo.rater1?.adaptabilityScore)}</td>
+                    <td className="text-center py-1">{formatScore(debugInfo.rater2?.adaptabilityScore)}</td>
                   </tr>
                   <tr>
                     <td className="py-1">Problem Resolution</td>
@@ -531,15 +512,9 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
                         ({categorizeScore(averageScores?.problemResolution || 0, 'Problem Resolution')})
                       </span>
                     </td>
-                    <td className="text-center py-1">
-                      {debugInfo.problemResolutionScore?.toFixed(1) || 'N/A'}
-                    </td>
-                    <td className="text-center py-1">
-                      {debugInfo.rater1?.problemResolutionScore?.toFixed(1) || 'N/A'}
-                    </td>
-                    <td className="text-center py-1">
-                      {debugInfo.rater2?.problemResolutionScore?.toFixed(1) || 'N/A'}
-                    </td>
+                    <td className="text-center py-1">{formatScore(debugInfo.problemResolutionScore)}</td>
+                    <td className="text-center py-1">{formatScore(debugInfo.rater1?.problemResolutionScore)}</td>
+                    <td className="text-center py-1">{formatScore(debugInfo.rater2?.problemResolutionScore)}</td>
                   </tr>
                 </tbody>
               </table>
