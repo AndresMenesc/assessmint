@@ -144,22 +144,13 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
       // aggregator scenario: selfScore + rater1Score + rater2Score - Use raw scores directly
       const s = original as any;
       
-      // Calculate normalized scores for positioning the bars (0-100)
-      const normalizedSelfScore =
-        ((s.selfScore - MIN_DIM) / RANGE_DIM) * 100 || 0;
-      
-      // Get individual rater scores instead of combined "others" score
+      // Get individual scores
+      const selfScore = s.selfScore || 0;
       const rater1Score = s.rater1Score || 0;
       const rater2Score = s.rater2Score || 0;
       
-      // Calculate normalized scores for individual raters
-      const normalizedRater1Score = 
-        ((rater1Score - MIN_DIM) / RANGE_DIM) * 100 || 0;
-      const normalizedRater2Score = 
-        ((rater2Score - MIN_DIM) / RANGE_DIM) * 100 || 0;
-      
       // Calculate average of all three scores
-      const validScores = [s.selfScore, rater1Score, rater2Score].filter(score => score !== 0);
+      const validScores = [selfScore, rater1Score, rater2Score].filter(score => score !== 0);
       const averageScore = validScores.length > 0 
         ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length 
         : 0;
@@ -170,21 +161,15 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
       
       return {
         dimension: dimensionName,
-        selfScore: s.selfScore, // Keep raw score unchanged for display
-        rater1Score: rater1Score,
-        rater2Score: rater2Score,
+        selfScore: selfScore, // Keep raw score unchanged for tooltip display
+        rater1Score: rater1Score, // Keep raw score unchanged for tooltip display
+        rater2Score: rater2Score, // Keep raw score unchanged for tooltip display
         averageScore: Number(averageScore.toFixed(1)), // Round to 1 decimal place
         min: MIN_DIM,
         max: MAX_DIM,
         color: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
-        normalizedSelfScore,
-        normalizedRater1Score,
-        normalizedRater2Score,
-        normalizedAverageScore,
-        selfColor: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
-        rater1Color: (s.color || DIMENSION_COLORS[dimensionName] || "#4169E1") + "CC", // 80% opacity
-        rater2Color: (s.color || DIMENSION_COLORS[dimensionName] || "#4169E1") + "99", // 60% opacity
-        averageColor: "#9b87f5", // New purple color for average
+        normalizedAverageScore, // The only score we'll display in the bar
+        averageColor: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1", // Keep using the dimension color for average
         lowLabel: descriptions.low,
         highLabel: descriptions.high
       };
@@ -307,116 +292,31 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                   />
                 </Bar>
               ) : (
-                <>
-                  {/* Self Score */}
-                  <Bar
-                    name="Self Score"
-                    dataKey="normalizedSelfScore"
-                    barSize={20}
-                    shape={<EndTickShape />}
-                    background={{ fill: "#f1f1f1" }}
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-self-${index}`} fill={entry.selfColor} />
-                    ))}
-                    <LabelList
-                      dataKey="selfScore"
-                      position="right"
-                      formatter={(v: number) => Math.round(v)}
-                      style={{
-                        fontSize: isMobile ? "9px" : "11px",
-                        fill: "#000"
-                      }}
-                      offset={5}
+                // Just show the average score bar
+                <Bar
+                  name="Average Score"
+                  dataKey="normalizedAverageScore"
+                  barSize={20}
+                  shape={<EndTickShape />}
+                  background={{ fill: "#f1f1f1" }}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-average-${index}`} 
+                      fill={entry.averageColor} 
                     />
-                  </Bar>
-
-                  {/* Rater 1 Score */}
-                  {chartData[0].rater1Score > 0 && (
-                    <Bar
-                      name="Rater 1 Score"
-                      dataKey="normalizedRater1Score"
-                      barSize={20}
-                      shape={<EndTickShape />}
-                      background={{ fill: "#f1f1f1" }}
-                    >
-                      {chartData.map((entry, index) => (
-                        <Cell
-                          key={`cell-rater1-${index}`}
-                          fill={entry.rater1Color}
-                        />
-                      ))}
-                      <LabelList
-                        dataKey="rater1Score"
-                        position="right"
-                        formatter={(v: number) => Math.round(v)}
-                        style={{
-                          fontSize: isMobile ? "9px" : "11px",
-                          fill: "#000"
-                        }}
-                        offset={25}
-                      />
-                    </Bar>
-                  )}
-
-                  {/* Rater 2 Score */}
-                  {chartData[0].rater2Score > 0 && (
-                    <Bar
-                      name="Rater 2 Score"
-                      dataKey="normalizedRater2Score"
-                      barSize={20}
-                      shape={<EndTickShape />}
-                      background={{ fill: "#f1f1f1" }}
-                    >
-                      {chartData.map((entry, index) => (
-                        <Cell
-                          key={`cell-rater2-${index}`}
-                          fill={entry.rater2Color}
-                        />
-                      ))}
-                      <LabelList
-                        dataKey="rater2Score"
-                        position="right"
-                        formatter={(v: number) => Math.round(v)}
-                        style={{
-                          fontSize: isMobile ? "9px" : "11px",
-                          fill: "#000"
-                        }}
-                        offset={45}
-                      />
-                    </Bar>
-                  )}
-                  
-                  {/* Average Score - New bar */}
-                  {chartData[0].averageScore > 0 && (
-                    <Bar
-                      name="Average Score"
-                      dataKey="normalizedAverageScore"
-                      barSize={20}
-                      shape={<EndTickShape />}
-                      background={{ fill: "#f1f1f1" }}
-                    >
-                      {chartData.map((entry, index) => (
-                        <Cell
-                          key={`cell-average-${index}`}
-                          fill={entry.averageColor}
-                        />
-                      ))}
-                      <LabelList
-                        dataKey="averageScore"
-                        position="right"
-                        formatter={(v: number) => v}
-                        style={{
-                          fontSize: isMobile ? "9px" : "11px",
-                          fill: "#000"
-                        }}
-                        offset={65}
-                      />
-                    </Bar>
-                  )}
-
-                  <Legend verticalAlign="bottom" height={36} />
-                </>
+                  ))}
+                  <LabelList
+                    dataKey="averageScore"
+                    position="right"
+                    formatter={(v: number) => v}
+                    style={{
+                      fontSize: isMobile ? "9px" : "11px",
+                      fill: "#000"
+                    }}
+                    offset={5}
+                  />
+                </Bar>
               )}
             </BarChart>
           </ResponsiveContainer>
