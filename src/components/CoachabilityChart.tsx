@@ -69,11 +69,24 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
   const coachabilityScore = scores.find(
     (score) => (score.dimension ?? (score as any).name) === "Coachability"
   );
-  if (!coachabilityScore) return null;
+  
+  if (!coachabilityScore) {
+    console.log("No Coachability score found in:", scores);
+    return null;
+  }
+
+  // Debug log to see the structure of the coachability score
+  console.log("Coachability Score Object:", coachabilityScore);
 
   // Determine if it's aggregate or individual view
-  const isAggregateView = "selfScore" in coachabilityScore || 
-    (coachabilityScore as any).rater1Score !== undefined;
+  // Check both property existence and their types to determine the view
+  const isAggregateView = 
+    typeof (coachabilityScore as any).selfScore !== 'undefined' || 
+    typeof (coachabilityScore as any).rater1Score !== 'undefined' ||
+    (coachabilityScore as any).score !== undefined && Array.isArray(scores) && 
+    scores.some(score => typeof (score as any).selfScore !== 'undefined');
+  
+  console.log("Is Aggregate View:", isAggregateView);
 
   // Build data for exactly one row
   const chartData: any[] = [];
@@ -97,7 +110,10 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
     // aggregate view with reference dots
     const c = coachabilityScore as any;
     
-    // Raw scores
+    // Raw scores - debugging to see what's available
+    console.log("Raw coachability score object:", c);
+    
+    // Extract scores, defaulting to 0 if undefined
     const avgRawScore = Math.round(c.score || 0);
     const selfRawScore = Math.round(c.selfScore || 0); 
     const rater1RawScore = Math.round(c.rater1Score || 0);

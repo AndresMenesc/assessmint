@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -154,17 +153,27 @@ const ResultsPage = () => {
         const calculatedResults = await getResults(selectedAssessment);
         console.log("Calculated results:", calculatedResults);
         
-        // Log some additional specific details for debugging
         if (calculatedResults && calculatedResults.dimensionScores) {
           console.log("Calculated dimension scores:", calculatedResults.dimensionScores);
-          // Check if any dimension has selfScore/rater1Score properties
+          
           const hasAggregateScores = calculatedResults.dimensionScores.some(
             (score: any) => score.selfScore !== undefined || score.rater1Score !== undefined
           );
           console.log("Has aggregate scores:", hasAggregateScores);
+          
+          if (calculatedResults.dimensionScores.length > 0) {
+            console.log("First dimension score structure:", calculatedResults.dimensionScores[0]);
+          }
+          
+          const coachabilityScore = calculatedResults.dimensionScores.find(
+            (score: any) => (score.name || score.dimension) === "Coachability"
+          );
+          if (coachabilityScore) {
+            console.log("Coachability score structure:", coachabilityScore);
+          }
+          
+          setResults(calculatedResults);
         }
-        
-        setResults(calculatedResults);
       } catch (error) {
         console.error("Error calculating results:", error);
         setResults(null);
@@ -526,7 +535,6 @@ const ResultsPage = () => {
                                         size="sm"
                                         onClick={() => {
                                           setSelectedAssessment(a);
-                                          // Explicitly set tab to "aggregate" when selecting an assessment
                                           setActiveTab("aggregate");
                                         }}
                                       >
@@ -631,7 +639,6 @@ const ResultsPage = () => {
                           <TabsContent value="aggregate" className="mt-4">
                             {results && results.dimensionScores && results.dimensionScores.length > 0 ? (
                               <>
-                                {/* Add a debug banner for development */}
                                 {process.env.NODE_ENV !== "production" && (
                                   <div className="bg-blue-100 border border-blue-300 rounded p-2 mb-4 text-xs">
                                     <p className="font-bold">Debug Info:</p>

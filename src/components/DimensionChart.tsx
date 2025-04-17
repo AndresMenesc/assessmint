@@ -151,9 +151,13 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
   }
 
   // Check if it's an aggregate view with self, rater1, rater2
-  const isAggregateView = "selfScore" in filteredScores[0] || 
-    (filteredScores[0] as any).rater1Score !== undefined;
-
+  // Improved detection logic to check both property existence and data structure
+  const isAggregateView = 
+    typeof (filteredScores[0] as any).selfScore !== 'undefined' || 
+    typeof (filteredScores[0] as any).rater1Score !== 'undefined' ||
+    (filteredScores[0] as any).score !== undefined && Array.isArray(scores) && 
+    scores.some(score => typeof (score as any).selfScore !== 'undefined');
+  
   console.log("Is Aggregate View:", isAggregateView);
   
   if (isAggregateView) {
@@ -191,6 +195,8 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
     } else {
       // Aggregate view with self, rater1, and rater2 scores
       const s = original as any;
+      
+      console.log(`Processing aggregate dimension ${dimensionName}:`, s);
       
       // Extract all scores
       const selfScore = s.selfScore || 0;
