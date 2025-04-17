@@ -438,47 +438,120 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
         
         {debugInfo && showDebug && (
           <div className="mb-4 p-3 border rounded-md text-xs">
-            <h4 className="font-medium mb-1">Average Dimension Scores (Self, Rater 1, Rater 2):</h4>
-            <ul className="space-y-1">
-              {averageScores && (
-                <>
-                  <li>
-                    Esteem: {averageScores.esteem.toFixed(1)} 
-                    <span className="ml-2 text-gray-500">
-                      ({categorizeScore(averageScores.esteem, 'Esteem')})
-                    </span>
-                  </li>
-                  <li>
-                    Trust: {averageScores.trust.toFixed(1)}
-                    <span className="ml-2 text-gray-500">
-                      ({categorizeScore(averageScores.trust, 'Trust')})
-                    </span>
-                  </li>
-                  <li>
-                    Business Drive: {averageScores.driver.toFixed(1)}
-                    <span className="ml-2 text-gray-500">
-                      ({categorizeScore(averageScores.driver, 'Drive')})
-                    </span>
-                  </li>
-                  <li>
-                    Adaptability: {averageScores.adaptability.toFixed(1)}
-                    <span className="ml-2 text-gray-500">
-                      ({categorizeScore(averageScores.adaptability, 'Adaptability')})
-                    </span>
-                  </li>
-                  <li>
-                    Problem Resolution: {averageScores.problemResolution.toFixed(1)}
-                    <span className="ml-2 text-gray-500">
-                      ({categorizeScore(averageScores.problemResolution, 'Problem Resolution')})
-                    </span>
-                  </li>
-                </>
-              )}
-              {debugInfo.coachabilityScore !== undefined && (
-                <li>Coachability: {debugInfo.coachabilityScore}</li>
-              )}
-            </ul>
-            <p className="mt-2 text-xs text-gray-500">
+            <h4 className="font-medium mb-2">Dimension Scores:</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left pb-1">Dimension</th>
+                    <th className="text-center pb-1">Average</th>
+                    <th className="text-center pb-1">Self</th>
+                    <th className="text-center pb-1">Rater 1</th>
+                    <th className="text-center pb-1">Rater 2</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b">
+                    <td className="py-1">Esteem</td>
+                    <td className="text-center py-1">
+                      {averageScores?.esteem.toFixed(1)} 
+                      <span className="block text-gray-500 text-[10px]">
+                        ({categorizeScore(averageScores?.esteem || 0, 'Esteem')})
+                      </span>
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.esteemScore?.toFixed(1) || 'N/A'}
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.rater1?.esteemScore?.toFixed(1) || 'N/A'}
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.rater2?.esteemScore?.toFixed(1) || 'N/A'}
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-1">Trust</td>
+                    <td className="text-center py-1">
+                      {averageScores?.trust.toFixed(1)}
+                      <span className="block text-gray-500 text-[10px]">
+                        ({categorizeScore(averageScores?.trust || 0, 'Trust')})
+                      </span>
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.trustScore?.toFixed(1) || 'N/A'}
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.rater1?.trustScore?.toFixed(1) || 'N/A'}
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.rater2?.trustScore?.toFixed(1) || 'N/A'}
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-1">Business Drive</td>
+                    <td className="text-center py-1">
+                      {averageScores?.driver.toFixed(1)}
+                      <span className="block text-gray-500 text-[10px]">
+                        ({categorizeScore(averageScores?.driver || 0, 'Drive')})
+                      </span>
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.driverScore?.toFixed(1) || 'N/A'}
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.rater1?.driverScore?.toFixed(1) || 'N/A'}
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.rater2?.driverScore?.toFixed(1) || 'N/A'}
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-1">Adaptability</td>
+                    <td className="text-center py-1">
+                      {averageScores?.adaptability.toFixed(1)}
+                      <span className="block text-gray-500 text-[10px]">
+                        ({categorizeScore(averageScores?.adaptability || 0, 'Adaptability')})
+                      </span>
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.adaptabilityScore?.toFixed(1) || 'N/A'}
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.rater1?.adaptabilityScore?.toFixed(1) || 'N/A'}
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.rater2?.adaptabilityScore?.toFixed(1) || 'N/A'}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-1">Problem Resolution</td>
+                    <td className="text-center py-1">
+                      {averageScores?.problemResolution.toFixed(1)}
+                      <span className="block text-gray-500 text-[10px]">
+                        ({categorizeScore(averageScores?.problemResolution || 0, 'Problem Resolution')})
+                      </span>
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.problemResolutionScore?.toFixed(1) || 'N/A'}
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.rater1?.problemResolutionScore?.toFixed(1) || 'N/A'}
+                    </td>
+                    <td className="text-center py-1">
+                      {debugInfo.rater2?.problemResolutionScore?.toFixed(1) || 'N/A'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            {debugInfo.coachabilityScore !== undefined && (
+              <div className="mt-2">
+                <strong>Coachability:</strong> {debugInfo.coachabilityScore}
+              </div>
+            )}
+            
+            <p className="mt-3 text-xs text-gray-500">
               Range for all dimensions (except Coachability): -28 to +28
               <br />
               Categories: Low (-28 to -10), Neutral (-9 to 9), High (10 to 28)
