@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -13,23 +12,19 @@ interface DimensionAverageProfileProps {
 const DimensionAverageProfile = ({ scores, profileType }: DimensionAverageProfileProps) => {
   const [showProfileDetails, setShowProfileDetails] = useState(false);
 
-  // Filter out the Coachability dimension since it's not part of profile determination
   const dimensionScores = scores.filter(score => {
     const dimensionName = "dimension" in score ? score.dimension : (score as any).name;
     return dimensionName !== "Coachability";
   });
 
-  // Helper function to format scores for display
   const formatScore = (score: number | undefined) => {
     if (score === undefined || score === null) return "N/A";
     return score.toFixed(1);
   };
 
-  // Helper function to get the descriptive range based on dimension and score
   const getDescriptiveRange = (dimensionName: string, score: number | undefined): string => {
     if (score === undefined || score === null) return "N/A";
     
-    // Default ranges for most dimensions
     if (dimensionName === "Adaptability") {
       if (score <= -10) return "High Flexibility (-28 to -10)";
       if (score >= 10) return "High Precision (10 to 28)";
@@ -40,7 +35,6 @@ const DimensionAverageProfile = ({ scores, profileType }: DimensionAverageProfil
       if (score >= 10) return "Direct (10 to 28)";
       return "Balanced (-9 to 9)";
     }
-    // Standard range for Esteem, Trust, Business Drive
     else {
       if (score <= -10) return "Low (-28 to -10)";
       if (score >= 10) return "High (10 to 28)";
@@ -48,7 +42,6 @@ const DimensionAverageProfile = ({ scores, profileType }: DimensionAverageProfil
     }
   };
 
-  // Helper function to get dimension category without the range numbers
   const getDimensionCategory = (dimensionName: string, score: number | undefined): string => {
     if (score === undefined || score === null) return "N/A";
     
@@ -69,11 +62,9 @@ const DimensionAverageProfile = ({ scores, profileType }: DimensionAverageProfil
     }
   };
 
-  // Check if we have both individual and aggregate scores
   const hasIndividualScores = dimensionScores.length > 0 && 
     ('selfScore' in dimensionScores[0] || 'rater1Score' in dimensionScores[0] || 'rater2Score' in dimensionScores[0]);
 
-  // Profile descriptions
   const profileDescriptions: Record<string, { 
     dimensions: { [key: string]: string }, 
     description: string 
@@ -248,7 +239,7 @@ const DimensionAverageProfile = ({ scores, profileType }: DimensionAverageProfil
     <Card className="w-full mt-6">
       <CardHeader>
         <CardTitle className="text-xl flex items-center gap-2">
-          <span>Average Profile: {profileType || "Profile Not Detected"}</span>
+          <span>Average Profile: {profileType || "Profile Not Found"}</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -275,7 +266,6 @@ const DimensionAverageProfile = ({ scores, profileType }: DimensionAverageProfil
                 const dimensionName = "dimension" in score ? score.dimension : (score as any).name;
                 const isIndividual = !('selfScore' in score);
 
-                // Calculate average if we have individual scores
                 let averageScore: number | undefined;
                 if (hasIndividualScores && !isIndividual) {
                   const scores = [
@@ -330,7 +320,6 @@ const DimensionAverageProfile = ({ scores, profileType }: DimensionAverageProfil
           </table>
         </div>
 
-        {/* Profile Details Section */}
         <div className="mt-6">
           <div 
             className="flex items-center justify-between cursor-pointer bg-muted/30 p-3 rounded-md hover:bg-muted/50 transition-colors"
@@ -343,7 +332,7 @@ const DimensionAverageProfile = ({ scores, profileType }: DimensionAverageProfil
           {showProfileDetails && (
             <div className="mt-4 p-4 border rounded-md bg-background">
               <h4 className="text-lg font-medium mb-4">
-                {profileType || "Profile Not Detected"}
+                {profileType || "Profile Not Found"}
               </h4>
               
               {profileType && profileDescriptions[profileType] ? (
