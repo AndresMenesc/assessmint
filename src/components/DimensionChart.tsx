@@ -79,7 +79,7 @@ const CustomTooltip = ({ active, payload }: any) => {
     const dimensionName = data.dimension || data.name;
 
     // Check if we have individual rater scores or just one score
-    if (data.score !== undefined) {
+    if (data.selfScore === undefined && data.avgScore === undefined) {
       const category = getCategoryLabel(dimensionName, data.score);
       return (
         <div className="bg-white p-2 border shadow-sm rounded-md">
@@ -151,12 +151,14 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
   }
 
   // Check if it's an aggregate view with self, rater1, rater2
-  // Improved detection logic to check both property existence and data structure
+  // By checking if any score has selfScore, rater1Score etc.
   const isAggregateView = 
     typeof (filteredScores[0] as any).selfScore !== 'undefined' || 
     typeof (filteredScores[0] as any).rater1Score !== 'undefined' ||
-    (filteredScores[0] as any).score !== undefined && Array.isArray(scores) && 
-    scores.some(score => typeof (score as any).selfScore !== 'undefined');
+    scores.some(score => 
+      typeof (score as any).selfScore !== 'undefined' || 
+      typeof (score as any).rater1Score !== 'undefined'
+    );
   
   console.log("Is Aggregate View:", isAggregateView);
   
@@ -220,12 +222,12 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
         dimension: dimensionName,
         avgScore: avgScore,
         selfScore: selfScore,
-        rater1Score: rater1Score,
-        rater2Score: rater2Score,
+        rater1Score: rater1Score > 0 ? rater1Score : null,
+        rater2Score: rater2Score > 0 ? rater2Score : null,
         normalizedAvgScore: normalizedAvgScore,
         normalizedSelfScore: normalizedSelfScore,
-        normalizedRater1Score: normalizedRater1Score,
-        normalizedRater2Score: normalizedRater2Score,
+        normalizedRater1Score: normalizedRater1Score > 0 ? normalizedRater1Score : null,
+        normalizedRater2Score: normalizedRater2Score > 0 ? normalizedRater2Score : null,
         min: MIN_DIM,
         max: MAX_DIM,
         color: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
@@ -309,7 +311,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
     return `${Math.round(score)} (${category})`;
   };
 
-  // New formatters for aggregate scores
+  // Formatters for aggregate scores
   const formatAvgLabel = (value: any, entry: any) => {
     if (!entry || !entry.payload) {
       return `Avg: ${value ? Math.round(value) : 0}`;

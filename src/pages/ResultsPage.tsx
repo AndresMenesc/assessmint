@@ -155,6 +155,7 @@ const ResultsPage = () => {
         
         if (calculatedResults && calculatedResults.dimensionScores) {
           console.log("Calculated dimension scores:", calculatedResults.dimensionScores);
+          console.log("Number of dimension scores:", calculatedResults.dimensionScores.length);
           
           const hasAggregateScores = calculatedResults.dimensionScores.some(
             (score: any) => score.selfScore !== undefined || score.rater1Score !== undefined

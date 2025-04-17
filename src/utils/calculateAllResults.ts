@@ -241,6 +241,9 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         { 
           name: "Esteem", 
           score: avgEsteemScore,
+          selfScore: selfEsteemScore,
+          rater1Score: rater1EsteemScore || null,
+          rater2Score: rater2EsteemScore || null,
           min: -28, 
           max: 28, 
           color: "#4169E1" // Royal Blue
@@ -248,6 +251,9 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         { 
           name: "Trust", 
           score: avgTrustScore,
+          selfScore: selfTrustScore,
+          rater1Score: rater1TrustScore || null,
+          rater2Score: rater2TrustScore || null,
           min: -28, 
           max: 28, 
           color: "#20B2AA" // Light Sea Green
@@ -255,6 +261,9 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         { 
           name: "Business Drive", 
           score: avgDriverScore,
+          selfScore: selfDriverScore,
+          rater1Score: rater1DriverScore || null,
+          rater2Score: rater2DriverScore || null,
           min: -28, 
           max: 28, 
           color: "#9370DB" // Medium Purple
@@ -262,6 +271,9 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         { 
           name: "Adaptability", 
           score: avgAdaptabilityScore,
+          selfScore: selfAdaptabilityScore,
+          rater1Score: rater1AdaptabilityScore || null,
+          rater2Score: rater2AdaptabilityScore || null,
           min: -28, 
           max: 28, 
           color: "#3CB371" // Medium Sea Green
@@ -269,16 +281,22 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         { 
           name: "Problem Resolution", 
           score: avgProblemResolutionScore,
+          selfScore: selfProblemResolutionScore,
+          rater1Score: rater1ProblemResolutionScore || null,
+          rater2Score: rater2ProblemResolutionScore || null,
           min: -28, 
           max: 28, 
           color: "#FF7F50" // Coral
         }
       ];
       
-      // Add coachability score
+      // Add coachability score with all individual scores
       dimensionScores.push({
         name: "Coachability", 
         score: avgCoachabilityScore,
+        selfScore: selfCoachabilityScore,
+        rater1Score: rater1CoachabilityScore || null,
+        rater2Score: rater2CoachabilityScore || null,
         min: 10, 
         max: 50,
         color: getCoachabilityColor(avgCoachabilityScore)
