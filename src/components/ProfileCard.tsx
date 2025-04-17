@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 
@@ -246,7 +247,7 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
         "Complex profile with potentially conflicting tendencies"
       ]
     },
-    "Unidentified Profile": {
+    "Profile Not Found": {
       summary: "Profile analysis inconclusive",
       traits: [
         "Unique combination of characteristics",

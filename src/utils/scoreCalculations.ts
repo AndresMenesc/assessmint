@@ -1,4 +1,3 @@
-
 import { AssessmentResponse, Question, RaterResponses, RaterType, Section } from "../types/assessment";
 import { questions } from "../data/questions";
 
@@ -330,7 +329,7 @@ export function determineProfileType(
   }
 
   // If no match is found
-  return 'Unidentified Profile';
+  return 'Profile Not Found';
 }
 
 export function calculateAllResults(assessment: RaterResponses[]): {
