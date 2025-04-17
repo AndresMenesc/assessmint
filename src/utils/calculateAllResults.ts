@@ -175,6 +175,53 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         rater2CoachabilityScore = calculateCoachabilityScore(rater2.responses);
       }
       
+      // Calculate individual rater scores for each dimension
+      let rater1EsteemScore = 0;
+      let rater1TrustScore = 0;
+      let rater1DriverScore = 0;
+      let rater1AdaptabilityScore = 0;
+      let rater1ProblemResolutionScore = 0;
+      
+      let rater2EsteemScore = 0;
+      let rater2TrustScore = 0;
+      let rater2DriverScore = 0;
+      let rater2AdaptabilityScore = 0;
+      let rater2ProblemResolutionScore = 0;
+      
+      // Calculate scores for Rater 1
+      if (rater1 && rater1.responses && rater1.responses.length > 0) {
+        rater1EsteemScore = calculateDimensionScore(rater1.responses, Section.ESTEEM);
+        rater1TrustScore = calculateDimensionScore(rater1.responses, Section.TRUST);
+        rater1DriverScore = calculateDimensionScore(rater1.responses, Section.DRIVER);
+        rater1AdaptabilityScore = calculateDimensionScore(rater1.responses, Section.ADAPTABILITY);
+        rater1ProblemResolutionScore = calculateDimensionScore(rater1.responses, Section.PROBLEM_RESOLUTION);
+        
+        console.log("Rater 1 scores:", { 
+          rater1EsteemScore, 
+          rater1TrustScore, 
+          rater1DriverScore, 
+          rater1AdaptabilityScore, 
+          rater1ProblemResolutionScore 
+        });
+      }
+      
+      // Calculate scores for Rater 2
+      if (rater2 && rater2.responses && rater2.responses.length > 0) {
+        rater2EsteemScore = calculateDimensionScore(rater2.responses, Section.ESTEEM);
+        rater2TrustScore = calculateDimensionScore(rater2.responses, Section.TRUST);
+        rater2DriverScore = calculateDimensionScore(rater2.responses, Section.DRIVER);
+        rater2AdaptabilityScore = calculateDimensionScore(rater2.responses, Section.ADAPTABILITY);
+        rater2ProblemResolutionScore = calculateDimensionScore(rater2.responses, Section.PROBLEM_RESOLUTION);
+        
+        console.log("Rater 2 scores:", { 
+          rater2EsteemScore, 
+          rater2TrustScore, 
+          rater2DriverScore, 
+          rater2AdaptabilityScore, 
+          rater2ProblemResolutionScore 
+        });
+      }
+      
       // Calculate average scores from other raters
       let otherEsteemTotal = 0;
       let otherTrustTotal = 0;
@@ -220,7 +267,9 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         { 
           name: "Esteem", 
           selfScore: esteemScore, 
-          othersScore: otherEsteemScore, 
+          othersScore: otherEsteemScore,
+          rater1Score: rater1EsteemScore,
+          rater2Score: rater2EsteemScore,
           min: -28, 
           max: 28, 
           color: "#4169E1" // Royal Blue
@@ -228,7 +277,9 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         { 
           name: "Trust", 
           selfScore: trustScore, 
-          othersScore: otherTrustScore, 
+          othersScore: otherTrustScore,
+          rater1Score: rater1TrustScore,
+          rater2Score: rater2TrustScore,
           min: -28, 
           max: 28, 
           color: "#20B2AA" // Light Sea Green
@@ -236,7 +287,9 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         { 
           name: "Business Drive", 
           selfScore: driverScore, 
-          othersScore: otherDriverScore, 
+          othersScore: otherDriverScore,
+          rater1Score: rater1DriverScore,
+          rater2Score: rater2DriverScore,
           min: -28, 
           max: 28, 
           color: "#9370DB" // Medium Purple
@@ -244,7 +297,9 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         { 
           name: "Adaptability", 
           selfScore: adaptabilityScore, 
-          othersScore: otherAdaptabilityScore, 
+          othersScore: otherAdaptabilityScore,
+          rater1Score: rater1AdaptabilityScore,
+          rater2Score: rater2AdaptabilityScore,
           min: -28, 
           max: 28, 
           color: "#3CB371" // Medium Sea Green
@@ -252,7 +307,9 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         { 
           name: "Problem Resolution", 
           selfScore: problemResolutionScore, 
-          othersScore: otherProblemResolutionScore, 
+          othersScore: otherProblemResolutionScore,
+          rater1Score: rater1ProblemResolutionScore,
+          rater2Score: rater2ProblemResolutionScore,
           min: -28, 
           max: 28, 
           color: "#FF7F50" // Coral

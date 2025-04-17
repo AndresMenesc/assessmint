@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DimensionScore } from "@/types/assessment";
 import {
@@ -9,7 +10,8 @@ import {
   Cell,
   ReferenceLine,
   Tooltip,
-  LabelList
+  LabelList,
+  Legend
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -58,18 +60,17 @@ const DIMENSION_COLORS = {
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    // Distinguish between single "score" vs. aggregator "selfScore" / "othersScore"
-    const isIndividual = data.score !== undefined;
-
+    
     return (
       <div className="bg-white p-2 border shadow-sm rounded-md">
         <p className="font-semibold">{data.dimension || data.name}</p>
-        {isIndividual ? (
+        {data.score !== undefined ? (
           <p>Score: {data.score}</p>
         ) : (
           <>
-            <p>Self Score: {data.selfScore}</p>
-            <p>Others Score: {data.othersScore}</p>
+            {data.selfScore !== undefined && <p>Self Score: {data.selfScore}</p>}
+            {data.rater1Score !== undefined && <p>Rater 1 Score: {data.rater1Score}</p>}
+            {data.rater2Score !== undefined && <p>Rater 2 Score: {data.rater2Score}</p>}
           </>
         )}
         <p className="text-xs text-gray-500">
@@ -110,7 +111,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
     );
   }
 
-  // Check if it's single "score" or aggregator with "selfScore"/"othersScore"
+  // Check if it's single "score" or aggregator with "selfScore"/"rater1Score"/"rater2Score"
   const isIndividualScores =
     "score" in filteredScores[0] || !("selfScore" in filteredScores[0]);
 
@@ -139,24 +140,37 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
         highLabel: descriptions.high
       };
     } else {
-      // aggregator scenario: selfScore + othersScore - Use raw scores directly
+      // aggregator scenario: selfScore + rater1Score + rater2Score - Use raw scores directly
       const s = original as any;
       
       // Calculate normalized scores for positioning the bars (0-100)
       const normalizedSelfScore =
         ((s.selfScore - MIN_DIM) / RANGE_DIM) * 100 || 0;
-      const normalizedOthersScore =
-        ((s.othersScore - MIN_DIM) / RANGE_DIM) * 100 || 0;
-
+      
+      // Get individual rater scores instead of combined "others" score
+      const rater1Score = s.rater1Score || 0;
+      const rater2Score = s.rater2Score || 0;
+      
+      // Calculate normalized scores for individual raters
+      const normalizedRater1Score = 
+        ((rater1Score - MIN_DIM) / RANGE_DIM) * 100 || 0;
+      const normalizedRater2Score = 
+        ((rater2Score - MIN_DIM) / RANGE_DIM) * 100 || 0;
+      
       return {
         dimension: dimensionName,
         selfScore: s.selfScore, // Keep raw score unchanged for display
-        othersScore: s.othersScore, // Keep raw score unchanged for display
+        rater1Score: rater1Score,
+        rater2Score: rater2Score,
         min: MIN_DIM,
         max: MAX_DIM,
         color: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
-        normalizedSelfScore, // Used for positioning the bar only
-        normalizedOthersScore, // Used for positioning the bar only
+        normalizedSelfScore,
+        normalizedRater1Score,
+        normalizedRater2Score,
+        selfColor: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
+        rater1Color: (s.color || DIMENSION_COLORS[dimensionName] || "#4169E1") + "CC", // 80% opacity
+        rater2Color: (s.color || DIMENSION_COLORS[dimensionName] || "#4169E1") + "99", // 60% opacity
         lowLabel: descriptions.low,
         highLabel: descriptions.high
       };
@@ -289,7 +303,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                     background={{ fill: "#f1f1f1" }}
                   >
                     {chartData.map((entry, index) => (
-                      <Cell key={`cell-self-${index}`} fill={entry.color} />
+                      <Cell key={`cell-self-${index}`} fill={entry.selfColor} />
                     ))}
                     <LabelList
                       dataKey="selfScore"
@@ -303,32 +317,63 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                     />
                   </Bar>
 
-                  {/* Others Score */}
-                  <Bar
-                    name="Others Score"
-                    dataKey="normalizedOthersScore"
-                    barSize={20}
-                    shape={<EndTickShape />}
-                    background={{ fill: "#f1f1f1" }}
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-others-${index}`}
-                        fill={entry.color}
-                        opacity={0.7}
+                  {/* Rater 1 Score */}
+                  {chartData[0].rater1Score > 0 && (
+                    <Bar
+                      name="Rater 1 Score"
+                      dataKey="normalizedRater1Score"
+                      barSize={20}
+                      shape={<EndTickShape />}
+                      background={{ fill: "#f1f1f1" }}
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell
+                          key={`cell-rater1-${index}`}
+                          fill={entry.rater1Color}
+                        />
+                      ))}
+                      <LabelList
+                        dataKey="rater1Score"
+                        position="right"
+                        formatter={(v: number) => Math.round(v)}
+                        style={{
+                          fontSize: isMobile ? "9px" : "11px",
+                          fill: "#000"
+                        }}
+                        offset={25}
                       />
-                    ))}
-                    <LabelList
-                      dataKey="othersScore"
-                      position="right"
-                      formatter={(v: number) => Math.round(v)}
-                      style={{
-                        fontSize: isMobile ? "9px" : "11px",
-                        fill: "#000"
-                      }}
-                      offset={25}
-                    />
-                  </Bar>
+                    </Bar>
+                  )}
+
+                  {/* Rater 2 Score */}
+                  {chartData[0].rater2Score > 0 && (
+                    <Bar
+                      name="Rater 2 Score"
+                      dataKey="normalizedRater2Score"
+                      barSize={20}
+                      shape={<EndTickShape />}
+                      background={{ fill: "#f1f1f1" }}
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell
+                          key={`cell-rater2-${index}`}
+                          fill={entry.rater2Color}
+                        />
+                      ))}
+                      <LabelList
+                        dataKey="rater2Score"
+                        position="right"
+                        formatter={(v: number) => Math.round(v)}
+                        style={{
+                          fontSize: isMobile ? "9px" : "11px",
+                          fill: "#000"
+                        }}
+                        offset={45}
+                      />
+                    </Bar>
+                  )}
+
+                  <Legend verticalAlign="bottom" height={36} />
                 </>
               )}
             </BarChart>
