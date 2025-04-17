@@ -71,6 +71,7 @@ const CustomTooltip = ({ active, payload }: any) => {
             {data.selfScore !== undefined && <p>Self Score: {data.selfScore}</p>}
             {data.rater1Score !== undefined && <p>Rater 1 Score: {data.rater1Score}</p>}
             {data.rater2Score !== undefined && <p>Rater 2 Score: {data.rater2Score}</p>}
+            {data.averageScore !== undefined && <p>Average Score: {data.averageScore}</p>}
           </>
         )}
         <p className="text-xs text-gray-500">
@@ -157,20 +158,33 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
       const normalizedRater2Score = 
         ((rater2Score - MIN_DIM) / RANGE_DIM) * 100 || 0;
       
+      // Calculate average of all three scores
+      const validScores = [s.selfScore, rater1Score, rater2Score].filter(score => score !== 0);
+      const averageScore = validScores.length > 0 
+        ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length 
+        : 0;
+      
+      // Calculate normalized average score
+      const normalizedAverageScore = 
+        ((averageScore - MIN_DIM) / RANGE_DIM) * 100 || 0;
+      
       return {
         dimension: dimensionName,
         selfScore: s.selfScore, // Keep raw score unchanged for display
         rater1Score: rater1Score,
         rater2Score: rater2Score,
+        averageScore: Number(averageScore.toFixed(1)), // Round to 1 decimal place
         min: MIN_DIM,
         max: MAX_DIM,
         color: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
         normalizedSelfScore,
         normalizedRater1Score,
         normalizedRater2Score,
+        normalizedAverageScore,
         selfColor: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
         rater1Color: (s.color || DIMENSION_COLORS[dimensionName] || "#4169E1") + "CC", // 80% opacity
         rater2Color: (s.color || DIMENSION_COLORS[dimensionName] || "#4169E1") + "99", // 60% opacity
+        averageColor: "#9b87f5", // New purple color for average
         lowLabel: descriptions.low,
         highLabel: descriptions.high
       };
@@ -369,6 +383,34 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                           fill: "#000"
                         }}
                         offset={45}
+                      />
+                    </Bar>
+                  )}
+                  
+                  {/* Average Score - New bar */}
+                  {chartData[0].averageScore > 0 && (
+                    <Bar
+                      name="Average Score"
+                      dataKey="normalizedAverageScore"
+                      barSize={20}
+                      shape={<EndTickShape />}
+                      background={{ fill: "#f1f1f1" }}
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell
+                          key={`cell-average-${index}`}
+                          fill={entry.averageColor}
+                        />
+                      ))}
+                      <LabelList
+                        dataKey="averageScore"
+                        position="right"
+                        formatter={(v: number) => v}
+                        style={{
+                          fontSize: isMobile ? "9px" : "11px",
+                          fill: "#000"
+                        }}
+                        offset={65}
                       />
                     </Bar>
                   )}
