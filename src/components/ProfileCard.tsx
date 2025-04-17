@@ -91,161 +91,160 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
     "The Trusting Driven Flexible": {
       summary: "Balanced, Growth-Oriented, Adaptable",
       traits: [
-        "Shows balanced self-confidence without excessive pride",
-        "Highly trusting of others and values diverse input",
-        "Actively pursues growth opportunities",
-        "Adapts quickly to change with big-picture focus",
-        "Addresses problems immediately and takes ownership"
+        "Shows balanced self-confidence without excessive pride or insecurity",
+        "Highly trusting of others, readily delegates, and values diverse input",
+        "Actively pursues growth opportunities and business development",
+        "Adapts quickly to change and focuses on big-picture thinking",
+        "Addresses problems immediately and takes ownership of difficult situations"
       ]
     },
     "The Confident Cautious Precise": {
       summary: "Confident, Precise, Direct",
       traits: [
-        "Confident in abilities and expertise",
-        "Skeptical and independently verifies information",
-        "Balances promotion with quality focus",
-        "Values structure and methodical approaches",
-        "Takes ownership of difficult situations"
+        "Confident in abilities and comfortable asserting expertise",
+        "Skeptical of information and others' motives, preferring to verify independently",
+        "Balances active promotion with focus on quality work",
+        "Values structure, details, and methodical approaches",
+        "Addresses problems immediately and takes ownership of difficult situations"
       ]
     },
     "The Modest Trusting Reserved": {
       summary: "Modest, Trusting, Cautious",
       traits: [
-        "Tends to downplay achievements",
-        "Highly trusting and values diverse input",
-        "Prefers organic growth approaches",
-        "Balances flexibility with attention to detail",
-        "May delay addressing difficult situations"
+        "Tends to downplay achievements and may second-guess decisions",
+        "Highly trusting of others, readily delegates, and values diverse input",
+        "Prefers organic growth and letting work quality speak for itself",
+        "Shows flexibility while still maintaining attention to important details",
+        "May delay addressing problems or redirect attention from difficulties"
       ]
     },
     "The Complete Neutral": {
       summary: "Balanced, Measured, Adaptable",
       traits: [
-        "Shows balanced self-confidence",
-        "Maintains healthy skepticism while being open",
-        "Balances promotion with quality focus",
-        "Flexible while maintaining attention to detail",
-        "Balances problem-solving with relationships"
+        "Shows balanced self-confidence without excessive pride or insecurity",
+        "Maintains healthy skepticism while still being open to others' input",
+        "Balances active promotion with focus on quality work",
+        "Shows flexibility while still maintaining attention to important details",
+        "Balances direct problem-solving with relationship preservation"
       ]
     },
     "The Modest Cautious Precise": {
       summary: "Detail-Oriented, Cautious, Direct",
       traits: [
-        "May second-guess decisions",
-        "Skeptical and independently verifies",
-        "Focuses on quality work",
-        "Values structure and methodology",
-        "Addresses problems immediately"
+        "Tends to downplay achievements and may second-guess decisions",
+        "Skeptical of information and others' motives, preferring to verify independently",
+        "Balances active promotion with focus on quality work",
+        "Values structure, details, and methodical approaches",
+        "Addresses problems immediately and takes ownership of difficult situations"
       ]
     },
     "The Confident Trusting Reserved": {
       summary: "Confident, Collaborative, Flexible",
       traits: [
-        "Confident and comfortable with expertise",
-        "Highly trusting and delegates readily",
-        "Prefers organic growth approaches",
-        "Adapts quickly to change",
-        "Balances directness with relationships"
+        "Confident in abilities and comfortable asserting expertise",
+        "Highly trusting of others, readily delegates, and values diverse input",
+        "Prefers organic growth and letting work quality speak for itself",
+        "Adapts quickly to change and focuses on big-picture thinking",
+        "Balances direct problem-solving with relationship preservation"
       ]
     },
     "The Confident Trusting Direct": {
       summary: "Confident, Social, Direct",
       traits: [
-        "Highly confident in abilities",
-        "Trusting and builds strong connections",
-        "Actively pursues growth",
-        "Balances structure with flexibility",
-        "Addresses problems while maintaining relationships"
+        "Highly confident in abilities while being trusting of others",
+        "Actively pursues growth opportunities with strong social connections",
+        "Balances structure and flexibility as needed",
+        "Addresses problems head-on while maintaining positive relationships"
       ]
     },
     "The Modest Precise Balanced": {
       summary: "Detail-Oriented, Measured, Balanced",
       traits: [
-        "Downplays personal achievements",
-        "Maintains balanced trust approach",
+        "Tends to downplay personal achievements while focusing on accurate, detail-oriented work",
+        "Maintains balanced trust and business approach",
         "Values systems and procedures",
         "Detail-oriented and precise",
-        "Considers both urgency and relationships"
+        "Addresses problems with a measured approach that considers both urgency and relationships"
       ]
     },
     "The Cautious Flexible Avoider": {
       summary: "Adaptable, Skeptical, Indirect",
       traits: [
-        "Balanced self-view with skepticism",
-        "Adapts quickly to change",
-        "Works around rather than through problems",
+        "Balanced self-view paired with skepticism of others",
+        "Adapts quickly to changing circumstances",
+        "Prefers to work around problems rather than confront them directly",
         "Maintains operational flexibility",
-        "Independently verifies information"
+        "Verifies information independently"
       ]
     },
     "The Modest Driven Direct": {
       summary: "Determined, Direct, Growth-Oriented",
       traits: [
-        "Shows determination despite self-doubt",
-        "Pursues business growth actively",
+        "Despite self-doubt, actively pursues business growth",
         "Confronts problems immediately",
+        "Shows remarkable determination in professional contexts",
         "Balanced in adaptability",
-        "Engages in difficult conversations"
+        "Doesn't shy away from difficult conversations"
       ]
     },
     "The Confident Reserved Precise": {
       summary: "Self-Assured, Systematic, Quality-Focused",
       traits: [
         "Self-assured in abilities",
-        "Prefers organic growth",
+        "Prefers organic growth to aggressive business development",
         "Focuses on exceptional quality",
         "Values systematic approaches",
-        "Lets work quality speak for itself"
+        "Lets work quality speak for itself rather than actively promoting achievements"
       ]
     },
     "The Low Trust Balanced Profile": {
       summary: "Skeptical, Measured, Balanced",
       traits: [
-        "Maintains healthy skepticism",
-        "Verifies information thoroughly",
-        "Balanced in most approaches",
-        "Flexible when needed",
-        "Measured response to problems"
+        "Maintains healthy skepticism in all interactions",
+        "Verifies information through multiple sources",
+        "Shows moderate balance across other dimensions",
+        "Approaches work with flexibility",
+        "Uses measured responses to problems"
       ]
     },
     "The Highly Flexible Reserved": {
       summary: "Adaptable, Conservative, Balanced",
       traits: [
-        "Adapts readily to change",
+        "Adapts readily to change and embraces new approaches",
+        "Prefers conservative business growth",
         "Comfortable with ambiguity",
-        "Conservative in growth approach",
-        "Embraces new directions",
-        "Balanced in problem resolution"
+        "Changes directions quickly",
+        "Doesn't actively pursue expansion or promotion opportunities"
       ]
     },
     "The Triply High Direct": {
       summary: "Confident, Ambitious, Structured",
       traits: [
-        "Ultimate confident achiever",
-        "Strong trust in others",
-        "Ambitious business drive",
-        "Highly structured approach",
-        "Direct problem-solver"
+        "The ultimate confident achiever with strong trust in others",
+        "Combines ambitious business drive with highly structured approach",
+        "Direct problem-solving",
+        "Sets high standards while maintaining positive relationships",
+        "Actively pursues growth"
       ]
     },
     "The Triply Low Avoider": {
       summary: "Cautious, Adaptive, Indirect",
       traits: [
-        "Downplays abilities",
-        "Skeptical of others",
-        "Cautious in growth",
-        "Highly adaptable",
-        "Avoids direct confrontation"
+        "Downplays abilities while maintaining skepticism of others",
+        "Takes a cautious approach to business growth",
+        "High adaptability but avoids confronting problems directly",
+        "May struggle with confidence in decision-making",
+        "Difficulty with conflict situations"
       ]
     },
     "The Mixed Extreme": {
       summary: "Complex, Dynamic, Growth-Focused",
       traits: [
-        "High self-confidence",
-        "Low trust in others",
-        "Strong business drive",
-        "Highly adaptable",
-        "Avoids confrontation"
+        "High self-confidence and business drive but low trust in others",
+        "Highly adaptable yet avoids direct confrontation",
+        "This combination might create internal tensions",
+        "Pushes for growth while being reluctant to address emerging problems",
+        "Complex profile with potentially conflicting tendencies"
       ]
     },
     "Unidentified Profile": {
@@ -291,7 +290,7 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
         
         {debugInfo && showDebug && (
           <div className="mb-4 p-3 border rounded-md text-xs">
-            <h4 className="font-medium mb-1">Raw Dimension Scores:</h4>
+            <h4 className="font-medium mb-1">Average Dimension Scores:</h4>
             <ul className="space-y-1">
               {averageScores && (
                 <>
@@ -327,12 +326,18 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
                   </li>
                 </>
               )}
-              {debugInfo.coachabilityScore && (
+              {debugInfo.coachabilityScore !== undefined && (
                 <li>Coachability: {debugInfo.coachabilityScore}</li>
               )}
             </ul>
-            <p className="mt-2 text-gray-500">
-              Verify these scores against profile ranges in the documentation
+            <p className="mt-2 text-xs text-gray-500">
+              Range for all dimensions (except Coachability): -28 to +28
+              <br />
+              Categories: Low (-28 to -10), Neutral (-9 to 9), High (10 to 28)
+              <br />
+              Adaptability: High Flexibility (-28 to -10), Balanced (-9 to 9), High Precision (10 to 28)
+              <br />
+              Problem Resolution: Avoidant (-28 to -10), Balanced (-9 to 9), Direct (10 to 28)
             </p>
           </div>
         )}

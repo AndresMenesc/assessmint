@@ -231,82 +231,99 @@ export function determineProfileType(
     problemResolution
   });
 
-  // Match profile patterns
+  // Match profile patterns based on the 16 defined profiles
+  
+  // 1. The Trusting Driven Flexible
   if (esteem === 'Neutral' && trust === 'High' && drive === 'High' && 
       adaptability === 'High Flexibility' && problemResolution === 'Direct') {
     return 'The Trusting Driven Flexible';
   }
 
+  // 2. The Confident Cautious Precise
   if (esteem === 'High' && trust === 'Low' && drive === 'Neutral' && 
       adaptability === 'High Precision' && problemResolution === 'Direct') {
     return 'The Confident Cautious Precise';
   }
 
+  // 3. The Modest Trusting Reserved
   if (esteem === 'Low' && trust === 'High' && drive === 'Low' && 
       adaptability === 'Balanced' && problemResolution === 'Avoidant') {
     return 'The Modest Trusting Reserved';
   }
 
+  // 4. The Complete Neutral
   if (esteem === 'Neutral' && trust === 'Neutral' && drive === 'Neutral' && 
       adaptability === 'Balanced' && problemResolution === 'Balanced') {
     return 'The Complete Neutral';
   }
 
+  // 5. The Modest Cautious Precise
   if (esteem === 'Low' && trust === 'Low' && drive === 'Neutral' && 
       adaptability === 'High Precision' && problemResolution === 'Direct') {
     return 'The Modest Cautious Precise';
   }
 
+  // 6. The Confident Trusting Reserved
   if (esteem === 'High' && trust === 'High' && drive === 'Low' && 
       adaptability === 'High Flexibility' && problemResolution === 'Balanced') {
     return 'The Confident Trusting Reserved';
   }
 
+  // 7. The Confident Trusting Direct
   if (esteem === 'High' && trust === 'High' && drive === 'High' && 
       adaptability === 'Balanced' && problemResolution === 'Direct') {
     return 'The Confident Trusting Direct';
   }
 
+  // 8. The Modest Precise Balanced
   if (esteem === 'Low' && trust === 'Neutral' && drive === 'Neutral' && 
       adaptability === 'High Precision' && problemResolution === 'Balanced') {
     return 'The Modest Precise Balanced';
   }
 
+  // 9. The Cautious Flexible Avoider
   if (esteem === 'Neutral' && trust === 'Low' && drive === 'Neutral' && 
       adaptability === 'High Flexibility' && problemResolution === 'Avoidant') {
     return 'The Cautious Flexible Avoider';
   }
 
+  // 10. The Modest Driven Direct
   if (esteem === 'Low' && trust === 'Neutral' && drive === 'High' && 
       adaptability === 'Balanced' && problemResolution === 'Direct') {
     return 'The Modest Driven Direct';
   }
 
+  // 11. The Confident Reserved Precise
   if (esteem === 'High' && trust === 'Neutral' && drive === 'Low' && 
       adaptability === 'High Precision' && problemResolution === 'Balanced') {
     return 'The Confident Reserved Precise';
   }
 
+  // 12. The Low Trust Balanced Profile
   if (esteem === 'Neutral' && trust === 'Low' && drive === 'Neutral' && 
       adaptability === 'Balanced' && problemResolution === 'Balanced') {
     return 'The Low Trust Balanced Profile';
   }
 
+  // 13. The Highly Flexible Reserved
   if (esteem === 'Neutral' && trust === 'Neutral' && drive === 'Low' && 
       adaptability === 'High Flexibility' && problemResolution === 'Balanced') {
     return 'The Highly Flexible Reserved';
   }
 
+  // 14. The Triply High Direct
   if (esteem === 'High' && trust === 'High' && drive === 'High' && 
       adaptability === 'High Precision' && problemResolution === 'Direct') {
     return 'The Triply High Direct';
   }
 
+  // 15. The Triply Low Avoider
   if (esteem === 'Low' && trust === 'Low' && drive === 'Low' && 
       adaptability === 'High Flexibility' && problemResolution === 'Avoidant') {
     return 'The Triply Low Avoider';
   }
 
+  // 16. The Mixed Extreme
   if (esteem === 'High' && trust === 'Low' && drive === 'High' && 
       adaptability === 'High Flexibility' && problemResolution === 'Avoidant') {
     return 'The Mixed Extreme';
