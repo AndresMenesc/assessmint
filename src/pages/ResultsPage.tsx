@@ -152,29 +152,7 @@ const ResultsPage = () => {
       try {
         const calculatedResults = await getResults(selectedAssessment);
         console.log("Calculated results:", calculatedResults);
-        
-        if (calculatedResults && calculatedResults.dimensionScores) {
-          console.log("Calculated dimension scores:", calculatedResults.dimensionScores);
-          console.log("Number of dimension scores:", calculatedResults.dimensionScores.length);
-          
-          const hasAggregateScores = calculatedResults.dimensionScores.some(
-            (score: any) => score.selfScore !== undefined || score.rater1Score !== undefined
-          );
-          console.log("Has aggregate scores:", hasAggregateScores);
-          
-          if (calculatedResults.dimensionScores.length > 0) {
-            console.log("First dimension score structure:", calculatedResults.dimensionScores[0]);
-          }
-          
-          const coachabilityScore = calculatedResults.dimensionScores.find(
-            (score: any) => (score.name || score.dimension) === "Coachability"
-          );
-          if (coachabilityScore) {
-            console.log("Coachability score structure:", coachabilityScore);
-          }
-          
-          setResults(calculatedResults);
-        }
+        setResults(calculatedResults);
       } catch (error) {
         console.error("Error calculating results:", error);
         setResults(null);
@@ -534,10 +512,7 @@ const ResultsPage = () => {
                                       <Button 
                                         variant="outline" 
                                         size="sm"
-                                        onClick={() => {
-                                          setSelectedAssessment(a);
-                                          setActiveTab("aggregate");
-                                        }}
+                                        onClick={() => setSelectedAssessment(a)}
                                       >
                                         <FileBarChart className="h-4 w-4 mr-2" />
                                         View
@@ -629,7 +604,7 @@ const ResultsPage = () => {
                   (results && results.dimensionScores && results.dimensionScores.length > 0) || userRole === "super_admin" ? (
                     <>
                       {userRole === "super_admin" || userRole === "admin" ? (
-                        <Tabs defaultValue="aggregate" value={activeTab} className="mt-6" onValueChange={(value) => setActiveTab(value as "aggregate" | "individual" | "responses")}>
+                        <Tabs defaultValue="aggregate" className="mt-6" onValueChange={(value) => setActiveTab(value as "aggregate" | "individual" | "responses")}>
                           <TabsList className="grid w-full grid-cols-3">
                             <TabsTrigger value="aggregate">Aggregate</TabsTrigger>
                             <TabsTrigger value="individual">Individual</TabsTrigger>
@@ -640,16 +615,6 @@ const ResultsPage = () => {
                           <TabsContent value="aggregate" className="mt-4">
                             {results && results.dimensionScores && results.dimensionScores.length > 0 ? (
                               <>
-                                {process.env.NODE_ENV !== "production" && (
-                                  <div className="bg-blue-100 border border-blue-300 rounded p-2 mb-4 text-xs">
-                                    <p className="font-bold">Debug Info:</p>
-                                    <p>Active Tab: {activeTab}</p>
-                                    <p>First Score Object Type: {results.dimensionScores[0] && Object.prototype.hasOwnProperty.call(results.dimensionScores[0], 'selfScore') ? 'Aggregate' : 'Individual'}</p>
-                                    <p>Scores Count: {results.dimensionScores.length}</p>
-                                    <p>Example Dimensions: {results.dimensionScores.map((s: any) => s.name || s.dimension).join(', ')}</p>
-                                  </div>
-                                )}
-                              
                                 <DimensionChart scores={results.dimensionScores} />
                                 <CoachabilityChart scores={results.dimensionScores} />
                                 
