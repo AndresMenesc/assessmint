@@ -133,6 +133,9 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
     return scoreName !== "Coachability"; // or remove this if you want to show it
   });
 
+  // Log the scores to verify what we're getting
+  console.log("Dimension Chart Scores:", filteredScores);
+
   // Early return if no data
   if (!filteredScores || filteredScores.length === 0) {
     return (
@@ -150,6 +153,12 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
   // Check if it's an aggregate view with self, rater1, rater2
   const isAggregateView = "selfScore" in filteredScores[0] || 
     (filteredScores[0] as any).rater1Score !== undefined;
+
+  console.log("Is Aggregate View:", isAggregateView);
+  
+  if (isAggregateView) {
+    console.log("First dimension score object:", filteredScores[0]);
+  }
 
   // Transform the raw data into chart data
   const chartData = filteredScores.map(original => {
@@ -227,6 +236,9 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
       };
     }
   });
+
+  // Log the transformed chart data
+  console.log("Chart Data:", chartData);
 
   // Custom Y-axis tick that displays the dimension name plus "low"/"high" text
   const renderYAxisTick = (props: any) => {

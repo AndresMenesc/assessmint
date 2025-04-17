@@ -102,6 +102,14 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
     const selfRawScore = Math.round(c.selfScore || 0); 
     const rater1RawScore = Math.round(c.rater1Score || 0);
     const rater2RawScore = Math.round(c.rater2Score || 0);
+
+    // Log the actual scores for debugging
+    console.log("Coachability Aggregate Scores:", { 
+      avg: avgRawScore,
+      self: selfRawScore,
+      rater1: rater1RawScore,
+      rater2: rater2RawScore
+    });
     
     chartData.push({
       dimension: "Coachability",

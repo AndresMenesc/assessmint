@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,6 +153,17 @@ const ResultsPage = () => {
       try {
         const calculatedResults = await getResults(selectedAssessment);
         console.log("Calculated results:", calculatedResults);
+        
+        // Log some additional specific details for debugging
+        if (calculatedResults && calculatedResults.dimensionScores) {
+          console.log("Calculated dimension scores:", calculatedResults.dimensionScores);
+          // Check if any dimension has selfScore/rater1Score properties
+          const hasAggregateScores = calculatedResults.dimensionScores.some(
+            (score: any) => score.selfScore !== undefined || score.rater1Score !== undefined
+          );
+          console.log("Has aggregate scores:", hasAggregateScores);
+        }
+        
         setResults(calculatedResults);
       } catch (error) {
         console.error("Error calculating results:", error);
@@ -512,7 +524,11 @@ const ResultsPage = () => {
                                       <Button 
                                         variant="outline" 
                                         size="sm"
-                                        onClick={() => setSelectedAssessment(a)}
+                                        onClick={() => {
+                                          setSelectedAssessment(a);
+                                          // Explicitly set tab to "aggregate" when selecting an assessment
+                                          setActiveTab("aggregate");
+                                        }}
                                       >
                                         <FileBarChart className="h-4 w-4 mr-2" />
                                         View
@@ -604,7 +620,7 @@ const ResultsPage = () => {
                   (results && results.dimensionScores && results.dimensionScores.length > 0) || userRole === "super_admin" ? (
                     <>
                       {userRole === "super_admin" || userRole === "admin" ? (
-                        <Tabs defaultValue="aggregate" className="mt-6" onValueChange={(value) => setActiveTab(value as "aggregate" | "individual" | "responses")}>
+                        <Tabs defaultValue="aggregate" value={activeTab} className="mt-6" onValueChange={(value) => setActiveTab(value as "aggregate" | "individual" | "responses")}>
                           <TabsList className="grid w-full grid-cols-3">
                             <TabsTrigger value="aggregate">Aggregate</TabsTrigger>
                             <TabsTrigger value="individual">Individual</TabsTrigger>
@@ -615,6 +631,17 @@ const ResultsPage = () => {
                           <TabsContent value="aggregate" className="mt-4">
                             {results && results.dimensionScores && results.dimensionScores.length > 0 ? (
                               <>
+                                {/* Add a debug banner for development */}
+                                {process.env.NODE_ENV !== "production" && (
+                                  <div className="bg-blue-100 border border-blue-300 rounded p-2 mb-4 text-xs">
+                                    <p className="font-bold">Debug Info:</p>
+                                    <p>Active Tab: {activeTab}</p>
+                                    <p>First Score Object Type: {results.dimensionScores[0] && Object.prototype.hasOwnProperty.call(results.dimensionScores[0], 'selfScore') ? 'Aggregate' : 'Individual'}</p>
+                                    <p>Scores Count: {results.dimensionScores.length}</p>
+                                    <p>Example Dimensions: {results.dimensionScores.map((s: any) => s.name || s.dimension).join(', ')}</p>
+                                  </div>
+                                )}
+                              
                                 <DimensionChart scores={results.dimensionScores} />
                                 <CoachabilityChart scores={results.dimensionScores} />
                                 
