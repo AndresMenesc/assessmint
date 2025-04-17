@@ -8,7 +8,6 @@ import AwarenessMetrics from "@/components/AwarenessMetrics";
 import DimensionChart from "@/components/DimensionChart";
 import CoachabilityChart from "@/components/CoachabilityChart";
 import Logo from "@/components/Logo";
-import ProfileCard from "@/components/ProfileCard";
 import DimensionAverageProfile from "@/components/DimensionAverageProfile";
 import { useAssessment } from "@/contexts/AssessmentContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -630,17 +629,10 @@ const ResultsPage = () => {
                                 )}
                                 
                                 {results.profileType && results.dimensionScores && (
-                                  <>
-                                    <ProfileCard 
-                                      profileType={results.profileType} 
-                                      debugInfo={results.rawScores}
-                                    />
-                                    
-                                    <DimensionAverageProfile 
-                                      scores={results.dimensionScores}
-                                      profileType={results.profileType}
-                                    />
-                                  </>
+                                  <DimensionAverageProfile 
+                                    scores={results.dimensionScores}
+                                    profileType={results.profileType}
+                                  />
                                 )}
                               </>
                             ) : (
@@ -673,17 +665,10 @@ const ResultsPage = () => {
                           )}
                           
                           {results.profileType && results.dimensionScores && (
-                            <>
-                              <ProfileCard 
-                                profileType={results.profileType} 
-                                debugInfo={results.rawScores}
-                              />
-                              
-                              <DimensionAverageProfile
-                                scores={results.dimensionScores}
-                                profileType={results.profileType}
-                              />
-                            </>
+                            <DimensionAverageProfile
+                              scores={results.dimensionScores}
+                              profileType={results.profileType}
+                            />
                           )}
                         </div>
                       )}
