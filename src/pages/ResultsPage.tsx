@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAssessment } from '@/contexts/AssessmentContext';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -9,7 +10,6 @@ import CoachabilityChart from '@/components/CoachabilityChart';
 import AwarenessMetrics from '@/components/AwarenessMetrics';
 import DimensionAverageProfile from '@/components/DimensionAverageProfile';
 import { calculateAllResults } from '@/utils/calculateAllResults';
-import { retrieveAssessment } from '@/utils/assessmentStorage';
 
 const ResultsPage = () => {
   const { assessment, setAssessment } = useAssessment();
@@ -27,22 +27,18 @@ const ResultsPage = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        if (code && assessmentId) {
-          const storedAssessment = await retrieveAssessment(code, assessmentId);
-          if (storedAssessment) {
-            setAssessment(storedAssessment);
-            const calculatedResults = calculateAllResults(storedAssessment.raters);
+        if (code && assessmentId && assessment) {
+          // We already have the assessment in context, so use that
+          const calculatedResults = calculateAllResults(assessment.raters);
+          if (calculatedResults) {
             setResults(calculatedResults);
-          } else {
-            console.log("No assessment found in local storage, navigating to assessment page");
-            navigate(`/assessment/${code}/${assessmentId}`);
           }
         } else {
-          console.log("Code or assessmentId is missing, navigating to home page");
+          console.log("No assessment found or missing parameters, navigating to home page");
           navigate('/');
         }
       } catch (error) {
-        console.error("Error retrieving assessment:", error);
+        console.error("Error calculating results:", error);
       } finally {
         setIsLoading(false);
       }
@@ -64,13 +60,16 @@ const ResultsPage = () => {
   }
 
   const downloadPdf = () => {
-    import('jspdf').then(jsPDF => {
-      import('html2canvas').then(html2canvas => {
+    // Using dynamic imports with proper type checking
+    import('jspdf').then(jsPDFModule => {
+      const jsPDF = jsPDFModule.default;
+      import('html2canvas').then(html2canvasModule => {
+        const html2canvas = html2canvasModule.default;
         const content = document.querySelector('.container');
         if (content) {
-          html2canvas(content).then(canvas => {
+          html2canvas(content as HTMLElement).then(canvas => {
             const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF.default('p', 'mm', 'a4');
+            const pdf = new jsPDF('p', 'mm', 'a4');
             const imgWidth = 210;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
             pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
@@ -113,7 +112,7 @@ const ResultsPage = () => {
         
         <TabsContent value="coachability">
           {coachabilityScore && (
-            <CoachabilityChart score={coachabilityScore} />
+            <CoachabilityChart scores={[coachabilityScore]} />
           )}
         </TabsContent>
         
