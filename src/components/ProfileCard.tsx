@@ -178,7 +178,7 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
         "Avoids confrontation"
       ]
     },
-    "No Profile Defined": {
+    "Unidentified Profile": {
       summary: "Profile analysis inconclusive",
       traits: [
         "Unique combination of characteristics",

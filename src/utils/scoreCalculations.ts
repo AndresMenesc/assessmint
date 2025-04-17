@@ -277,12 +277,12 @@ export function determineProfileType(
   }
 
   if (esteem === 'Low' && trust === 'Neutral' && drive === 'High' && 
-      adaptability === 'Balanced' && problemResolution === 'Direct') {
+      adaptability === 'Neutral' && problemResolution === 'Direct') {
     return 'The Modest Driven Direct';
   }
 
   if (esteem === 'High' && trust === 'Neutral' && drive === 'Low' && 
-      adaptability === 'High Precision' && problemResolution === 'Balanced') {
+      adaptability === 'High Precision' && problemResolution === 'Neutral') {
     return 'The Confident Reserved Precise';
   }
 
@@ -292,7 +292,7 @@ export function determineProfileType(
   }
 
   if (esteem === 'Neutral' && trust === 'Neutral' && drive === 'Low' && 
-      adaptability === 'High Flexibility' && problemResolution === 'Balanced') {
+      adaptability === 'High Flexibility' && problemResolution === 'Neutral') {
     return 'The Highly Flexible Reserved';
   }
 
@@ -312,7 +312,7 @@ export function determineProfileType(
   }
 
   // If no match is found
-  return 'No Profile Defined';
+  return 'Unidentified Profile';
 }
 
 export function calculateAllResults(assessment: RaterResponses[]): {
