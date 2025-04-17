@@ -376,7 +376,10 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
     traits: ["Detailed information not available for this profile"]
   };
 
-  const profile = profiles[profileBasedOnAverages] || fallbackProfile;
+  const profile = profiles[profileBasedOnAverages] || {
+    summary: "",
+    traits: []
+  };
 
   const formatScore = (score: number | undefined): string => {
     if (score === undefined || score === null) return 'N/A';
@@ -388,14 +391,6 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
       <CardHeader>
         <CardTitle className="flex justify-between">
           <span>Your Profile: {profileBasedOnAverages}</span>
-          {debugInfo && (
-            <button 
-              onClick={() => setShowDebug(!showDebug)} 
-              className="text-xs text-gray-500 underline"
-            >
-              {showDebug ? "Hide Scores" : "Show Scores"}
-            </button>
-          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -404,103 +399,6 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
             {profile.summary}
           </span>
         </div>
-        
-        {debugInfo && showDebug && (
-          <div className="mb-4 p-3 border rounded-md text-xs">
-            <h4 className="font-medium mb-2">Dimension Scores:</h4>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left pb-1">Dimension</th>
-                    <th className="text-center pb-1">Average</th>
-                    <th className="text-center pb-1">Self</th>
-                    <th className="text-center pb-1">Rater 1</th>
-                    <th className="text-center pb-1">Rater 2</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b">
-                    <td className="py-1">Esteem</td>
-                    <td className="text-center py-1">
-                      {averageScores?.esteem.toFixed(1)} 
-                      <span className="block text-gray-500 text-[10px]">
-                        ({categorizeScore(averageScores?.esteem || 0, 'Esteem')})
-                      </span>
-                    </td>
-                    <td className="text-center py-1">{formatScore(debugInfo.esteemScore)}</td>
-                    <td className="text-center py-1">{formatScore(debugInfo.rater1?.esteemScore)}</td>
-                    <td className="text-center py-1">{formatScore(debugInfo.rater2?.esteemScore)}</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="py-1">Trust</td>
-                    <td className="text-center py-1">
-                      {averageScores?.trust.toFixed(1)}
-                      <span className="block text-gray-500 text-[10px]">
-                        ({categorizeScore(averageScores?.trust || 0, 'Trust')})
-                      </span>
-                    </td>
-                    <td className="text-center py-1">{formatScore(debugInfo.trustScore)}</td>
-                    <td className="text-center py-1">{formatScore(debugInfo.rater1?.trustScore)}</td>
-                    <td className="text-center py-1">{formatScore(debugInfo.rater2?.trustScore)}</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="py-1">Business Drive</td>
-                    <td className="text-center py-1">
-                      {averageScores?.driver.toFixed(1)}
-                      <span className="block text-gray-500 text-[10px]">
-                        ({categorizeScore(averageScores?.driver || 0, 'Drive')})
-                      </span>
-                    </td>
-                    <td className="text-center py-1">{formatScore(debugInfo.driverScore)}</td>
-                    <td className="text-center py-1">{formatScore(debugInfo.rater1?.driverScore)}</td>
-                    <td className="text-center py-1">{formatScore(debugInfo.rater2?.driverScore)}</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="py-1">Adaptability</td>
-                    <td className="text-center py-1">
-                      {averageScores?.adaptability.toFixed(1)}
-                      <span className="block text-gray-500 text-[10px]">
-                        ({categorizeScore(averageScores?.adaptability || 0, 'Adaptability')})
-                      </span>
-                    </td>
-                    <td className="text-center py-1">{formatScore(debugInfo.adaptabilityScore)}</td>
-                    <td className="text-center py-1">{formatScore(debugInfo.rater1?.adaptabilityScore)}</td>
-                    <td className="text-center py-1">{formatScore(debugInfo.rater2?.adaptabilityScore)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-1">Problem Resolution</td>
-                    <td className="text-center py-1">
-                      {averageScores?.problemResolution.toFixed(1)}
-                      <span className="block text-gray-500 text-[10px]">
-                        ({categorizeScore(averageScores?.problemResolution || 0, 'Problem Resolution')})
-                      </span>
-                    </td>
-                    <td className="text-center py-1">{formatScore(debugInfo.problemResolutionScore)}</td>
-                    <td className="text-center py-1">{formatScore(debugInfo.rater1?.problemResolutionScore)}</td>
-                    <td className="text-center py-1">{formatScore(debugInfo.rater2?.problemResolutionScore)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            
-            {debugInfo.coachabilityScore !== undefined && (
-              <div className="mt-2">
-                <strong>Coachability:</strong> {debugInfo.coachabilityScore}
-              </div>
-            )}
-            
-            <p className="mt-3 text-xs text-gray-500">
-              Range for all dimensions (except Coachability): -28 to +28
-              <br />
-              Categories: Low (-28 to -10), Neutral (-9 to 9), High (10 to 28)
-              <br />
-              Adaptability: High Flexibility (-28 to -10), Balanced (-9 to 9), High Precision (10 to 28)
-              <br />
-              Problem Resolution: Avoidant (-28 to -10), Balanced (-9 to 9), Direct (10 to 28)
-            </p>
-          </div>
-        )}
         
         <h3 className="font-semibold mb-2">Typical Behaviors:</h3>
         <ul className="list-disc list-inside space-y-1 pl-2">
