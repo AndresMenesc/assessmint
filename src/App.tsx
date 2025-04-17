@@ -1,8 +1,6 @@
 
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AssessmentProvider } from "./contexts/AssessmentContext";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -11,6 +9,8 @@ import { useEffect } from "react";
 import { importQuestionsToDb } from "./utils/importQuestionsToDb";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Pages
 import LoginPage from "./pages/LoginPage";
@@ -100,22 +100,20 @@ const AppRoutes = () => {
 };
 
 // The App component structure ensures that the providers are properly ordered
-// IMPORTANT: All providers are now at the same level to avoid nesting issues
+// Moving TooltipProvider inside each route where tooltips are used, not at the app level
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <AssessmentProvider>
-            <DatabaseInitializer>
-              <AppRoutes />
-              <Toaster />
-              <Sonner />
-            </DatabaseInitializer>
-          </AssessmentProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AssessmentProvider>
+          <DatabaseInitializer>
+            <AppRoutes />
+            <Toaster />
+            <Sonner />
+          </DatabaseInitializer>
+        </AssessmentProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 

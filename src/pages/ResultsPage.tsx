@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import DimensionChart from '@/components/DimensionChart';
 import CoachabilityChart from '@/components/CoachabilityChart';
 import AwarenessMetrics from '@/components/AwarenessMetrics';
@@ -91,43 +92,45 @@ const ResultsPage = () => {
   );
 
   return (
-    <div className="container mx-auto py-6 max-w-5xl">
-      <h1 className="text-3xl font-bold mb-6">Assessment Results</h1>
-      
-      <Tabs defaultValue="dimensions" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="dimensions">Dimensions</TabsTrigger>
-          <TabsTrigger value="coachability">Coachability</TabsTrigger>
-          <TabsTrigger value="awareness">Awareness</TabsTrigger>
-        </TabsList>
+    <TooltipProvider>
+      <div className="container mx-auto py-6 max-w-5xl">
+        <h1 className="text-3xl font-bold mb-6">Assessment Results</h1>
         
-        <TabsContent value="dimensions" className="space-y-4">
-          <DimensionChart scores={dimensionScores} />
+        <Tabs defaultValue="dimensions" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="dimensions">Dimensions</TabsTrigger>
+            <TabsTrigger value="coachability">Coachability</TabsTrigger>
+            <TabsTrigger value="awareness">Awareness</TabsTrigger>
+          </TabsList>
           
-          <DimensionAverageProfile 
-            scores={dimensionScores} 
-            profileType={results.profileType} 
-          />
-        </TabsContent>
+          <TabsContent value="dimensions" className="space-y-4">
+            <DimensionChart scores={dimensionScores} />
+            
+            <DimensionAverageProfile 
+              scores={dimensionScores} 
+              profileType={results.profileType} 
+            />
+          </TabsContent>
+          
+          <TabsContent value="coachability">
+            {coachabilityScore && (
+              <CoachabilityChart scores={[coachabilityScore]} />
+            )}
+          </TabsContent>
+          
+          <TabsContent value="awareness">
+            <AwarenessMetrics 
+              selfAwareness={results.selfAwareness} 
+              coachabilityAwareness={results.coachabilityAwareness} 
+            />
+          </TabsContent>
+        </Tabs>
         
-        <TabsContent value="coachability">
-          {coachabilityScore && (
-            <CoachabilityChart scores={[coachabilityScore]} />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="awareness">
-          <AwarenessMetrics 
-            selfAwareness={results.selfAwareness} 
-            coachabilityAwareness={results.coachabilityAwareness} 
-          />
-        </TabsContent>
-      </Tabs>
-      
-      <div className="mt-6">
-        <Button onClick={downloadPdf}>Download Results as PDF</Button>
+        <div className="mt-6">
+          <Button onClick={downloadPdf}>Download Results as PDF</Button>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };
 
