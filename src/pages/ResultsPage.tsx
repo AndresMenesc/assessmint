@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -151,7 +152,10 @@ const ResultsPage = () => {
       console.log("Calculating results for selected assessment:", selectedAssessment);
       try {
         const calculatedResults = await getResults(selectedAssessment);
-        console.log("Calculated results:", calculatedResults);
+        console.log("💡 Calculated Results for ALL Components:", calculatedResults);
+        console.log("💡 Dimension Scores:", calculatedResults?.dimensionScores);
+        console.log("💡 Raw Scores:", calculatedResults?.rawScores);
+        console.log("💡 Profile Type:", calculatedResults?.profileType);
         setResults(calculatedResults);
       } catch (error) {
         console.error("Error calculating results:", error);
