@@ -221,19 +221,19 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
         
         {debugInfo && showDebug && (
           <div className="mb-4 p-3 border rounded-md text-xs">
-            <h4 className="font-medium mb-1">Raw Dimension Scores:</h4>
+            <h4 className="font-medium mb-1">Average Dimension Scores:</h4>
             <ul className="space-y-1">
-              <li>Esteem: {debugInfo.esteemScore}</li>
-              <li>Trust: {debugInfo.trustScore}</li>
-              <li>Business Drive: {debugInfo.driverScore}</li>
-              <li>Adaptability: {debugInfo.adaptabilityScore}</li>
-              <li>Problem Resolution: {debugInfo.problemResolutionScore}</li>
+              <li>Esteem: {debugInfo.esteemScore?.toFixed(1)}</li>
+              <li>Trust: {debugInfo.trustScore?.toFixed(1)}</li>
+              <li>Business Drive: {debugInfo.driverScore?.toFixed(1)}</li>
+              <li>Adaptability: {debugInfo.adaptabilityScore?.toFixed(1)}</li>
+              <li>Problem Resolution: {debugInfo.problemResolutionScore?.toFixed(1)}</li>
               {debugInfo.coachabilityScore && (
-                <li>Coachability: {debugInfo.coachabilityScore}</li>
+                <li>Coachability: {debugInfo.coachabilityScore?.toFixed(1)}</li>
               )}
             </ul>
             <p className="mt-2 text-gray-500">
-              Verify these scores against profile ranges in the documentation
+              Calculated profile type is based on these average scores
             </p>
           </div>
         )}
