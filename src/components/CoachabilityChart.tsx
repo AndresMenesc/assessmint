@@ -79,12 +79,14 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
   console.log("Coachability Score Object:", coachabilityScore);
 
   // Determine if it's aggregate or individual view
-  // Check both property existence and their types to determine the view
+  // Check if any of the scores have selfScore, rater1Score attributes to determine if it's aggregate view
   const isAggregateView = 
     typeof (coachabilityScore as any).selfScore !== 'undefined' || 
     typeof (coachabilityScore as any).rater1Score !== 'undefined' ||
-    (coachabilityScore as any).score !== undefined && Array.isArray(scores) && 
-    scores.some(score => typeof (score as any).selfScore !== 'undefined');
+    scores.some(score => 
+      typeof (score as any).selfScore !== 'undefined' || 
+      typeof (score as any).rater1Score !== 'undefined'
+    );
   
   console.log("Is Aggregate View:", isAggregateView);
 
@@ -114,25 +116,25 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
     console.log("Raw coachability score object:", c);
     
     // Extract scores, defaulting to 0 if undefined
-    const avgRawScore = Math.round(c.score || 0);
-    const selfRawScore = Math.round(c.selfScore || 0); 
-    const rater1RawScore = Math.round(c.rater1Score || 0);
-    const rater2RawScore = Math.round(c.rater2Score || 0);
+    const avgScore = c.score || 0;
+    const selfScore = c.selfScore || 0; 
+    const rater1Score = c.rater1Score || 0;
+    const rater2Score = c.rater2Score || 0;
 
     // Log the actual scores for debugging
     console.log("Coachability Aggregate Scores:", { 
-      avg: avgRawScore,
-      self: selfRawScore,
-      rater1: rater1RawScore,
-      rater2: rater2RawScore
+      avg: avgScore,
+      self: selfScore,
+      rater1: rater1Score,
+      rater2: rater2Score
     });
     
     chartData.push({
       dimension: "Coachability",
-      avgScore: avgRawScore,
-      selfScore: selfRawScore,
-      rater1Score: rater1RawScore > 0 ? rater1RawScore : null,
-      rater2Score: rater2RawScore > 0 ? rater2RawScore : null,
+      avgScore: avgScore,
+      selfScore: selfScore,
+      rater1Score: rater1Score > 0 ? rater1Score : null,
+      rater2Score: rater2Score > 0 ? rater2Score : null,
       // Data for chart display
       min: 10,
       max: 50,
@@ -192,6 +194,11 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
   // Custom dot with label
   const CustomizedDot = (props: any) => {
     const { cx, cy, value, key, fill } = props;
+    
+    // Don't render dots for null or undefined values
+    if (value === null || value === undefined) {
+      return null;
+    }
 
     return (
       <g>
@@ -326,8 +333,8 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                   isAnimationActive={false}
                 />
 
-                {/* Individual score reference dots */}
-                {chartData[0] && chartData[0].avgScore !== undefined && (
+                {/* Individual score reference dots - only render if they have values */}
+                {chartData[0]?.avgScore !== undefined && chartData[0]?.avgScore !== null && (
                   <ReferenceDot
                     key="avgScore"
                     x={chartData[0].avgScore}
@@ -338,7 +345,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                   />
                 )}
 
-                {chartData[0] && chartData[0].selfScore !== undefined && (
+                {chartData[0]?.selfScore !== undefined && chartData[0]?.selfScore !== null && (
                   <ReferenceDot
                     key="selfScore"
                     x={chartData[0].selfScore}
@@ -349,7 +356,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                   />
                 )}
 
-                {chartData[0] && chartData[0].rater1Score !== null && chartData[0].rater1Score !== undefined && (
+                {chartData[0]?.rater1Score !== null && chartData[0]?.rater1Score !== undefined && (
                   <ReferenceDot
                     key="rater1Score"
                     x={chartData[0].rater1Score}
@@ -360,7 +367,7 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                   />
                 )}
 
-                {chartData[0] && chartData[0].rater2Score !== null && chartData[0].rater2Score !== undefined && (
+                {chartData[0]?.rater2Score !== null && chartData[0]?.rater2Score !== undefined && (
                   <ReferenceDot
                     key="rater2Score"
                     x={chartData[0].rater2Score}
