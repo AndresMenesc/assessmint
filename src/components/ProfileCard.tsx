@@ -290,7 +290,7 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
         
         {debugInfo && showDebug && (
           <div className="mb-4 p-3 border rounded-md text-xs">
-            <h4 className="font-medium mb-1">Average Dimension Scores:</h4>
+            <h4 className="font-medium mb-1">Average Dimension Scores (Self, Rater 1, Rater 2):</h4>
             <ul className="space-y-1">
               {averageScores && (
                 <>
