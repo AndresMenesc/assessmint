@@ -30,6 +30,7 @@ const CustomTooltip = ({ active, payload }: any) => {
           <p>Score: {data.score}</p>
         ) : (
           <>
+            {data.avgScore !== undefined && <p>Average Score: {data.avgScore}</p>}
             {data.selfScore !== undefined && <p>Self Score: {data.selfScore}</p>}
             {data.rater1Score !== undefined && <p>Rater 1 Score: {data.rater1Score}</p>}
             {data.rater2Score !== undefined && <p>Rater 2 Score: {data.rater2Score}</p>}
@@ -80,24 +81,48 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
     const c = coachabilityScore as any;
     const selfRawScore = Math.round(c.selfScore);
     
-    // Instead of aggregating all others, get individual rater scores
     // Extract rater scores from assessmentContext results if available
     // Default to 0 if not available
     const rater1RawScore = c.rater1Score ? Math.round(c.rater1Score) : 0;
     const rater2RawScore = c.rater2Score ? Math.round(c.rater2Score) : 0;
+    
+    // Calculate average score of the three scores
+    // Only count scores that are available (greater than 0)
+    let scoreCount = 0;
+    let scoreSum = 0;
+    
+    if (selfRawScore > 0) {
+      scoreSum += selfRawScore;
+      scoreCount++;
+    }
+    
+    if (rater1RawScore > 0) {
+      scoreSum += rater1RawScore;
+      scoreCount++;
+    }
+    
+    if (rater2RawScore > 0) {
+      scoreSum += rater2RawScore;
+      scoreCount++;
+    }
+    
+    const avgRawScore = scoreCount > 0 ? Math.round(scoreSum / scoreCount) : 0;
     
     chartData.push({
       dimension: "Coachability",
       selfScore: selfRawScore,
       rater1Score: rater1RawScore,
       rater2Score: rater2RawScore,
+      avgScore: avgRawScore,
       // color logic for each
       selfColor: selfRawScore <= 30 ? "#ef4444" : selfRawScore <= 40 ? "#eab308" : "#22c55e",
       rater1Color: rater1RawScore <= 30 ? "#ef4444" : rater1RawScore <= 40 ? "#eab308" : "#22c55e",
       rater2Color: rater2RawScore <= 30 ? "#ef4444" : rater2RawScore <= 40 ? "#eab308" : "#22c55e",
+      avgColor: avgRawScore <= 30 ? "#ef4444" : avgRawScore <= 40 ? "#eab308" : "#22c55e",
       normalizedSelfScore: ((selfRawScore - 10) / 40) * 100,
       normalizedRater1Score: ((rater1RawScore - 10) / 40) * 100,
       normalizedRater2Score: ((rater2RawScore - 10) / 40) * 100,
+      normalizedAvgScore: ((avgRawScore - 10) / 40) * 100,
       min: 10,
       max: 50,
       lowLabel: "resistant",
@@ -210,8 +235,25 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                 />
               </Bar>
             ) : (
-              // Three separate bars for self, rater1, and rater2
+              // Four separate bars for avg, self, rater1, and rater2
               <>
+                <Bar
+                  name="Average"
+                  dataKey="normalizedAvgScore"
+                  barSize={20}
+                >
+                  {chartData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.avgColor} />
+                  ))}
+                  <LabelList
+                    dataKey="avgScore"
+                    position="right"
+                    formatter={(val: number) => Math.round(val)}
+                    style={labelStyle}
+                    offset={5}
+                  />
+                </Bar>
+                
                 <Bar
                   name="Self"
                   dataKey="normalizedSelfScore"
@@ -225,9 +267,10 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                     position="right"
                     formatter={(val: number) => Math.round(val)}
                     style={labelStyle}
-                    offset={5}
+                    offset={25}
                   />
                 </Bar>
+                
                 {chartData[0].rater1Score > 0 && (
                   <Bar
                     name="Rater 1"
@@ -242,10 +285,11 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                       position="right"
                       formatter={(val: number) => Math.round(val)}
                       style={labelStyle}
-                      offset={25}
+                      offset={45}
                     />
                   </Bar>
                 )}
+                
                 {chartData[0].rater2Score > 0 && (
                   <Bar
                     name="Rater 2"
@@ -260,10 +304,11 @@ export default function CoachabilityChart({ scores }: CoachabilityChartProps) {
                       position="right"
                       formatter={(val: number) => Math.round(val)}
                       style={labelStyle}
-                      offset={45}
+                      offset={65}
                     />
                   </Bar>
                 )}
+                
                 <Legend verticalAlign="bottom" height={36} />
               </>
             )}
