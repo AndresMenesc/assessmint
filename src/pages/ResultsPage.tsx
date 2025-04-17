@@ -630,17 +630,10 @@ const ResultsPage = () => {
                                 )}
                                 
                                 {results.profileType && results.dimensionScores && (
-                                  <>
-                                    <ProfileCard 
-                                      profileType={results.profileType} 
-                                      debugInfo={results.rawScores}
-                                    />
-                                    
-                                    <DimensionAverageProfile 
-                                      scores={results.dimensionScores}
-                                      profileType={results.profileType}
-                                    />
-                                  </>
+                                  <ProfileCard 
+                                    profileType={results.profileType} 
+                                    debugInfo={results.rawScores}
+                                  />
                                 )}
                               </>
                             ) : (
@@ -673,17 +666,10 @@ const ResultsPage = () => {
                           )}
                           
                           {results.profileType && results.dimensionScores && (
-                            <>
-                              <ProfileCard 
-                                profileType={results.profileType} 
-                                debugInfo={results.rawScores}
-                              />
-                              
-                              <DimensionAverageProfile
-                                scores={results.dimensionScores}
-                                profileType={results.profileType}
-                              />
-                            </>
+                            <ProfileCard 
+                              profileType={results.profileType} 
+                              debugInfo={results.rawScores}
+                            />
                           )}
                         </div>
                       )}
