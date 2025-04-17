@@ -316,18 +316,18 @@ export function determineProfileType(
 }
 
 export function calculateAllResults(assessment: RaterResponses[]): {
-  dimensionScores: { dimension: string, score: number, min: number, max: number, color: string }[],
-  selfAwareness: number,
-  coachabilityAwareness: number,
-  profileType: string,
-  completed: boolean,
+  dimensionScores: { dimension: string; score: number; min: number; max: number; color: string; }[];
+  selfAwareness: number;
+  coachabilityAwareness: number;
+  profileType: string;
+  completed: boolean;
   rawScores: {
-    esteemScore: number,
-    trustScore: number,
-    driverScore: number,
-    adaptabilityScore: number,
-    problemResolutionScore: number,
-    coachabilityScore: number
+    esteemScore: number;
+    trustScore: number;
+    driverScore: number;
+    adaptabilityScore: number;
+    problemResolutionScore: number;
+    coachabilityScore: number;
   }
 } {
   // Filter responses by rater type
@@ -478,67 +478,66 @@ export function calculateAllResults(assessment: RaterResponses[]): {
   );
   
   // Format dimension scores for display
-  // Include both individual rater scores and the average score
   const dimensionScores = [
     { 
       dimension: "Esteem", 
+      score: Number(avgEsteemScore.toFixed(1)),
+      min: -28, 
+      max: 28, 
+      color: "#4169E1",
       selfScore: selfEsteemScore,
       rater1Score: rater1EsteemScore,
       rater2Score: rater2EsteemScore,
-      avgScore: Number(avgEsteemScore.toFixed(1)),
-      min: -28, 
-      max: 28, 
-      color: "#4169E1" 
     },
     { 
       dimension: "Trust", 
+      score: Number(avgTrustScore.toFixed(1)),
+      min: -28, 
+      max: 28, 
+      color: "#20B2AA",
       selfScore: selfTrustScore,
       rater1Score: rater1TrustScore,
       rater2Score: rater2TrustScore,
-      avgScore: Number(avgTrustScore.toFixed(1)),
-      min: -28, 
-      max: 28, 
-      color: "#20B2AA" 
     },
     { 
       dimension: "Business Drive", 
+      score: Number(avgDriverScore.toFixed(1)),
+      min: -28, 
+      max: 28, 
+      color: "#9370DB",
       selfScore: selfDriverScore,
       rater1Score: rater1DriverScore,
       rater2Score: rater2DriverScore,
-      avgScore: Number(avgDriverScore.toFixed(1)),
-      min: -28, 
-      max: 28, 
-      color: "#9370DB" 
     },
     { 
       dimension: "Adaptability", 
+      score: Number(avgAdaptabilityScore.toFixed(1)),
+      min: -28, 
+      max: 28, 
+      color: "#3CB371",
       selfScore: selfAdaptabilityScore,
       rater1Score: rater1AdaptabilityScore,
       rater2Score: rater2AdaptabilityScore,
-      avgScore: Number(avgAdaptabilityScore.toFixed(1)),
-      min: -28, 
-      max: 28, 
-      color: "#3CB371" 
     },
     { 
       dimension: "Problem Resolution", 
+      score: Number(avgProblemResolutionScore.toFixed(1)),
+      min: -28, 
+      max: 28, 
+      color: "#FF7F50",
       selfScore: selfProblemResolutionScore,
       rater1Score: rater1ProblemResolutionScore,
       rater2Score: rater2ProblemResolutionScore,
-      avgScore: Number(avgProblemResolutionScore.toFixed(1)),
-      min: -28, 
-      max: 28, 
-      color: "#FF7F50" 
     },
     { 
       dimension: "Coachability", 
+      score: selfCoachabilityScore,
+      min: 10, 
+      max: 50, 
+      color: selfCoachabilityScore <= 30 ? "#ef4444" : selfCoachabilityScore <= 40 ? "#eab308" : "#22c55e",
       selfScore: selfCoachabilityScore,
       rater1Score: rater1CoachabilityScore,
       rater2Score: rater2CoachabilityScore,
-      avgScore: selfCoachabilityScore, // Only using self score for coachability (as before)
-      min: 10, 
-      max: 50, 
-      color: selfCoachabilityScore <= 30 ? "#ef4444" : selfCoachabilityScore <= 40 ? "#eab308" : "#22c55e" 
     }
   ];
   
