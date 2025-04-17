@@ -538,9 +538,9 @@ function determineProfileType(
     return "The Direct Implementer";
   }
 
-  // If no specific profile matched, return "Profile Not Found" instead of defaulting to "The Direct Implementer"
-  console.log("No specific profile matched, returning 'Profile Not Found'");
-  return "Profile Not Found";
+  // If no specific profile matched, provide a reasonable fallback
+  console.log("No specific profile matched, using fallback to Direct Implementer");
+  return "The Direct Implementer";
 }
 
 /**
