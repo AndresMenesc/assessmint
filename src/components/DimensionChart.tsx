@@ -68,11 +68,10 @@ const CustomTooltip = ({ active, payload }: any) => {
           <p>Score: {data.score}</p>
         ) : (
           <>
-            <p className="font-medium">Average: {data.avgScore}</p>
-            <hr className="my-1" />
-            {data.selfScore !== undefined && <p>Self: {data.selfScore}</p>}
-            {data.rater1Score !== undefined && data.rater1Score !== 0 && <p>Rater 1: {data.rater1Score}</p>}
-            {data.rater2Score !== undefined && data.rater2Score !== 0 && <p>Rater 2: {data.rater2Score}</p>}
+            {data.selfScore !== undefined && <p>Self Score: {data.selfScore}</p>}
+            {data.rater1Score !== undefined && <p>Rater 1 Score: {data.rater1Score}</p>}
+            {data.rater2Score !== undefined && <p>Rater 2 Score: {data.rater2Score}</p>}
+            {data.averageScore !== undefined && <p>Average Score: {data.averageScore}</p>}
           </>
         )}
         <p className="text-xs text-gray-500">
@@ -113,8 +112,9 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
     );
   }
 
-  // Check if we have avgScore in the data
-  const hasAverageScore = 'avgScore' in filteredScores[0];
+  // Check if it's single "score" or aggregator with "selfScore"/"rater1Score"/"rater2Score"
+  const isIndividualScores =
+    "score" in filteredScores[0] || !("selfScore" in filteredScores[0]);
 
   // Transform the raw data into chart data
   const chartData = filteredScores.map(original => {
@@ -122,7 +122,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
     const descriptions =
       DIMENSION_DESCRIPTIONS[dimensionName] || { low: "low", high: "high" };
 
-    if (!hasAverageScore) {
+    if (isIndividualScores) {
       // Single dimension score - Use raw score directly
       const s = original as any;
       
@@ -141,29 +141,35 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
         highLabel: descriptions.high
       };
     } else {
-      // Using average score from all raters
+      // aggregator scenario: selfScore + rater1Score + rater2Score - Use raw scores directly
       const s = original as any;
       
       // Get individual scores
       const selfScore = s.selfScore || 0;
       const rater1Score = s.rater1Score || 0;
       const rater2Score = s.rater2Score || 0;
-      const avgScore = s.avgScore || 0;
       
-      // Calculate normalized average score for positioning
-      const normalizedAvgScore = 
-        ((avgScore - MIN_DIM) / RANGE_DIM) * 100 || 0;
+      // Calculate average of all three scores
+      const validScores = [selfScore, rater1Score, rater2Score].filter(score => score !== 0);
+      const averageScore = validScores.length > 0 
+        ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length 
+        : 0;
+      
+      // Calculate normalized average score
+      const normalizedAverageScore = 
+        ((averageScore - MIN_DIM) / RANGE_DIM) * 100 || 0;
       
       return {
         dimension: dimensionName,
-        selfScore: selfScore, // Keep raw scores for tooltip
-        rater1Score: rater1Score,
-        rater2Score: rater2Score,
-        avgScore: avgScore,
+        selfScore: selfScore, // Keep raw score unchanged for tooltip display
+        rater1Score: rater1Score, // Keep raw score unchanged for tooltip display
+        rater2Score: rater2Score, // Keep raw score unchanged for tooltip display
+        averageScore: Number(averageScore.toFixed(1)), // Round to 1 decimal place
         min: MIN_DIM,
         max: MAX_DIM,
         color: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1",
-        normalizedAvgScore, // Used for positioning the bar
+        normalizedAverageScore, // The only score we'll display in the bar
+        averageColor: s.color || DIMENSION_COLORS[dimensionName] || "#4169E1", // Keep using the dimension color for average
         lowLabel: descriptions.low,
         highLabel: descriptions.high
       };
@@ -263,7 +269,7 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
               <ReferenceLine x={50} stroke="#aaa" />
               <ReferenceLine x={75} stroke="#ddd" strokeDasharray="3 3" />
 
-              {!hasAverageScore ? (
+              {isIndividualScores ? (
                 // Single dimension score bar
                 <Bar
                   dataKey="normalizedScore"
@@ -286,22 +292,22 @@ export default function DimensionChart({ scores }: { scores: DimensionScore[] })
                   />
                 </Bar>
               ) : (
-                // Average score bar
+                // Just show the average score bar
                 <Bar
                   name="Average Score"
-                  dataKey="normalizedAvgScore"
+                  dataKey="normalizedAverageScore"
                   barSize={20}
                   shape={<EndTickShape />}
                   background={{ fill: "#f1f1f1" }}
                 >
                   {chartData.map((entry, index) => (
                     <Cell 
-                      key={`cell-avg-${index}`} 
-                      fill={entry.color} 
+                      key={`cell-average-${index}`} 
+                      fill={entry.averageColor} 
                     />
                   ))}
                   <LabelList
-                    dataKey="avgScore"
+                    dataKey="averageScore"
                     position="right"
                     formatter={(v: number) => v}
                     style={{

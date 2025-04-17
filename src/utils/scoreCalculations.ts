@@ -214,7 +214,7 @@ export function determineProfileType(
     return 'Balanced';
   };
 
-  // Get categories for each dimension based on their scores
+  // Get categories for each dimension
   const esteem = categorizeScore(esteemScore);
   const trust = categorizeScore(trustScore);
   const drive = categorizeScore(driverScore);
@@ -316,19 +316,11 @@ export function determineProfileType(
 }
 
 export function calculateAllResults(assessment: RaterResponses[]): {
-  dimensionScores: { dimension: string; score: number; min: number; max: number; color: string; }[];
-  selfAwareness: number;
-  coachabilityAwareness: number;
-  profileType: string;
-  completed: boolean;
-  rawScores: {
-    esteemScore: number;
-    trustScore: number;
-    driverScore: number;
-    adaptabilityScore: number;
-    problemResolutionScore: number;
-    coachabilityScore: number;
-  }
+  dimensionScores: { dimension: string, score: number, min: number, max: number, color: string }[],
+  selfAwareness: number,
+  coachabilityAwareness: number,
+  profileType: string,
+  completed: boolean
 } {
   // Filter responses by rater type
   const selfRater = assessment.find(rater => rater.raterType === RaterType.SELF);
@@ -345,115 +337,25 @@ export function calculateAllResults(assessment: RaterResponses[]): {
       selfAwareness: 0,
       coachabilityAwareness: 0,
       profileType: "",
-      completed: false,
-      rawScores: {
-        esteemScore: 0,
-        trustScore: 0,
-        driverScore: 0,
-        adaptabilityScore: 0,
-        problemResolutionScore: 0,
-        coachabilityScore: 0
-      }
+      completed: false
     };
   }
   
   // Calculate dimension scores for self-rater
-  const selfEsteemScore = calculateDimensionScore(selfRater.responses, Section.ESTEEM);
-  const selfTrustScore = calculateDimensionScore(selfRater.responses, Section.TRUST);
-  const selfDriverScore = calculateDimensionScore(selfRater.responses, Section.DRIVER);
-  const selfAdaptabilityScore = calculateDimensionScore(selfRater.responses, Section.ADAPTABILITY);
-  const selfProblemResolutionScore = calculateDimensionScore(selfRater.responses, Section.PROBLEM_RESOLUTION);
-  const selfCoachabilityScore = calculateCoachabilityScore(selfRater.responses);
+  const esteemScore = calculateDimensionScore(selfRater.responses, Section.ESTEEM);
+  const trustScore = calculateDimensionScore(selfRater.responses, Section.TRUST);
+  const driverScore = calculateDimensionScore(selfRater.responses, Section.DRIVER);
+  const adaptabilityScore = calculateDimensionScore(selfRater.responses, Section.ADAPTABILITY);
+  const problemResolutionScore = calculateDimensionScore(selfRater.responses, Section.PROBLEM_RESOLUTION);
+  const coachabilityScore = calculateCoachabilityScore(selfRater.responses);
   
   console.log("Self rater dimension scores:", {
-    selfEsteemScore,
-    selfTrustScore,
-    selfDriverScore,
-    selfAdaptabilityScore,
-    selfProblemResolutionScore,
-    selfCoachabilityScore
-  });
-  
-  // Calculate scores for each rater and keep track of totals for averaging
-  let totalEsteemScore = selfEsteemScore;
-  let totalTrustScore = selfTrustScore;
-  let totalDriverScore = selfDriverScore;
-  let totalAdaptabilityScore = selfAdaptabilityScore;
-  let totalProblemResolutionScore = selfProblemResolutionScore;
-  let raterCount = 1; // Start with 1 for self-rater
-  
-  // Individual scores for each rater
-  let rater1EsteemScore = 0;
-  let rater1TrustScore = 0;
-  let rater1DriverScore = 0;
-  let rater1AdaptabilityScore = 0;
-  let rater1ProblemResolutionScore = 0;
-  let rater1CoachabilityScore = 0;
-  
-  let rater2EsteemScore = 0;
-  let rater2TrustScore = 0;
-  let rater2DriverScore = 0;
-  let rater2AdaptabilityScore = 0;
-  let rater2ProblemResolutionScore = 0;
-  let rater2CoachabilityScore = 0;
-  
-  // Calculate scores for each other rater and add to totals
-  otherRaters.forEach((rater, index) => {
-    const esteemScore = calculateDimensionScore(rater.responses, Section.ESTEEM);
-    const trustScore = calculateDimensionScore(rater.responses, Section.TRUST);
-    const driverScore = calculateDimensionScore(rater.responses, Section.DRIVER);
-    const adaptabilityScore = calculateDimensionScore(rater.responses, Section.ADAPTABILITY);
-    const problemResolutionScore = calculateDimensionScore(rater.responses, Section.PROBLEM_RESOLUTION);
-    const coachabilityScore = calculateCoachabilityScore(rater.responses);
-    
-    console.log(`Rater ${index + 1} dimension scores:`, {
-      esteemScore,
-      trustScore,
-      driverScore,
-      adaptabilityScore,
-      problemResolutionScore,
-      coachabilityScore
-    });
-    
-    // Add to totals
-    totalEsteemScore += esteemScore;
-    totalTrustScore += trustScore;
-    totalDriverScore += driverScore;
-    totalAdaptabilityScore += adaptabilityScore;
-    totalProblemResolutionScore += problemResolutionScore;
-    raterCount++;
-    
-    // Store individual rater scores
-    if (index === 0) {
-      rater1EsteemScore = esteemScore;
-      rater1TrustScore = trustScore;
-      rater1DriverScore = driverScore;
-      rater1AdaptabilityScore = adaptabilityScore;
-      rater1ProblemResolutionScore = problemResolutionScore;
-      rater1CoachabilityScore = coachabilityScore;
-    } else if (index === 1) {
-      rater2EsteemScore = esteemScore;
-      rater2TrustScore = trustScore;
-      rater2DriverScore = driverScore;
-      rater2AdaptabilityScore = adaptabilityScore;
-      rater2ProblemResolutionScore = problemResolutionScore;
-      rater2CoachabilityScore = coachabilityScore;
-    }
-  });
-  
-  // Calculate averages
-  const avgEsteemScore = totalEsteemScore / raterCount;
-  const avgTrustScore = totalTrustScore / raterCount;
-  const avgDriverScore = totalDriverScore / raterCount;
-  const avgAdaptabilityScore = totalAdaptabilityScore / raterCount;
-  const avgProblemResolutionScore = totalProblemResolutionScore / raterCount;
-  
-  console.log("Average dimension scores:", {
-    avgEsteemScore,
-    avgTrustScore,
-    avgDriverScore,
-    avgAdaptabilityScore,
-    avgProblemResolutionScore
+    esteemScore,
+    trustScore,
+    driverScore,
+    adaptabilityScore,
+    problemResolutionScore,
+    coachabilityScore
   });
   
   // Calculate self-awareness
@@ -468,95 +370,67 @@ export function calculateAllResults(assessment: RaterResponses[]): {
     otherRaters.map(rater => rater.responses)
   );
   
-  // Determine profile type based on average scores
+  // Determine profile type
   const profileType = determineProfileType(
-    avgEsteemScore,
-    avgTrustScore,
-    avgDriverScore,
-    avgAdaptabilityScore,
-    avgProblemResolutionScore
+    esteemScore,
+    trustScore,
+    driverScore,
+    adaptabilityScore,
+    problemResolutionScore
   );
   
-  // Format dimension scores for display
+  // Format dimension scores for display - each dimension uses the -28 to 28 range
+  // except for coachability which uses 10-50
   const dimensionScores = [
     { 
       dimension: "Esteem", 
-      score: Number(avgEsteemScore.toFixed(1)),
+      score: esteemScore, 
       min: -28, 
       max: 28, 
-      color: "#4169E1",
-      selfScore: selfEsteemScore,
-      rater1Score: rater1EsteemScore,
-      rater2Score: rater2EsteemScore,
+      color: "#4169E1" 
     },
     { 
       dimension: "Trust", 
-      score: Number(avgTrustScore.toFixed(1)),
+      score: trustScore, 
       min: -28, 
       max: 28, 
-      color: "#20B2AA",
-      selfScore: selfTrustScore,
-      rater1Score: rater1TrustScore,
-      rater2Score: rater2TrustScore,
+      color: "#20B2AA" 
     },
     { 
       dimension: "Business Drive", 
-      score: Number(avgDriverScore.toFixed(1)),
+      score: driverScore, 
       min: -28, 
       max: 28, 
-      color: "#9370DB",
-      selfScore: selfDriverScore,
-      rater1Score: rater1DriverScore,
-      rater2Score: rater2DriverScore,
+      color: "#9370DB" 
     },
     { 
       dimension: "Adaptability", 
-      score: Number(avgAdaptabilityScore.toFixed(1)),
+      score: adaptabilityScore, 
       min: -28, 
       max: 28, 
-      color: "#3CB371",
-      selfScore: selfAdaptabilityScore,
-      rater1Score: rater1AdaptabilityScore,
-      rater2Score: rater2AdaptabilityScore,
+      color: "#3CB371" 
     },
     { 
       dimension: "Problem Resolution", 
-      score: Number(avgProblemResolutionScore.toFixed(1)),
+      score: problemResolutionScore, 
       min: -28, 
       max: 28, 
-      color: "#FF7F50",
-      selfScore: selfProblemResolutionScore,
-      rater1Score: rater1ProblemResolutionScore,
-      rater2Score: rater2ProblemResolutionScore,
+      color: "#FF7F50" 
     },
     { 
       dimension: "Coachability", 
-      score: selfCoachabilityScore,
+      score: coachabilityScore, 
       min: 10, 
       max: 50, 
-      color: selfCoachabilityScore <= 30 ? "#ef4444" : selfCoachabilityScore <= 40 ? "#eab308" : "#22c55e",
-      selfScore: selfCoachabilityScore,
-      rater1Score: rater1CoachabilityScore,
-      rater2Score: rater2CoachabilityScore,
+      color: coachabilityScore <= 30 ? "#ef4444" : coachabilityScore <= 40 ? "#eab308" : "#22c55e" 
     }
   ];
-  
-  // Store raw scores for debugging in ProfileCard
-  const rawScores = {
-    esteemScore: avgEsteemScore,
-    trustScore: avgTrustScore,
-    driverScore: avgDriverScore,
-    adaptabilityScore: avgAdaptabilityScore,
-    problemResolutionScore: avgProblemResolutionScore,
-    coachabilityScore: selfCoachabilityScore
-  };
   
   return {
     dimensionScores,
     selfAwareness,
     coachabilityAwareness,
     profileType,
-    completed: allCompleted,
-    rawScores
+    completed: allCompleted
   };
 }
