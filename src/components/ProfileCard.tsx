@@ -11,11 +11,81 @@ interface ProfileCardProps {
     adaptabilityScore?: number;
     problemResolutionScore?: number;
     coachabilityScore?: number;
+    rater1?: {
+      esteemScore?: number;
+      trustScore?: number;
+      driverScore?: number;
+      adaptabilityScore?: number;
+      problemResolutionScore?: number;
+    };
+    rater2?: {
+      esteemScore?: number;
+      trustScore?: number;
+      driverScore?: number;
+      adaptabilityScore?: number;
+      problemResolutionScore?: number;
+    };
   };
 }
 
 const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
   const [showDebug, setShowDebug] = useState(false);
+  
+  // Helper function to calculate average of available scores
+  const calculateAverage = (...scores: (number | undefined)[]) => {
+    const validScores = scores.filter(score => typeof score === 'number') as number[];
+    return validScores.length > 0 
+      ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length 
+      : 0;
+  };
+  
+  // Helper function to categorize scores based on ranges
+  const categorizeScore = (score: number, dimension: string): string => {
+    if (dimension === 'Adaptability') {
+      if (score >= 10) return 'High Precision';
+      if (score <= -10) return 'High Flexibility';
+      return 'Balanced';
+    } 
+    else if (dimension === 'Problem Resolution') {
+      if (score >= 10) return 'Direct';
+      if (score <= -10) return 'Avoidant';
+      return 'Balanced';
+    }
+    else {
+      if (score >= 10) return 'High';
+      if (score <= -10) return 'Low';
+      return 'Neutral';
+    }
+  };
+  
+  // Calculate averages if debug info is available
+  const averageScores = debugInfo ? {
+    esteem: calculateAverage(
+      debugInfo.esteemScore, 
+      debugInfo.rater1?.esteemScore, 
+      debugInfo.rater2?.esteemScore
+    ),
+    trust: calculateAverage(
+      debugInfo.trustScore, 
+      debugInfo.rater1?.trustScore, 
+      debugInfo.rater2?.trustScore
+    ),
+    driver: calculateAverage(
+      debugInfo.driverScore, 
+      debugInfo.rater1?.driverScore, 
+      debugInfo.rater2?.driverScore
+    ),
+    adaptability: calculateAverage(
+      debugInfo.adaptabilityScore, 
+      debugInfo.rater1?.adaptabilityScore, 
+      debugInfo.rater2?.adaptabilityScore
+    ),
+    problemResolution: calculateAverage(
+      debugInfo.problemResolutionScore, 
+      debugInfo.rater1?.problemResolutionScore, 
+      debugInfo.rater2?.problemResolutionScore
+    )
+  } : null;
   
   const profiles: Record<string, { summary: string; traits: string[] }> = {
     "The Trusting Driven Flexible": {
@@ -223,11 +293,40 @@ const ProfileCard = ({ profileType, debugInfo }: ProfileCardProps) => {
           <div className="mb-4 p-3 border rounded-md text-xs">
             <h4 className="font-medium mb-1">Raw Dimension Scores:</h4>
             <ul className="space-y-1">
-              <li>Esteem: {debugInfo.esteemScore}</li>
-              <li>Trust: {debugInfo.trustScore}</li>
-              <li>Business Drive: {debugInfo.driverScore}</li>
-              <li>Adaptability: {debugInfo.adaptabilityScore}</li>
-              <li>Problem Resolution: {debugInfo.problemResolutionScore}</li>
+              {averageScores && (
+                <>
+                  <li>
+                    Esteem: {averageScores.esteem.toFixed(1)} 
+                    <span className="ml-2 text-gray-500">
+                      ({categorizeScore(averageScores.esteem, 'Esteem')})
+                    </span>
+                  </li>
+                  <li>
+                    Trust: {averageScores.trust.toFixed(1)}
+                    <span className="ml-2 text-gray-500">
+                      ({categorizeScore(averageScores.trust, 'Trust')})
+                    </span>
+                  </li>
+                  <li>
+                    Business Drive: {averageScores.driver.toFixed(1)}
+                    <span className="ml-2 text-gray-500">
+                      ({categorizeScore(averageScores.driver, 'Drive')})
+                    </span>
+                  </li>
+                  <li>
+                    Adaptability: {averageScores.adaptability.toFixed(1)}
+                    <span className="ml-2 text-gray-500">
+                      ({categorizeScore(averageScores.adaptability, 'Adaptability')})
+                    </span>
+                  </li>
+                  <li>
+                    Problem Resolution: {averageScores.problemResolution.toFixed(1)}
+                    <span className="ml-2 text-gray-500">
+                      ({categorizeScore(averageScores.problemResolution, 'Problem Resolution')})
+                    </span>
+                  </li>
+                </>
+              )}
               {debugInfo.coachabilityScore && (
                 <li>Coachability: {debugInfo.coachabilityScore}</li>
               )}
