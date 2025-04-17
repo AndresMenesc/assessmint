@@ -345,13 +345,37 @@ export const calculateAllResults = (raters: RaterResponses[]) => {
         color: getCoachabilityColor(selfCoachabilityScore)
       });
       
-      // Determine profile type based on actual scores
+      // Calculate average scores from all raters for profile determination
+      // Only include raters that have completed the assessment
+      let validRaters = [selfRater];
+      if (rater1 && rater1.completed && rater1.responses && rater1.responses.length > 0) {
+        validRaters.push(rater1);
+      }
+      if (rater2 && rater2.completed && rater2.responses && rater2.responses.length > 0) {
+        validRaters.push(rater2);
+      }
+      
+      const avgEsteemScore = (esteemScore + rater1EsteemScore + rater2EsteemScore) / validRaters.length;
+      const avgTrustScore = (trustScore + rater1TrustScore + rater2TrustScore) / validRaters.length;
+      const avgDriverScore = (driverScore + rater1DriverScore + rater2DriverScore) / validRaters.length;
+      const avgAdaptabilityScore = (adaptabilityScore + rater1AdaptabilityScore + rater2AdaptabilityScore) / validRaters.length;
+      const avgProblemResolutionScore = (problemResolutionScore + rater1ProblemResolutionScore + rater2ProblemResolutionScore) / validRaters.length;
+      
+      console.log("Average scores for profile determination:", {
+        avgEsteemScore,
+        avgTrustScore,
+        avgDriverScore,
+        avgAdaptabilityScore,
+        avgProblemResolutionScore
+      });
+      
+      // Determine profile type based on average scores from all raters
       profileType = determineProfileType(
-        esteemScore,
-        trustScore,
-        driverScore,
-        adaptabilityScore,
-        problemResolutionScore
+        avgEsteemScore,
+        avgTrustScore,
+        avgDriverScore,
+        avgAdaptabilityScore,
+        avgProblemResolutionScore
       );
       
       console.log("Determined profile type:", profileType);
