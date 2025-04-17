@@ -60,10 +60,10 @@ const ResultsPage = () => {
   }
 
   const downloadPdf = () => {
-    // Using dynamic imports with proper type checking
-    import('jspdf').then(jsPDFModule => {
+    // Import types properly to avoid TypeScript errors
+    import('jspdf').then((jsPDFModule) => {
       const jsPDF = jsPDFModule.default;
-      import('html2canvas').then(html2canvasModule => {
+      import('html2canvas').then((html2canvasModule) => {
         const html2canvas = html2canvasModule.default;
         const content = document.querySelector('.container');
         if (content) {
