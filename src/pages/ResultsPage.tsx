@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +9,7 @@ import DimensionChart from "@/components/DimensionChart";
 import CoachabilityChart from "@/components/CoachabilityChart";
 import Logo from "@/components/Logo";
 import ProfileCard from "@/components/ProfileCard";
+import DimensionAverageProfile from "@/components/DimensionAverageProfile";
 import { useAssessment } from "@/contexts/AssessmentContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { RaterType, Assessment, AssessmentResponse, DimensionScore } from "@/types/assessment";
@@ -629,11 +629,18 @@ const ResultsPage = () => {
                                   />
                                 )}
                                 
-                                {results.profileType && (
-                                  <ProfileCard 
-                                    profileType={results.profileType} 
-                                    debugInfo={results.rawScores}
-                                  />
+                                {results.profileType && results.dimensionScores && (
+                                  <>
+                                    <ProfileCard 
+                                      profileType={results.profileType} 
+                                      debugInfo={results.rawScores}
+                                    />
+                                    
+                                    <DimensionAverageProfile 
+                                      scores={results.dimensionScores}
+                                      profileType={results.profileType}
+                                    />
+                                  </>
                                 )}
                               </>
                             ) : (
@@ -665,11 +672,18 @@ const ResultsPage = () => {
                             />
                           )}
                           
-                          {results.profileType && (
-                            <ProfileCard 
-                              profileType={results.profileType} 
-                              debugInfo={results.rawScores}
-                            />
+                          {results.profileType && results.dimensionScores && (
+                            <>
+                              <ProfileCard 
+                                profileType={results.profileType} 
+                                debugInfo={results.rawScores}
+                              />
+                              
+                              <DimensionAverageProfile
+                                scores={results.dimensionScores}
+                                profileType={results.profileType}
+                              />
+                            </>
                           )}
                         </div>
                       )}
