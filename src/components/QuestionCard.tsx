@@ -80,8 +80,8 @@ const QuestionCard = ({ question, onNext, onBack, isFirstQuestion }: QuestionCar
         <p className="text-xl mb-8 text-center">{question.text}</p>
         
         <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2 justify-between mb-8">
-          <div className="text-sm text-center sm:text-left">Strongly Disagree</div>
-          <div className="text-sm text-center sm:text-right">Strongly Agree</div>
+          <div className="text-sm text-center sm:text-left">Disagree</div>
+          <div className="text-sm text-center sm:text-right">Agree</div>
         </div>
         
         <div className="flex justify-between space-x-2">

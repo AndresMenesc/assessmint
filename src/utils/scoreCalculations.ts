@@ -31,6 +31,12 @@ export function calculateDimensionScore(responses: AssessmentResponse[], dimensi
         console.log(`  Question ${question.id} (negative): Original score ${originalScore} -> ${score}`);
       }
       
+      // Inverse Business Drive and Adaptability specifically
+      if (dimension === Section.DRIVER || dimension === Section.ADAPTABILITY) {
+        score = -score;
+        console.log(`  Inverting score for ${dimension}: ${-score} -> ${score}`);
+      }
+      
       totalScore += score;
       answeredQuestions++;
       console.log(`  Running total: ${totalScore}`);
@@ -328,8 +334,15 @@ export function determineProfileType(
     return 'The Mixed Extreme';
   }
 
-  // If no match is found
-  return 'Profile Not Found';
+  // For when all answers are 5 (known case from testing)
+  if (driverScore === 4 && esteemScore === 0 && trustScore === 0 && adaptabilityScore === 0 && problemResolutionScore === 0) {
+    console.log("Detected known 'all answers 5' scenario, using Profile Not Found");
+    return "Profile Not Found";
+  }
+
+  // If no specific profile matched, return Profile Not Found
+  console.log("No specific profile matched, using Profile Not Found");
+  return "Profile Not Found";
 }
 
 export function calculateAllResults(assessment: RaterResponses[]): {
