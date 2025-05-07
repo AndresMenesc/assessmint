@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect, KeyboardEvent } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface QuestionCardProps {
   question: Question;
@@ -17,6 +18,7 @@ interface QuestionCardProps {
 
 const QuestionCard = ({ question, onNext, onBack, isFirstQuestion }: QuestionCardProps) => {
   const { responses, updateResponse } = useAssessment();
+  const isMobile = useIsMobile();
   
   // Find existing response for this question
   const existingResponse = responses.find(r => r.questionId === question.id);
@@ -79,9 +81,9 @@ const QuestionCard = ({ question, onNext, onBack, isFirstQuestion }: QuestionCar
       <CardContent>
         <p className="text-xl mb-8 text-center">{question.text}</p>
         
-        <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2 justify-between mb-8">
-          <div className="text-sm text-center sm:text-left">Disagree</div>
-          <div className="text-sm text-center sm:text-right">Agree</div>
+        <div className="flex justify-between mb-8">
+          <div className="text-sm text-left">Strongly Disagree</div>
+          <div className="text-sm text-right">Strongly Agree</div>
         </div>
         
         <div className="flex justify-between space-x-2">
